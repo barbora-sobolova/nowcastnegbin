@@ -3,8 +3,7 @@ functions {
   #include "functions/observe_onsets_with_delay.stan"
   #include "functions/predict_pois_rng.stan"
   #include "functions/combine_obs_with_predicted_obs.stan"
-  #include "functions/multiply_array_by_vector.stan"
-  #include "functions/multiply_array_by_scalar.stan"
+  #include "functions/multiply_array.stan"
 }
 
 data {
@@ -31,8 +30,8 @@ parameters {
 
 transformed parameters {
   array[n] real lambda = geometric_random_walk(init_onsets, rw_noise, rw_sd);
-  array[n] real lambda_times_nb_size = multiply_array_by_scalar(nb_size, lambda);
-  array[n] real lambda_with_re = multiply_array_by_vector(random_effect, lambda);
+  array[n] real lambda_times_nb_size = multiply_array(nb_size, lambda);
+  array[n] real lambda_with_re = multiply_array(random_effect, lambda);
   array[m] real lambda_with_re_times_pis = observe_onsets_with_delay(lambda_with_re, reporting_delay, P, p);
 }
 
