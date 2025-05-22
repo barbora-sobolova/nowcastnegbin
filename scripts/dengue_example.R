@@ -77,20 +77,34 @@ dengue_stan_data <- list(
 #################
 
 # Declare models
-pois_mod <- cmdstan_model("stan/Pois_nowcast.stan")
-nbin2D_mod <- cmdstan_model("stan/NBin2D_nowcast.stan")
-nbin1D_mod <- cmdstan_model("stan/NBin1D_nowcast.stan")
-nbin2M_mod <- cmdstan_model("stan/NBin2M_nowcast.stan")
-nbin1M_mod <- cmdstan_model("stan/NBin1M_nowcast.stan")
-nbinX_mod <- cmdstan_model("stan/NBinX_nowcast.stan")
+mod <- cmdstan_model("stan/nowcast.stan")
 
 # Sample from the models
-pois_nowcast_fit <- pois_mod$sample(data = dengue_stan_data, parallel_chains = 4)
-nbin2D_nowcast_fit <- nbin2D_mod$sample(data = dengue_stan_data, parallel_chains = 4)
-nbin1D_nowcast_fit <- nbin1D_mod$sample(data = dengue_stan_data, parallel_chains = 4)
-nbin2M_nowcast_fit <- nbin2M_mod$sample(data = dengue_stan_data, parallel_chains = 4)
-nbin1M_nowcast_fit <- nbin1M_mod$sample(data = dengue_stan_data, parallel_chains = 4)
-nbinX_nowcast_fit <- nbinX_mod$sample(data = dengue_stan_data, parallel_chains = 4)
+pois_nowcast_fit <- mod$sample(
+  data = c(dengue_stan_data, model_obs = 0),
+  parallel_chains = 4
+)
+nbinX_nowcast_fit <- mod$sample(
+  data = c(dengue_stan_data, model_obs = 1), 
+  parallel_chains = 4
+)
+nbin2D_nowcast_fit <- mod$sample(
+  data = c(dengue_stan_data, model_obs = 2),
+  parallel_chains = 4
+)
+nbin1D_nowcast_fit <- mod$sample(
+  data = c(dengue_stan_data, model_obs = 3), 
+  parallel_chains = 4
+)
+nbin2M_nowcast_fit <- mod$sample(
+  data = c(dengue_stan_data, model_obs = 4), 
+  parallel_chains = 4
+)
+nbin1M_nowcast_fit <- mod$sample(
+  data = c(dengue_stan_data, model_obs = 5),
+  parallel_chains = 4
+)
+
 
 #####################
 ## Gather the results
@@ -138,7 +152,8 @@ nowcast_plot_tib <- nowcast  |>
     quantiles = list(
       as_tibble(
         as.list(
-          quantile(.value, probs = c(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.975, 0.99, 0.995))
+          quantile(.value, probs = c(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 
+                                     0.75, 0.9, 0.95, 0.975, 0.99, 0.995))
         )
       )
     )
@@ -248,7 +263,7 @@ ggplot() +
   scale_x_date(date_labels = "%Y %b") +
   labs(x = "Week", y = "Cases") +
   facet_wrap(~Distribution)
-ggsave("figure/Nowcasts_example.pdf", p_nowcasts, width = 7, height = 5)
+ggsave("figure/Nowcasts_example.pdf", width = 7, height = 5)
 
 # Plot the nowcast variances in time
 ggplot(tib_variances, aes(x = week, y = variance, color = Distribution)) +
