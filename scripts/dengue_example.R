@@ -195,20 +195,20 @@ delays <- rbind(nbinX_delays, nbin2D_delays, nbin1D_delays, nbin1M_delays,
 
 # Dispersion parameter
 nbinX_disp <- nbinX_nowcast_fit |>
-  gather_draws(nb_size) |>
-  mutate(Distribution = "NegBinX")
+  gather_draws(nb_size[1]) |>
+  mutate(Distribution = "NegBinX", .value = unlist(.value))
 nbin2D_disp <- nbin2D_nowcast_fit |>
-  gather_draws(nb_size) |>
-  mutate(Distribution = "NegBin2D")
+  gather_draws(nb_size[1]) |>
+  mutate(Distribution = "NegBin2D", .value = unlist(.value))
 nbin1D_disp <- nbin1D_nowcast_fit |>
-  gather_draws(nb_size) |>
-  mutate(Distribution = "NegBin1D")
+  gather_draws(nb_size[1]) |>
+  mutate(Distribution = "NegBin1D", .value = unlist(.value))
 nbin2M_disp <- nbin2M_nowcast_fit |>
-  gather_draws(nb_size) |>
-  mutate(Distribution = "NegBin2M")
+  gather_draws(nb_size[1]) |>
+  mutate(Distribution = "NegBin2M", .value = unlist(.value))
 nbin1M_disp <- nbin1M_nowcast_fit |>
-  gather_draws(nb_size) |>
-  mutate(Distribution = "NegBin1M")
+  gather_draws(nb_size[1]) |>
+  mutate(Distribution = "NegBin1M", .value = unlist(.value))
 df_disp <- rbind(nbinX_disp, nbin2D_disp, nbin1D_disp, nbin1M_disp, nbin2M_disp)
 
 # Final data and the observed data
