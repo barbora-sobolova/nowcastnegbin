@@ -33,9 +33,7 @@ parameters {
 
 transformed parameters {
   array[n] real lambda = geometric_random_walk(init_onsets, rw_noise, rw_sd);
-  array[m] real lambda_times_pis = 
-    observe_onsets_with_delay(lambda, reporting_delay, P, p);
-  array[n] real lambda_times_nb_size = rep_array(1, n);;
+  array[n] real lambda_times_nb_size = rep_array(1, n);
   if (model_obs == 5) {
     lambda_times_nb_size = multiply_array(nb_size[1], lambda);
   }
