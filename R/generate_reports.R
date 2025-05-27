@@ -6,39 +6,39 @@
 #' @param log_lambda0 Numeric, the initial value of the random walk.
 #' @param rw_noise_sd Numeric, standard deviation of the geometric random walk.
 #' @param probs Numeric, a numeric vector specifying the delay distribution.
-#' @param nb_size Numeric, a positive real value specifying the size of the 
+#' @param nb_size Numeric, a positive real value specifying the size of the
 #' negbin distribution. The lower, the more dispersed
-#' @param model name of the observation model 
+#' @param model name of the observation model
 #'
 #' @return The reporting table as a matrix
 generate_reports <- function (
-    lgt, 
+    lgt,
     max_lag,
     log_lambda0,
-    rw_noise_sd, 
-    probs, 
-    nb_size = NULL, 
+    rw_noise_sd,
+    probs,
+    nb_size = NULL,
     model = c("Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M", "NegBin1M")
 ) {
   model <- match.arg(model, c("Poisson", "NegBinX", "NegBin2D", "NegBin1D",
                               "NegBin2M", "NegBin1M"))
-  
+
   # Generate the random walk
   wn <- rnorm(lgt - 1, 0, 1)
   log_lambda <- log_lambda0 + cumsum(c(0, wn)) * rw_noise_sd
   lambda <- exp(log_lambda)
-  
+
   # The expected counts split by delay
   exp_obs <- lambda %*% t(probs)
-  
+
   # Calculate the size parameter according to the model
   nb_sizes <- switch(
     model,
-    NegBinX = rep(nb_size, lgt * D),
+    NegBinX = rep(nb_size, lgt * max_lag),
     NegBin2D = rep(nb_size, lgt) %*% t(probs),
     NegBin1D = exp_obs * nb_size
   )
-  
+
   # Generate reports
   if (model %in% c("NegBinX", "NegBin2D", "NegBin1D")) {
     ret <- rnbinom(lgt * max_lag, nb_sizes, mu = exp_obs) |>
@@ -51,7 +51,7 @@ generate_reports <- function (
       } else {
         random_effect_gamma_par <- rep(nb_size, lgt)
       }
-      random_effect <- rgamma(lgt, shape = random_effect_gamma_par, 
+      random_effect <- rgamma(lgt, shape = random_effect_gamma_par,
                               rate = random_effect_gamma_par)
       exp_obs <- sweep(exp_obs, 1, random_effect, "*")
     }
