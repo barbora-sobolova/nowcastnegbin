@@ -1,4 +1,6 @@
-#' Generates the (full) reporting table of a nowcasting problem, where the
+#' Generate the reporting table of a nowcasting problem
+#'
+#' Generate the full reporting table, i.e. with no right censoring. The
 #' mean process follows an exponential random walk.
 #'
 #' @param lgt Integer, the length of the simulated table.
