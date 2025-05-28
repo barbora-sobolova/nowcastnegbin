@@ -28,12 +28,12 @@ parameters {
   real<lower=0> rw_sd;
   simplex[d] reporting_delay; // reporting delay distribution
   // random effect needed for the NegBin1M and NegBin2M models only
-  vector<lower=0>[model_obs == 4 || model_obs == 5 ? n : 0] random_effect; 
+  vector<lower=0>[model_obs == 4 || model_obs == 5 ? n : 0] random_effect;
 }
 
 transformed parameters {
   array[n] real lambda = geometric_random_walk(init_onsets, rw_noise, rw_sd);
-  array[m] real lambda_times_pis = 
+  array[m] real lambda_times_pis =
     observe_onsets_with_delay(lambda, reporting_delay, P, p);
   array[n] real lambda_times_nb_size = rep_array(1, n);;
   if (model_obs == 5) {
@@ -55,7 +55,7 @@ model {
     random_effect ~ gamma(lambda_times_nb_size, lambda_times_nb_size);
   }
   // Likelihood
-  target += obs_lpmf(obs | lambda, nb_size, reporting_delay, random_effect, model_obs, P, p);
+  obs ~ obs(lambda, nb_size, reporting_delay, random_effect, model_obs, P, p);
 }
 
 generated quantities {
