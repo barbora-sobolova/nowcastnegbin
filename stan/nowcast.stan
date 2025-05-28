@@ -28,7 +28,7 @@ parameters {
   real<lower=0> rw_sd;
   simplex[d] reporting_delay; // reporting delay distribution
   // random effect needed for the NegBin1M and NegBin2M models only
-  vector<lower=0>[model_obs == 4 || model_obs == 5 ? n : 0] random_effect; 
+  vector<lower=0>[model_obs == 4 || model_obs == 5 ? n : 0] random_effect;
 }
 
 transformed parameters {
@@ -53,7 +53,7 @@ model {
     random_effect ~ gamma(lambda_times_nb_size, lambda_times_nb_size);
   }
   // Likelihood
-  target += obs_lpmf(obs | lambda, nb_size, reporting_delay, random_effect, model_obs, P, p);
+  obs ~ obs(lambda, nb_size, reporting_delay, random_effect, model_obs, P, p);
 }
 
 generated quantities {
