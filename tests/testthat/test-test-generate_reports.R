@@ -23,8 +23,8 @@ test_that("moments as expected", {
   for (k in seq_along(models)) {
     trajectory <- generate_reports(lgt, length(probs), log_lambda0, rw_noise_sd,
                                    probs, nb_size = r, model = models[k])
-    means_observed <- apply(trajectory, 2, mean)
-    cov_observed <- cov(trajectory)
+    means_observed <- apply(trajectory$reports, 2, mean)
+    cov_observed <- cov(trajectory$reports)
     expect_equal(means_observed, means_theo, tolerance = 0.1)
     expect_equal(cov_observed, cov_theo[[k]], tolerance = 1.5)
   }

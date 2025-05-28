@@ -41,7 +41,7 @@ generate_reports <- function (
 
   # Generate reports
   if (model %in% c("NegBinX", "NegBin2D", "NegBin1D")) {
-    ret <- rnbinom(lgt * max_lag, nb_sizes, mu = exp_obs) |>
+    samp <- rnbinom(lgt * max_lag, nb_sizes, mu = exp_obs) |>
       matrix(nrow = lgt, ncol = max_lag)
   } else {
     # Sample the random effect, when necessary
@@ -55,8 +55,8 @@ generate_reports <- function (
                               rate = random_effect_gamma_par)
       exp_obs <- sweep(exp_obs, 1, random_effect, "*")
     }
-    ret <- rpois(lgt * max_lag, lambda = exp_obs) |>
+    samp <- rpois(lgt * max_lag, lambda = exp_obs) |>
       matrix(nrow = lgt, ncol = max_lag)
   }
-  ret
+  list(reports = samp, exp_obs_total = lambda)
 }
