@@ -4,7 +4,7 @@ library("tidybayes")
 theme_set(theme_bw())
 
 # Script running through 6 relatively simple nowcasting models, demonstrating
-# different results. 
+# different results.
 
 ######################################
 ## Load and preprocess the dengue data
@@ -57,7 +57,7 @@ df_all_dates <- tibble(
   delay = unlist(sapply(p, function (x) {0:(x - 1)}))
 ) |> mutate(report_week = onset_week + delay * 7)
 df_dengue_subset_padded <- full_join(
-  df_all_dates, 
+  df_all_dates,
   df_dengue_subset,
   by = c("onset_week", "report_week", "delay")
 )
@@ -77,7 +77,7 @@ dengue_stan_data <- list(
 #################
 
 # Declare models
-mod <- cmdstan_model("stan/nowcast.stan")
+mod <- cmdstan_model("inst/stan/nowcast.stan")
 
 # Sample from the models
 pois_nowcast_fit <- mod$sample(
@@ -85,7 +85,7 @@ pois_nowcast_fit <- mod$sample(
   parallel_chains = 4
 )
 nbinX_nowcast_fit <- mod$sample(
-  data = c(dengue_stan_data, model_obs = 1), 
+  data = c(dengue_stan_data, model_obs = 1),
   parallel_chains = 4
 )
 nbin2D_nowcast_fit <- mod$sample(
@@ -93,11 +93,11 @@ nbin2D_nowcast_fit <- mod$sample(
   parallel_chains = 4
 )
 nbin1D_nowcast_fit <- mod$sample(
-  data = c(dengue_stan_data, model_obs = 3), 
+  data = c(dengue_stan_data, model_obs = 3),
   parallel_chains = 4
 )
 nbin2M_nowcast_fit <- mod$sample(
-  data = c(dengue_stan_data, model_obs = 4), 
+  data = c(dengue_stan_data, model_obs = 4),
   parallel_chains = 4
 )
 nbin1M_nowcast_fit <- mod$sample(
@@ -145,14 +145,14 @@ nowcast <- rbind(
 ) |> filter(
   week %in% (n - d + 1):n
 )
-nowcast_plot_tib <- nowcast  |> 
+nowcast_plot_tib <- nowcast  |>
   group_by(week, week_date, Distribution) |>
   summarise(
     mean = mean(.value),
     quantiles = list(
       as_tibble(
         as.list(
-          quantile(.value, probs = c(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 
+          quantile(.value, probs = c(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5,
                                      0.75, 0.9, 0.95, 0.975, 0.99, 0.995))
         )
       )
@@ -162,7 +162,7 @@ nowcast_plot_tib <- nowcast  |>
 
 # Calculate the variances of the nowcasts
 tib_variances <- nowcast |> group_by(Distribution, week, week_date) |>
-  summarise(variance = var(.value)) |> 
+  summarise(variance = var(.value)) |>
   filter(variance > 0)
 
 # Delays
@@ -213,21 +213,21 @@ df_disp <- rbind(nbinX_disp, nbin2D_disp, nbin1D_disp, nbin1M_disp, nbin2M_disp)
 
 # Final data and the observed data
 timepoint_to_plot <- d - 1 + 10
-df_true <- df_dengue |> 
-  rename("week_date" = "onset_week") |> 
+df_true <- df_dengue |>
+  rename("week_date" = "onset_week") |>
   group_by(week_date) |>
   summarise(true_val = sum(reports)) |>
   filter(week_date %in% dates_seq) |>
-  mutate(week = 1:n, Data = "Final") |> 
+  mutate(week = 1:n, Data = "Final") |>
   filter(week %in% (n - timepoint_to_plot):n)
-df_available <- df_dengue_subset_padded |> 
-  rename("week_date" = "onset_week") |> 
+df_available <- df_dengue_subset_padded |>
+  rename("week_date" = "onset_week") |>
   group_by(week_date) |>
   summarise(true_val = sum(reports)) |>
   filter(week_date %in% dates_seq) |>
-  mutate(week = 1:n, Data = "Available") |> 
+  mutate(week = 1:n, Data = "Available") |>
   filter(week %in% (n - timepoint_to_plot):n)
-df_obs <- rbind(df_available, df_true) |> 
+df_obs <- rbind(df_available, df_true) |>
   mutate( Data = factor(Data, levels = c("Available", "Final"), ordered = TRUE))
 
 ###################
@@ -250,7 +250,7 @@ ggplot() +
   ) +
   geom_ribbon(
     data = nowcast_plot_tib,
-    aes(x = week_date, ymin = `2.5%`, ymax = `97.5%`, color = Distribution, 
+    aes(x = week_date, ymin = `2.5%`, ymax = `97.5%`, color = Distribution,
         fill = Distribution),
     alpha = 0.2,
     linetype = 0
