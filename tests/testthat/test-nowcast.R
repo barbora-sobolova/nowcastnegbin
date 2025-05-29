@@ -24,7 +24,7 @@ test_that("Model sampling output is stable (snapshot)", {
   for (model_obs in 0:5) {
     # Run sampling with fixed seed
     fit <- mod$sample(
-      data = c(data_list, model_obs = 0),
+      data = c(data_list, model_obs = model_obs),
       seed = 123,
       chains = 2,
       iter_sampling = 1000,
