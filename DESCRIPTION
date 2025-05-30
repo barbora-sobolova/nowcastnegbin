@@ -1,0 +1,23 @@
+Package: nowcastnegbin
+Title: Observation Models for Hierarchical Bayesian Nowcasting
+Version: 0.0.0.9000
+Authors@R: 
+    person(
+    given = "Barbora", 
+    family = "Nemcova", 
+    email = "barbora.nemcova@kit.edu",
+    role = c("aut", "cre"))
+Description: This is an experimental package containing observation models for 
+  an upcoming paper about overdispersion in infectious disease nowcasting.
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
+Config/testthat/edition: 3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+  cmdstanr
+Suggests:
+  dplyr,
+  testthat (>= 3.1.9)
+SystemRequirements: CmdStan (>=2.29)

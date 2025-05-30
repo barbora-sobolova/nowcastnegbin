@@ -13,6 +13,21 @@
 #' @param model name of the observation model
 #'
 #' @return The reporting table as a matrix
+#'
+#' @importFrom stats rgamma rnbinom rnorm rpois
+#'
+#' @export
+#'
+#' @examples
+#' # Example: Sample a reporting table from the Poisson model for 100 days,
+#' # with the maximum delay 3.
+#' generate_reports(100, 3, log_lambda0 = log(12), rw_noise_sd = 0.9,
+#'                  probs = c(0.3, 0.4, 0.3), model = "Poisson")
+#'
+#' # Example: Sample a reporting table from the NegBin2D model for 100 days,
+#' # with the maximum delay 3.
+#' generate_reports(100, 3, log_lambda0 = log(12), rw_noise_sd = 0.9,
+#'                  probs = c(0.3, 0.4, 0.3), nb_size = 0.8, model = "NegBin2D")
 generate_reports <- function (
     lgt,
     max_lag,
