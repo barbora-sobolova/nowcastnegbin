@@ -16,6 +16,8 @@
 #'
 #' @importFrom stats rgamma rnbinom rnorm rpois
 #'
+#' @export
+#'
 #' @examples
 #' # Example: Sample a reporting table from the Poisson model for 100 days,
 #' # with the maximum delay 3.
