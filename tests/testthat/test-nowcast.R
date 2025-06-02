@@ -10,7 +10,11 @@ test_that("Model sampling output is stable (snapshot)", {
   obs_flat <- t(obs_full)[t(index_mat)]
 
   # Compile the model
-  mod <- cmdstanr::cmdstan_model(system.file("stan", "nowcast.stan", package = "nowcastnegbin"))
+  mod <- cmdstanr::cmdstan_model(system.file(
+    "stan",
+    "nowcast.stan",
+    package = "nowcastnegbin"
+  ))
 
   data_list <- list(
     n = nrow(index_mat),
@@ -38,8 +42,10 @@ test_that("Model sampling output is stable (snapshot)", {
     summary_df <- fit$summary()
 
     # You can snapshot a subset if output is too large
-    snapshot_output <- summary_df[summary_df$variable %in% paste0("nowcast[", 1:lgt, "]"),
-                                  c("mean", "median", "sd", "mad", "q5", "q95")]
+    snapshot_output <- summary_df[
+      summary_df$variable %in% paste0("nowcast[", 1:lgt, "]"),
+      c("mean", "median", "sd", "mad", "q5", "q95")
+    ]
 
     # Snapshot the output
     expect_snapshot_output(snapshot_output)
