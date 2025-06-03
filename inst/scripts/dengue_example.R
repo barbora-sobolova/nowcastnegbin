@@ -94,23 +94,23 @@ pois_nowcast_fit <- mod$sample(
   data = c(dengue_stan_data, model_obs = 0),
   parallel_chains = 4
 )
-nbinX_nowcast_fit <- mod$sample(
+nbin_x_nowcast_fit <- mod$sample(
   data = c(dengue_stan_data, model_obs = 1),
   parallel_chains = 4
 )
-nbin2D_nowcast_fit <- mod$sample(
+nbin_2d_nowcast_fit <- mod$sample(
   data = c(dengue_stan_data, model_obs = 2),
   parallel_chains = 4
 )
-nbin1D_nowcast_fit <- mod$sample(
+nbin_1d_nowcast_fit <- mod$sample(
   data = c(dengue_stan_data, model_obs = 3),
   parallel_chains = 4
 )
-nbin2M_nowcast_fit <- mod$sample(
+nbin_2m_nowcast_fit <- mod$sample(
   data = c(dengue_stan_data, model_obs = 4),
   parallel_chains = 4
 )
-nbin1M_nowcast_fit <- mod$sample(
+nbin_1m_nowcast_fit <- mod$sample(
   data = c(dengue_stan_data, model_obs = 5),
   parallel_chains = 4
 )
@@ -121,23 +121,23 @@ nbin1M_nowcast_fit <- mod$sample(
 #####################
 
 # Nowcasts
-nbinX_nowcast <- nbinX_nowcast_fit |>
+nbin_x_nowcast <- nbin_x_nowcast_fit |>
   gather_draws(nowcast[week]) |>
   ungroup() |>
   mutate(Distribution = "NegBinX", week_date = dates_seq[week])
-nbin2D_nowcast <- nbin2D_nowcast_fit |>
+nbin_2d_nowcast <- nbin_2d_nowcast_fit |>
   gather_draws(nowcast[week]) |>
   ungroup() |>
   mutate(Distribution = "NegBin2D", week_date = dates_seq[week])
-nbin1D_nowcast <- nbin1D_nowcast_fit |>
+nbin_1d_nowcast <- nbin_1d_nowcast_fit |>
   gather_draws(nowcast[week]) |>
   ungroup() |>
   mutate(Distribution = "NegBin1D", week_date = dates_seq[week])
-nbin2M_nowcast <- nbin2M_nowcast_fit |>
+nbin_2m_nowcast <- nbin_2m_nowcast_fit |>
   gather_draws(nowcast[week]) |>
   ungroup() |>
   mutate(Distribution = "NegBin2M", week_date = dates_seq[week])
-nbin1M_nowcast <- nbin1M_nowcast_fit |>
+nbin_1m_nowcast <- nbin_1m_nowcast_fit |>
   gather_draws(nowcast[week]) |>
   ungroup() |>
   mutate(Distribution = "NegBin1M", week_date = dates_seq[week])
@@ -146,11 +146,11 @@ pois_nowcast <- pois_nowcast_fit |>
   ungroup() |>
   mutate(Distribution = "Poisson", week_date = dates_seq[week])
 nowcast <- rbind(
-  nbinX_nowcast,
-  nbin2D_nowcast,
-  nbin1D_nowcast,
-  nbin2M_nowcast,
-  nbin1M_nowcast,
+  nbin_x_nowcast,
+  nbin_2d_nowcast,
+  nbin_1d_nowcast,
+  nbin_2m_nowcast,
+  nbin_1m_nowcast,
   pois_nowcast
 ) |>
   filter(
@@ -179,23 +179,23 @@ tib_variances <- nowcast |>
   filter(variance > 0)
 
 # Delays
-nbinX_delays <- nbinX_nowcast_fit |>
+nbin_x_delays <- nbin_x_nowcast_fit |>
   gather_draws(reporting_delay[week]) |>
   ungroup() |>
   mutate(Distribution = "NegBinX", week_date = dates_seq[week])
-nbin2D_delays <- nbin2D_nowcast_fit |>
+nbin_2d_delays <- nbin_2d_nowcast_fit |>
   gather_draws(reporting_delay[week]) |>
   ungroup() |>
   mutate(Distribution = "NegBin2D", week_date = dates_seq[week])
-nbin1D_delays <- nbin1D_nowcast_fit |>
+nbin_1d_delays <- nbin_1d_nowcast_fit |>
   gather_draws(reporting_delay[week]) |>
   ungroup() |>
   mutate(Distribution = "NegBin1D", week_date = dates_seq[week])
-nbin2M_delays <- nbin2M_nowcast_fit |>
+nbin_2m_delays <- nbin_2m_nowcast_fit |>
   gather_draws(reporting_delay[week]) |>
   ungroup() |>
   mutate(Distribution = "NegBin2M", week_date = dates_seq[week])
-nbin1M_delays <- nbin1M_nowcast_fit |>
+nbin_1m_delays <- nbin_1m_nowcast_fit |>
   gather_draws(reporting_delay[week]) |>
   ungroup() |>
   mutate(Distribution = "NegBin1M", week_date = dates_seq[week])
@@ -204,31 +204,37 @@ pois_delays <- pois_nowcast_fit |>
   ungroup() |>
   mutate(Distribution = "Poisson", week_date = dates_seq[week])
 delays <- rbind(
-  nbinX_delays,
-  nbin2D_delays,
-  nbin1D_delays,
-  nbin1M_delays,
-  nbin2M_delays,
+  nbin_x_delays,
+  nbin_2d_delays,
+  nbin_1d_delays,
+  nbin_1m_delays,
+  nbin_2m_delays,
   pois_delays
 )
 
 # Dispersion parameter
-nbinX_disp <- nbinX_nowcast_fit |>
+nbin_x_disp <- nbin_x_nowcast_fit |>
   gather_draws(nb_size[1]) |>
   mutate(Distribution = "NegBinX", .value = unlist(.value))
-nbin2D_disp <- nbin2D_nowcast_fit |>
+nbin_2d_disp <- nbin_2d_nowcast_fit |>
   gather_draws(nb_size[1]) |>
   mutate(Distribution = "NegBin2D", .value = unlist(.value))
-nbin1D_disp <- nbin1D_nowcast_fit |>
+nbin_1d_disp <- nbin_1d_nowcast_fit |>
   gather_draws(nb_size[1]) |>
   mutate(Distribution = "NegBin1D", .value = unlist(.value))
-nbin2M_disp <- nbin2M_nowcast_fit |>
+nbin_2m_disp <- nbin_2m_nowcast_fit |>
   gather_draws(nb_size[1]) |>
   mutate(Distribution = "NegBin2M", .value = unlist(.value))
-nbin1M_disp <- nbin1M_nowcast_fit |>
+nbin_1m_disp <- nbin_1m_nowcast_fit |>
   gather_draws(nb_size[1]) |>
   mutate(Distribution = "NegBin1M", .value = unlist(.value))
-df_disp <- rbind(nbinX_disp, nbin2D_disp, nbin1D_disp, nbin1M_disp, nbin2M_disp)
+df_disp <- rbind(
+  nbin_x_disp,
+  nbin_2d_disp,
+  nbin_1d_disp,
+  nbin_1m_disp,
+  nbin_2m_disp
+)
 
 # Final data and the observed data
 timepoint_to_plot <- d - 1 + 10
