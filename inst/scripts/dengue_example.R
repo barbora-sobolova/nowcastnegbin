@@ -31,7 +31,7 @@ ggplot(dengue_observed, aes(x = onset_week, y = observed)) +
 
 # Select a subset
 begin_date <- as.Date("2005-05-16", format = "%Y-%m-%d")
-end_date <- as.Date("2007-09-24", format = "%Y-%m-%d")  # inclusive
+end_date <- as.Date("2007-09-24", format = "%Y-%m-%d") # inclusive
 dates_seq <- seq(begin_date, end_date, by = 7)
 df_dengue_subset <- filter(
   df_dengue,
@@ -52,7 +52,7 @@ max_lag_df <- df_dengue_subset |>
 
 # Create the indexing variables
 d <- max(max_lag_df$max_lag) + 1
-n <- as.numeric((end_date - begin_date) / 7 + 1)  # including the endpoints
+n <- as.numeric((end_date - begin_date) / 7 + 1) # including the endpoints
 p <- c(rep(d, n - d + 1), (d - 1):1)
 
 # We need to pad the week-delay pairs, where no reports occurred, by zeros
