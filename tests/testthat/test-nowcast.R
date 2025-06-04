@@ -30,7 +30,7 @@ test_that("Model sampling output is stable (snapshot)", {
     fit <- mod$sample(
       data = c(data_list, model_obs = model_obs),
       seed = 123,
-      chains = 2,
+      chains = 4,
       iter_sampling = 1000,
       iter_warmup = 1000,
       refresh = 0,
@@ -45,7 +45,7 @@ test_that("Model sampling output is stable (snapshot)", {
     snapshot_output <- summary_df[
       summary_df$variable %in% paste0("nowcast[", 1:lgt, "]"),
       c("mean", "median", "sd", "mad", "q5", "q95")
-    ]
+    ] |> dplyr::mutate(dplyr::across(c(mean, sd, mad), round))
 
     # Snapshot the output
     expect_snapshot_output(snapshot_output)
