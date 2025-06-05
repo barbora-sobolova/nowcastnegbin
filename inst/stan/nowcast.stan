@@ -33,10 +33,21 @@ parameters {
 
 transformed parameters {
   array[n] real lambda = geometric_random_walk(init_onsets, rw_noise, rw_sd);
-  array[n] real lambda_times_nb_size = rep_array(1, n);
-  if (model_obs == 5) {
-    lambda_times_nb_size = multiply_array(nb_size[1], lambda);
+  array[n] real re_params;
+  if (model_obs == 4) {
+    re_params = rep_array(nb_size[1], n);
+  } else if (model_obs == 5) {
+    re_params = multiply_array(nb_size[1], lambda);
   }
+  // multiply lambda by the random effect, when needed
+  array[n] real exp_total_obs;
+  if (model_obs == 4 || model_obs == 5) {
+    exp_total_obs = multiply_array(random_effect, lambda);
+  } else {
+    exp_total_obs = lambda;
+  }
+  array[m] real exp_obs = observe_onsets_with_delay(exp_total_obs, reporting_delay, P, p);
+  array[d*n] real exp_obs_complete = observe_onsets_with_delay(exp_total_obs, reporting_delay, D, rep_array(d, n));
 }
 
 model {
@@ -47,18 +58,16 @@ model {
   reporting_delay ~ dirichlet(rep_vector(1, d));
   nb_size ~ normal(1, 3) T[0, ];
   // Random effect for the NegBin1M and NegBin2M models
-  if (model_obs == 4) {
-    random_effect ~ gamma(nb_size[1], nb_size[1]);
-  } else if (model_obs == 5) {
-    random_effect ~ gamma(lambda_times_nb_size, lambda_times_nb_size);
+  if (model_obs == 4 || model_obs == 5) {
+    random_effect ~ gamma(re_params, re_params);
   }
   // Likelihood
-  obs ~ obs(lambda, nb_size, reporting_delay, random_effect, model_obs, P, p);
+  obs ~ obs(exp_obs, nb_size, reporting_delay, model_obs, P, p);
 }
 
 generated quantities {
   array[d * n - m] int predicted_counts = predict_rng(
-      lambda, nb_size, reporting_delay, random_effect, model_obs, P, p, d, D
+      exp_obs_complete, nb_size, reporting_delay, model_obs, P, p, d, D
      );
   array[n] int nowcast = combine_obs_with_predicted_obs(
       obs, predicted_counts, P, p, d, D
