@@ -28,17 +28,26 @@
 #' # with the maximum delay 3.
 #' generate_reports(100, 3, log_lambda0 = log(12), rw_noise_sd = 0.9,
 #'                  probs = c(0.3, 0.4, 0.3), nb_size = 0.8, model = "NegBin2D")
-generate_reports <- function (
-    lgt,
-    max_lag,
-    log_lambda0,
-    rw_noise_sd,
-    probs,
-    nb_size = NULL,
-    model = c("Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M", "NegBin1M")
+generate_reports <- function(
+  lgt,
+  max_lag,
+  log_lambda0,
+  rw_noise_sd,
+  probs,
+  nb_size = NULL,
+  model = c(
+    "Poisson",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBin2M",
+    "NegBin1M"
+  )
 ) {
-  model <- match.arg(model, c("Poisson", "NegBinX", "NegBin2D", "NegBin1D",
-                              "NegBin2M", "NegBin1M"))
+  model <- match.arg(
+    model,
+    c("Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M", "NegBin1M")
+  )
 
   # Generate the random walk
   wn <- rnorm(lgt - 1, 0, 1)
@@ -68,8 +77,11 @@ generate_reports <- function (
       } else {
         random_effect_gamma_par <- rep(nb_size, lgt)
       }
-      random_effect <- rgamma(lgt, shape = random_effect_gamma_par,
-                              rate = random_effect_gamma_par)
+      random_effect <- rgamma(
+        lgt,
+        shape = random_effect_gamma_par,
+        rate = random_effect_gamma_par
+      )
       exp_obs <- sweep(exp_obs, 1, random_effect, "*")
     }
     samp <- rpois(lgt * max_lag, lambda = exp_obs) |>
