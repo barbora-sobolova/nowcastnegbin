@@ -4,6 +4,8 @@ functions {
   #include "functions/predict_rng.stan"
   #include "functions/combine_obs_with_predicted_obs.stan"
   #include "functions/multiply_array.stan"
+  #include "functions/calc_exp_total_obs.stan"
+  #include "functions/calc_re_parametres.stan"
   #include "functions/obs_lpmf.stan"
 }
 
@@ -33,19 +35,9 @@ parameters {
 
 transformed parameters {
   array[n] real lambda = geometric_random_walk(init_onsets, rw_noise, rw_sd);
-  array[n] real re_params;
-  if (model_obs == 4) {
-    re_params = rep_array(nb_size[1], n);
-  } else if (model_obs == 5) {
-    re_params = multiply_array(nb_size[1], lambda);
-  }
+  array[n] real re_params = calc_re_parameters(lambda, nb_size, model_obs);
   // multiply lambda by the random effect, when needed
-  array[n] real exp_total_obs;
-  if (model_obs == 4 || model_obs == 5) {
-    exp_total_obs = multiply_array(random_effect, lambda);
-  } else {
-    exp_total_obs = lambda;
-  }
+  array[n] real exp_total_obs = calc_exp_total_obs(lambda, random_effect, model_obs);
   array[m] real exp_obs = observe_onsets_with_delay(exp_total_obs, reporting_delay, P, p);
   array[d*n] real exp_obs_complete = observe_onsets_with_delay(exp_total_obs, reporting_delay, D, rep_array(d, n));
 }
