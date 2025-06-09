@@ -6,16 +6,13 @@
  *
  * @param obs Observations, an array of integers.
  *
- * @param lambdas Expected observations of the total, an array of reals.
+ * @param exp_obs Expectations of the partial counts, an array of reals.
  *
  * @param nb_size Size = (1 / Dispersion parameter) for the negative binomial
- * model, a vector of size 0 for Poisson (being ignoed), size 1 for the negative
- * binomial models
+ * model, a vector of size 0 for Poisson (being ignored), size 1 for the
+ * negative binomial models
  *
  * @param reporting_delay reporting delay probability, a vector
- *
- * @param random_effect multiplicative random effect, used only for the NegBin2M
- * and NegBin1M models, a vector of the same length as `lambda`
  *
  * @param model_obs Indicator of the model used (0 for Poisson, 1 for NegBinX,
  * 2 for NegBin2D, 3 for NegBin1D, 4 for NegBin2M and 5 for NegBin1M).
@@ -27,8 +24,8 @@
  *
  * @note The function selects between the negative binomial models and the
  * Poisson model based on the `model_obs` flag. It uses
- * `neg_binomial_2_lpmf` for the negative binomial models and
- * `poisson_lpmf` for the Poisson model.
+ * `neg_binomial_2_lpmf` for NegBinX, NegBin2D and NegBin1D models and
+ * `poisson_lpmf` for the Poisson, NegBin2M and NegBin1M models.
  */
 real obs_lpmf(array[] int obs, array[] real exp_obs, vector nb_size,
                   vector reporting_delay, int model_obs, array[] int P,
