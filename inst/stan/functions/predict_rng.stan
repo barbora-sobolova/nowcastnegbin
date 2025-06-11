@@ -1,27 +1,22 @@
-array[] int predict_rng(array[] real lambda, vector nb_size, 
-                          vector reporting_delay, vector random_effect, 
-                          int model_obs, array[] int P, array[] int p, int d, 
+array[] int predict_rng(array[] real exp_obs, vector nb_size,
+                          vector reporting_delay,
+                          int model_obs, array[] int P, array[] int p, int d,
                           array[] int D) {
   // Prepare the expected values and the neg. binom sizes
   int n = num_elements(p);
   int n_predict = d * n - sum(p);
-  array[n*d] real exp_obs = observe_onsets_with_delay(lambda, reporting_delay, D, rep_array(d, n));
   array[n*d] real nb_size_expanded;
-  if (model_obs == 1) {  
+  if (model_obs == 1) {
     // NegBinX
     nb_size_expanded = rep_array(nb_size[1], d*n);
-  } else if (model_obs == 2) {  
+  } else if (model_obs == 2) {
     // NegBin2D
     nb_size_expanded = observe_onsets_with_delay(rep_array(nb_size[1], n), reporting_delay, D, rep_array(d, n));
-  } else if (model_obs == 3) { 
+  } else if (model_obs == 3) {
     // NegBin1D
     nb_size_expanded = multiply_array(nb_size[1], exp_obs);
-  } else if (model_obs == 4 || model_obs == 5) {  
-    // NegBin2M and NegBin1M: random effect reprezentation
-    array[n] real lambda_with_re = multiply_array(random_effect, lambda);
-    exp_obs = observe_onsets_with_delay(lambda_with_re, reporting_delay, D, rep_array(d, n));
   }
-  
+
   // Sample the predictions
   array[n_predict] int predicted_counts;
   int predicted_index = 0;
@@ -41,9 +36,9 @@ array[] int predict_rng(array[] real lambda, vector nb_size,
             );
         } else {
           predicted_counts[predicted_index + j] = neg_binomial_2_rng(
-              exp_obs[D_index + p[i] + j], 
+              exp_obs[D_index + p[i] + j],
               nb_size_expanded[D_index + p[i] + j]
-            ); 
+            );
         }
       }
       predicted_index += missing_reports;
