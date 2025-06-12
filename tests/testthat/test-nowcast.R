@@ -41,7 +41,7 @@ test_that("Model sampling output is stable and plausible", {
     # Run sampling with fixed seed
     fit <- mod$sample(
       data = c(data_list, model_obs = model_obs, obs = list(obs_flat)),
-     # seed = 123,
+      seed = 123,
       parallel_chains = 4,
       iter_sampling = 1000,
       iter_warmup = 1000,
