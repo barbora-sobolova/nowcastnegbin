@@ -1,5 +1,4 @@
 test_that("Model sampling output is stable and plausible", {
-
   # Compile the model
   mod <- cmdstanr::cmdstan_model(system.file(
     "stan",
@@ -16,8 +15,10 @@ test_that("Model sampling output is stable and plausible", {
   params$probs <- c(0.6, 0.4)
   params$nb_size <- 1.5
 
-  index_mat <- lower.tri(matrix(nrow = lgt, ncol = params$max_lag),
-                         diag = TRUE)[lgt:1, ]
+  index_mat <- lower.tri(
+    matrix(nrow = lgt, ncol = params$max_lag),
+    diag = TRUE
+  )[lgt:1, ]
   data_list <- list(
     n = nrow(index_mat),
     m = sum(index_mat),
@@ -26,16 +27,29 @@ test_that("Model sampling output is stable and plausible", {
   )
 
   # Loop over the model types
-  model_names <- c("Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M",
-                   "NegBin1M")
+  model_names <- c(
+    "Poisson",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBin2M",
+    "NegBin1M"
+  )
   for (model_obs in 0:5) {
     # Generate data
     set.seed(123456)
     obs_full <- with(
       params,
-      generate_reports(lgt, max_lag, log_lambda0, rw_sd, probs, nb_size,
-                       model = model_names[model_obs + 1])
+      generate_reports(
+        lgt,
+        max_lag,
+        log_lambda0,
+        rw_sd,
+        probs,
+        nb_size,
+        model = model_names[model_obs + 1]
       )
+    )
     obs_flat <- t(obs_full$reports)[t(index_mat)]
 
     # Run sampling with fixed seed
@@ -51,7 +65,9 @@ test_that("Model sampling output is stable and plausible", {
     )
 
     # Extract the quantiles
-    probs_sampled <- fit$draws(variables = paste0("reporting_delay[", 1:params$max_lag, "]")) |>
+    probs_sampled <- fit$draws(
+      variables = paste0("reporting_delay[", 1:params$max_lag, "]")
+    ) |>
       apply(3, quantile, probs = c(0.025, 0.975))
     lambda_sampled <- fit$draws(variables = paste0("lambda[", lgt, "]")) |>
       apply(3, quantile, probs = c(0.025, 0.975))
