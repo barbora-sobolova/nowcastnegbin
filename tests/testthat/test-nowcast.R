@@ -11,8 +11,8 @@ test_that("Model sampling output is stable and plausible", {
   params$log_lambda0 <- log(100)
   params$rw_sd <- 0.01
   lgt <- 100
-  params$max_lag <- 2
-  params$probs <- c(0.6, 0.4)
+  params$max_lag <- 3
+  params$probs <- c(0.5, 0.3, 0.2)
   params$nb_size <- 1.5
 
   index_mat <- lower.tri(
@@ -69,7 +69,7 @@ test_that("Model sampling output is stable and plausible", {
       variables = paste0("reporting_delay[", 1:params$max_lag, "]")
     ) |>
       apply(3, quantile, probs = c(0.025, 0.975))
-    lambda_sampled <- fit$draws(variables = paste0("lambda[", lgt, "]")) |>
+    lambda_sampled <- fit$draws(variables = paste0("lambda[", lgt - 1:0, "]")) |>
       apply(3, quantile, probs = c(0.025, 0.975))
 
     # Compare, whether the true value is inside the 95% CI
@@ -81,7 +81,9 @@ test_that("Model sampling output is stable and plausible", {
     }
     expect_true(all(probs_sampled[1, ] < params$probs))
     expect_true(all(probs_sampled[2, ] > params$probs))
-    expect_lt(lambda_sampled[1], obs_full$exp_obs_total[lgt])
-    expect_gt(lambda_sampled[2], obs_full$exp_obs_total[lgt])
+    expect_true(all(lambda_sampled[1, ] < obs_full$exp_obs_total[lgt - 1:0]))
+    expect_true(all(lambda_sampled[2, ] > obs_full$exp_obs_total[lgt - 1:0]))
+    # expect_lt(lambda_sampled[1], obs_full$exp_obs_total[lgt])
+    # expect_gt(lambda_sampled[2], obs_full$exp_obs_total[lgt])
   }
 })
