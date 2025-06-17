@@ -1,4 +1,24 @@
-array[] int combine_obs_with_predicted_obs(array[] int obs, array[] int predicted_counts, array[] int P, array[] int p, int d, array[] int D) {
+/**
+ * Combine the observed and predicted partial counts
+ *
+ * Combines the flat array of observations with the flat array of predicted
+ * counts.
+ *
+ * @param obs Observations, an array of integers
+ *
+ * @param predicted_counts, an array of the predicted counts
+ *
+ * @param d maximum delay
+ *
+ * @param P,p,D arrays of lookup variables
+ *
+ * @return The completed reporting triangle as a flat array concatenated
+ * rowwise
+ **/
+array[] int combine_obs_with_predicted_obs(array[] int obs,
+                                             array[] int predicted_counts,
+                                             array[] int P, array[] int p,
+                                             int d, array[] int D) {
     int n = num_elements(p);
     array[n] int reported_cases = rep_array(0, n);
     int predicted_index = 0;
