@@ -1,21 +1,36 @@
-array[] int predict_rng(array[] real exp_obs, vector nb_size,
-                          vector reporting_delay,
+/**
+ * Predict the missing partial reports
+ *
+ * Predicts the entries of the reporting triangle.
+ *
+ * @param exp_obs Expectations of the partial counts, an array of reals. For the
+ * Poisson, NegBin2M and NegBin1M model, it includes the random effect.
+ *
+ * @param nb_size Size = (1 / Dispersion parameter) for the negative binomial
+ * model, an array of size 0 for Poisson (being ignored), same size `exp_obs` as
+ * the `exp_obs` paramater for the negative binomial models. Used only for
+ * NegBinX, NegBin2D and NegBin1D models.
+ *
+ * @param model_obs Indicator of the model used (0 for Poisson, 1 for NegBinX,
+ * 2 for NegBin2D, 3 for NegBin1D, 4 for NegBin2M and 5 for NegBin1M).
+ *
+ * @param d maximum delay
+ *
+ * @param P,p,D arrays of lookup variables
+ *
+ * @return The predicted partial reports as a flat array concatenated rowwise
+ *
+ * @note The function selects between the negative binomial models and the
+ * Poisson model based on the `model_obs` flag. It uses
+ * `neg_binomial_2_rng` for NegBinX, NegBin2D and NegBin1D models and
+ * `poisson_rng` for the Poisson, NegBin2M and NegBin1M models.
+ **/
+array[] int predict_rng(array[] real exp_obs, array[] real nb_size,
                           int model_obs, array[] int P, array[] int p, int d,
                           array[] int D) {
   // Prepare the expected values and the neg. binom sizes
   int n = num_elements(p);
   int n_predict = d * n - sum(p);
-  array[n*d] real nb_size_expanded;
-  if (model_obs == 1) {
-    // NegBinX
-    nb_size_expanded = rep_array(nb_size[1], d*n);
-  } else if (model_obs == 2) {
-    // NegBin2D
-    nb_size_expanded = observe_onsets_with_delay(rep_array(nb_size[1], n), reporting_delay, D, rep_array(d, n));
-  } else if (model_obs == 3) {
-    // NegBin1D
-    nb_size_expanded = multiply_array(nb_size[1], exp_obs);
-  }
 
   // Sample the predictions
   array[n_predict] int predicted_counts;
@@ -37,7 +52,7 @@ array[] int predict_rng(array[] real exp_obs, vector nb_size,
         } else {
           predicted_counts[predicted_index + j] = neg_binomial_2_rng(
               exp_obs[D_index + p[i] + j],
-              nb_size_expanded[D_index + p[i] + j]
+              nb_size[D_index + p[i] + j]
             );
         }
       }
