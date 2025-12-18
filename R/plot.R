@@ -261,6 +261,7 @@ plot_crps <- function(
 #' @description This function plots and possibly saves the incidence trajectory
 #' used for the case study. The first and the last estimation windows will be
 #' highlighted to see the chunk of the data we use for model training.
+#'
 #' @param full_data a data frame of the whole trajectory containing columns
 #' `date` and columns `value_0w`, `value_1w`, etc. until `max_lag - 1`.
 #' @param start_date a date (indeed in the date format), where the training data
@@ -272,7 +273,12 @@ plot_crps <- function(
 #' lag as the second and so on.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
+#'
 #' @return a ggplot object
+#'
+#' @import dplyr ggplot2
+#' @importFrom ggpubr geom_bracket
+#'
 #' @export
 plot_trajectory <- function(
   full_data,

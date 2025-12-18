@@ -20,7 +20,8 @@
 #'   binomial distribution. Not applicable for the Poisson model.}
 #'  }
 #'
-#'  @importFrom dplyr ungroup
+#'  @import dplyr
+#'  @importFrom tidybayes gather_draws
 #'
 #'  @export
 fit_stan_model <- function(

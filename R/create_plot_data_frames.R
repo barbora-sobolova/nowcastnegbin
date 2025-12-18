@@ -58,6 +58,7 @@ create_totals_data_frame <- function(
 #' }
 #'
 #' @import dplyr
+#' @importFrom scoringutils crps_sample
 #' @importFrom stats quantile
 #' @importFrom tibble as_tibble
 #'
@@ -92,11 +93,11 @@ summarize_nowcast <- function(
   df_nowcast_plot <- df_total |>
     # The `df_total` data frame contains the final and the preliminary counts.
     # We need the final observed counts to evaluate the nowcasts via CRPS.
-    filter(data == "Final") |>
+    dplyr::filter(data == "Final") |>
     # Join the two data frames to put the predicted and the true values together
-    inner_join(df_nowcast, by = "date") |>
-    summarize(
+    dplyr::inner_join(df_nowcast, by = "date") |>
     dplyr::group_by(.data$date, .data$nowcast_date, .data$Distribution) |>
+    dplyr::summarize(
       # Calculate the CRPS from the MCMC sample. We pass counts[1] as the true
       # observed value, since this is the same value for each date.
       CRPS = scoringutils::crps_sample(
@@ -108,15 +109,15 @@ summarize_nowcast <- function(
       # Calculate the mean and the quantiles
       mean = mean(.data$.value),
       quantiles = list(
-        as_tibble(
+        tibble::as_tibble(
           as.list(
             quantile(.data$.value, probs = quantiles_to_get / 100)
           )
         )
       )
     ) |>
-    unnest(quantiles) |>
-    ungroup()
+    tidyr::unnest(.data$quantiles) |>
+    dplyr::ungroup()
   # Rename the quantile columns to have nicer names
   cols_to_rename <- ncol(df_nowcast_plot) + 1 -
     rev(seq_along(quantiles_to_get))
