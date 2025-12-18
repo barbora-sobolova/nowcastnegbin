@@ -71,11 +71,6 @@ summarize_nowcast <- function(
   # Recover the beginning of the estimation window from the total
   # counts
   start_date <- min(df_total$date)
-  # Recover the length of the estimation window from the total counts.
-  # We have to add 1 to the difference of the two dates, since
-  # `date_of_the_nowcast` is included as the last point of the estimation
-  # window.
-  length_of_train_data <- (date_of_the_nowcast - start_date + 1) / 7
 
   # Reformat the `week` column of the data frame with the nowcasts, so that it's
   # aligned with the actual date
