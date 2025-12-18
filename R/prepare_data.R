@@ -25,7 +25,7 @@ get_time_horizons <- function(
     train_data_begin = start_date + (seq_len(timesteps_to_fit) - 1) * 7
   ) |>
     mutate(
-      nowcast_date = train_data_begin + (length_of_train_data - 1) * 7
+      nowcast_date = .data$train_data_begin + (length_of_train_data - 1) * 7
     )
 }
 
@@ -52,9 +52,9 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
     path,
     show_col_types = FALSE
   ) |>
-    filter(
+    dplyr::filter(
       # No stratification, we work with the aggregate numbers only
-      age_group == "00+",
+      .data$age_group == "00+",
       # Filter only the desired time period
       date >= start_date & date < analysis_end_date
     )

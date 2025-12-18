@@ -36,7 +36,7 @@ fit_stan_model <- function(
   )
   # Extract the nowcasts
   df_nowcast <- fitted_model |>
-    tidybayes::gather_draws(nowcast[week]) |>
+    tidybayes::gather_draws(nowcast[week]) |> # nolint
     mutate(Distribution = model_obs) |>
     # Keep only the counts that needed correction, which are those located at
     # the last `max_lag - 1`. we can calculate the last positions using the
@@ -47,13 +47,13 @@ fit_stan_model <- function(
     ungroup()
   # Extract the estimates of the expected counts
   df_lambda <- fitted_model |>
-    tidybayes::gather_draws(lambda[week]) |>
+    tidybayes::gather_draws(lambda[week]) |> # nolint
     mutate(Distribution = model_obs) |>
     dplyr::select(-".variable") |>
     ungroup()
   # Extract the delay probabilities
   df_delay_prob <- fitted_model |>
-    tidybayes::gather_draws(reporting_delay[delay]) |>
+    tidybayes::gather_draws(reporting_delay[delay]) |> # nolint
     mutate(Distribution = model_obs) |>
     dplyr::select(-".variable") |>
     ungroup()
@@ -72,7 +72,7 @@ fit_stan_model <- function(
   # the Poisson model
   if (model_obs != 0) {
     df_nb_size <- fitted_model |>
-      tidybayes::gather_draws(nb_size[1]) |>
+      tidybayes::gather_draws(nb_size[1]) |> # nolint
       mutate(Distribution = model_obs) |>
       dplyr::select(-".variable") |>
       ungroup()

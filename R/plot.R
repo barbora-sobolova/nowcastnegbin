@@ -36,7 +36,7 @@ plot_nowcast <- function(
   # Convert and order factors so that they display with correct labels and in a
   # correct order
   df_summarized_nowcast <- df_summarized_nowcast |>
-    mutate(Distribution = factor(Distribution, labels = model_codes))
+    mutate(Distribution = factor(.data$Distribution, labels = model_codes))
   df_total <- df_total |>
     mutate(data = factor(data, levels = c("Preliminary", "Final")))
   # Plot the nowcasts
@@ -45,25 +45,30 @@ plot_nowcast <- function(
     geom_line(
       data = df_summarized_nowcast,
       mapping = aes(
-        x = date,
-        y = quantile_50,
-        color = Distribution,
+        x = .data$date,
+        y = .data$quantile_50,
+        color = .data$Distribution,
         linetype = "Nowcast"
       )
     ) +
     # Different data versions - preliminary and final
     geom_line(
       data = df_total,
-      mapping = aes(x = date, y = counts, color = data, linetype = data)
+      mapping = aes(
+        x = .data$date,
+        y = .data$counts,
+        color = .data$data,
+        linetype = .data$data
+      )
     ) +
     # 95% prediction intervals
     geom_ribbon(
       data = df_summarized_nowcast,
       mapping = aes(
-        x = date,
-        ymin = quantile_2.5,
-        ymax = quantile_97.5,
-        fill = Distribution,
+        x = .data$date,
+        ymin = .data$quantile_2.5,
+        ymax = .data$quantile_97.5,
+        fill = .data$Distribution,
         alpha = "PI_95"
       )
     ) +
@@ -71,10 +76,10 @@ plot_nowcast <- function(
     geom_ribbon(
       data = df_summarized_nowcast,
       mapping = aes(
-        x = date,
-        ymin = quantile_25,
-        ymax = quantile_75,
-        fill = Distribution,
+        x = .data$date,
+        ymin = .data$quantile_25,
+        ymax = .data$quantile_75,
+        fill = .data$Distribution,
         alpha = "PI_50"
       )
     ) +
@@ -156,11 +161,15 @@ plot_coverage <- function(
 ) {
   # Calculate the empirical coverage
   df_coverage <- df_summarized_nowcast |>
-    group_by(delay, Distribution) |>
+    group_by(.data$delay, .data$Distribution) |>
     summarize(
-      coverage_50 = sum(true_val > quantile_25 & true_val < quantile_75) / n(),
-      coverage_95 = sum(true_val > quantile_2.5 & true_val < quantile_97.5) /
-        n(),
+      coverage_50 = sum(
+        .data$true_val > .data$quantile_25 & .data$true_val < .data$quantile_75
+      ) / n(),
+      coverage_95 = sum(
+        .data$true_val > .data$quantile_2.5 &
+          .data$true_val < .data$quantile_97.5
+      ) / n(),
     ) |>
     ungroup() |>
     # Pivot for easier definition of the alpha aesthetic
@@ -173,10 +182,10 @@ plot_coverage <- function(
   coverage_plot <- ggplot(
     df_coverage,
     aes(
-      x = empirical_coverage,
-      y = Distribution,
-      fill = Distribution,
-      alpha = nominal_coverage
+      x = .data$empirical_coverage,
+      y = .data$Distribution,
+      fill = .data$Distribution,
+      alpha = .data$nominal_coverage
     )
   ) +
     geom_col(position = "identity") +
@@ -227,7 +236,7 @@ plot_crps <- function(
 ) {
   crps_plot <- ggplot(
     df_summarized_nowcast,
-    aes(x = CRPS, color = Distribution)
+    aes(x = .data$CRPS, color = .data$Distribution)
   ) +
     # Plot the density of the CRPS
     geom_line(stat = "density", alpha = 0.6) +
@@ -290,17 +299,17 @@ plot_trajectory <- function(
   # window in order to place the brace correctly above them.
   first_window_max_cases <- totals |>
     filter(date <= first_window_end) |>
-    pull(counts) |>
+    pull(.data$counts) |>
     # na.rm = TRUE is usually not needed, but it prevents the plot element to
     # disappear in the case of missing values
     max(na.rm = TRUE)
   last_window_max_cases <- totals |>
     filter(date >= last_window_beg) |>
-    pull(counts) |>
+    pull(.data$counts) |>
     max(na.rm = TRUE)
   # 5% offset of the braces to avoid overplotting the trajectory
   bracket_offset <- first_window_max_cases * 0.05
-  trajectory_plot <- ggplot(totals, aes(x = date, y = counts)) +
+  trajectory_plot <- ggplot(totals, aes(x = .data$date, y = .data$counts)) +
     geom_line() +
     # Highlight the first window of training data excluding the nowcasting part
     ggpubr::geom_bracket(

@@ -80,7 +80,7 @@ summarize_nowcast <- function(
   # aligned with the actual date
   df_nowcast <- df_nowcast |>
     mutate(
-      date = start_date + (week - 1) * 7,
+      date = start_date + (.data$week - 1) * 7,
       nowcast_date = date_of_the_nowcast
     ) |>
     # Remove the, now redundant, week column
@@ -95,22 +95,22 @@ summarize_nowcast <- function(
     filter(data == "Final") |>
     # Join the two data frames to put the predicted and the true values together
     inner_join(df_nowcast, by = "date") |>
-    group_by(date, nowcast_date, Distribution) |>
     summarize(
+    dplyr::group_by(.data$date, .data$nowcast_date, .data$Distribution) |>
       # Calculate the CRPS from the MCMC sample. We pass counts[1] as the true
       # observed value, since this is the same value for each date.
       CRPS = scoringutils::crps_sample(
-        observed = counts[1],
-        predicted = .value
+        observed = .data$counts[1],
+        predicted = .data$.value
       ),
       # Keep the true value
-      true_val = counts[1],
+      true_val = .data$counts[1],
       # Calculate the mean and the quantiles
-      mean = mean(.value),
+      mean = mean(.data$.value),
       quantiles = list(
         as_tibble(
           as.list(
-            quantile(.value, probs = quantiles_to_get / 100)
+            quantile(.data$.value, probs = quantiles_to_get / 100)
           )
         )
       )
