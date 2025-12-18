@@ -32,11 +32,16 @@ fit_stan_model <- function(
     mutate(Distribution = model_obs) |>
     dplyr::select(-".variable") |>
     ungroup()
+  # Extract the diagnostic summary
+  diagnostics <- fitted_model$diagnostic_summary() |>
+    as.data.frame() |>
+    mutate(Distribution = model_obs)
   # Return the draws as a list
   ret_list <- list(
     nowcast = df_nowcast,
     lambda = df_lambda,
-    delay_prob = df_delay_prob
+    delay_prob = df_delay_prob,
+    diagnostics = diagnostics
   )
   # Extract the draws of the negative binomial size parameter if we don't fit
   # the Poisson model
@@ -49,7 +54,6 @@ fit_stan_model <- function(
   } else {
     df_nb_size <- NULL
   }
-  browser()
   # return the draws as a list
   ret_list <- c(ret_list, list(nb_size = df_nb_size))
   ret_list

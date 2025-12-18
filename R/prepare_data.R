@@ -1,4 +1,17 @@
-load_triangle <- function(path, start_date, num_of_weeks, max_lag) {
+get_time_horizons <- function(
+  start_date,
+  timesteps_to_fit,
+  length_of_train_data
+) {
+  data.frame(
+    train_data_begin = start_date + (seq_len(timesteps_to_fit) - 1) * 7
+  ) |>
+    mutate(
+      nowcast_date = train_data_begin + (length_of_train_data - 1) * 7
+    )
+}
+
+load_preprocessed_data <- function(path, start_date, num_of_weeks) {
   # Set the end date. It will be excluded from the dataset
   analysis_end_date <- start_date + num_of_weeks * 7
   # Load the full dataset
@@ -10,8 +23,18 @@ load_triangle <- function(path, start_date, num_of_weeks, max_lag) {
       # No stratification, we work with the aggregate numbers only
       age_group == "00+",
       # Filter only the desired time period
-      date >= analysis_start_date & date < analysis_end_date
+      date >= start_date & date < analysis_end_date
     )
+}
+
+filter_train_period <- function(full_data, start_date, end_date, max_lag) {
+  full_data |> dplyr::filter(
+    # Filter only the desired time period including the last date
+    date >= start_date & date <= end_date
+  ) |>
+    dplyr::select(paste0("value_", 1:max_lag - 1, "w")) |>
+    # Convert to matrix for simpler calculations
+    as.matrix()
 }
 
 mock_unobserved <- function(obs_counts) {
@@ -29,15 +52,16 @@ mock_unobserved <- function(obs_counts) {
   obs_mat
 }
 
-get_stan_data <- function(obs_mat) {
-  # Assume the latest counts to be unobserved
-  obs_mat_truncated <- obs_mat |> mock_unobserved()
+get_stan_data <- function(train_data) {
+  # Replace the known counts by NAs to create the reporting triangle
+  obs_mat_truncated <- mock_unobserved(train_data)
+
   # Flatten the observation matrix by row
   obs_flat <- obs_mat_truncated |> t() |> c()
   list(
     # Total number of days/weeks/time units. This is the number of rows of the
     # reporting triangle
-    n = nrow(obs_mat),
+    n = nrow(obs_mat_truncated),
     # Total number of non-empty cells of the reporting triangle, can be
     # calculated as the total number of non-NA elements of the observation
     # matrix.
@@ -47,7 +71,7 @@ get_stan_data <- function(obs_mat) {
     p = apply(obs_mat_truncated, 1, function(x) sum(!is.na(x))),
     # Maximum lag with delay zero counting as the first lag. This is the number
     # of columns of the reporting triangle.
-    d = ncol(obs_mat),
+    d = ncol(obs_mat_truncated),
     # Observations in the flat format with the unobserved entries skipped. Must
     # be defined like this, otherwise the look-up indices in the STAN algorithm
     # won't work.
