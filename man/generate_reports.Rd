@@ -34,8 +34,8 @@ negbin distribution. The lower, the more dispersed}
 The reporting table as a matrix
 }
 \description{
-Generate the full reporting table, i.e. with no right censoring. The
-mean process follows an exponential random walk.
+Generate the full reporting table, i.e. with no right censoring.
+The mean process follows an exponential random walk.
 }
 \examples{
 # Example: Sample a reporting table from the Poisson model for 100 days,
