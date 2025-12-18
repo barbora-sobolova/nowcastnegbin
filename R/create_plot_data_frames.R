@@ -1,3 +1,17 @@
+#' Create a data frame from the reporting table
+#'
+#' @description This function creates a ready-to-be-plotted data frame of the
+#' total incidence from the reporting table
+#'
+#' @param train_data the reporting table in a matrix format
+#' @param start_date date (in a date format) when the incidence begins
+#'
+#' @return a data frame with columns `counts` and `date`. The data frame is in a
+#' long format. Its first half contains the complete total incidence. The second
+#' half contains the incomplete sums. The data versions are indicated by a
+#' string in the `data` column.
+#'
+#' @export
 create_totals_data_frame <- function(
   train_data,
   start_date
@@ -14,6 +28,40 @@ create_totals_data_frame <- function(
   )
 }
 
+#' Summarize the MCMC draws from STAN
+#'
+#' @description This function creates a data frame containing summarized
+#' nowcast draws from the MCMC model-fitting procedure. The summaries calculated
+#' are the mean, the median, the CRPS and selected quantiles. We calculate
+#' the 2.5%, 25%, 75% and the 97.5% quantiles to prepare for the plotting
+#' of the 50% and 95% prediction intervals.
+#'
+#' @param df_nowcast a data frame with columns `week`, `.value`, `Distribution`
+#' @param df_total a data frame containing columns `date`, `counts` and `data`.
+#' The last column `data` is an indicator, whether the values in the `counts`
+#' column are the final sums of the counts, or the preliminary data version.
+#' @param date_of_the_nowcast a date indicating the day when the nowcasting
+#' takes place.
+#'
+#' @return a data frame with columns
+#' \describe{
+#'   \item{\code{date}}{date of the nowcasting target,}
+#'   \item{\code{nowcast_date}}{date when the nowcast was calculated,}
+#'   \item{\code{Distribution}}{numeric code of the observation model,}
+#'   \item{\code{CRPS}}{the CRPS calculated from the sample of the nowcasts,}
+#'   \item{\code{true_val}}{the final value  of the incidence to compare the
+#'   nowcast to,}
+#'   \item{\code{mean}}{mean of the sampled nowcasts,}
+#'   \item{\code{quantile_50}}{median of the sampled nowcasts,}
+#'   \item{\code{quantile_2.5}, \code{quantile_25}, \code{quantile_75},
+#'   \code{quantile_97.5}}{quantiles of the sampled nowcasts,}
+#' }
+#'
+#' @import dplyr
+#' @importFrom stats quantile
+#' @importFrom tibble as_tibble
+#'
+#' @export
 summarize_nowcast <- function(
   df_nowcast,
   df_total,

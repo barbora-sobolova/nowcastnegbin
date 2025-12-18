@@ -1,3 +1,28 @@
+#' Fit the nowcasting model in STAN
+#'
+#' @description Fit the compiled STAN model and return the draws of selected
+#' parameters in a list.
+#'
+#' @param compiled_model a compiled STAN model.
+#' @param stan_data a list of data and parameters accepted by the STAN model
+#' returned by the `get_stan_data()` function
+#' @param model_obs an integer indicating the observation model. 0 - Poisson,
+#' 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.
+#' @param stan_settings a list of STAN settings
+#'
+#' @return list of the data frames with the MCMC draws of different quantities:
+#' \describe{
+#'   \item{\code{nowcast}}{samples from the nowcasting distribution,}
+#'   \item{\code{lambda}}{samples of the mean incidence trajectory,}
+#'   \item{\code{delay_prob}}{samples of the delay probability vector,}
+#'   \item{\code{diagnostics}}{a diagnostic summary of the Markov chains,}
+#'   \item{\code{nb_size}}{The draws of the size parameter of the negative
+#'   binomial distribution. Not applicable for the Poisson model.}
+#'  }
+#'
+#'  @importFrom dplyr ungroup
+#'
+#'  @export
 fit_stan_model <- function(
   compiled_model,
   stan_data,

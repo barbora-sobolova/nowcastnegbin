@@ -1,3 +1,30 @@
+#' Plot and save the nowcasts
+#'
+#' @description This function plots and possibly saves the nowcasts from all
+#' observation models for a single date. The nowcasts are plotted along the
+#' data for comparison.
+#'
+#' @param df_summarized_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_50`
+#' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
+#' `quantile_97.5` (bounds of the prediction intervals) and `date` (x-axis
+#' dates)
+#' @param df_total a data frame
+#' @param model_codes a vector of observation model names. Must be in the
+#' correct order to label the models correctly. The order in case all models are
+#' used is: "Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M",
+#' "NegBin1M".
+#' @param model_colors a named vector of the model colors corresponding to each
+#' observation model
+#' @param nowcast_date a date, when the nowcast is made
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggplot2::ggsave()}
+#'
+#' @return a ggplot object with one facet per observation model
+#'
+#' @import dplyr ggplot2
+#'
+#' @export
 plot_nowcast <- function(
   df_summarized_nowcast,
   df_total,
@@ -97,6 +124,30 @@ plot_nowcast <- function(
   nowcasts_plot
 }
 
+#' Plot and save the coverage
+#'
+#' @description This function plots and possibly saves the chart of empirical
+#' vs. nominal coverage. Only 50% and 95% coverage is considered.
+#'
+#' @param df_summarized_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_2.5`,
+#' `quantile_25`, `quantile_75`, `quantile_97.5` (bounds of the prediction
+#' intervals), `delay` (the nowcasting horizon) and the true value of the
+#' prediction target `true_val`
+#' @param model_codes a vector of observation model names. Must be in the
+#' correct order to label the models correctly. The order in case all models are
+#' used is: "Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M",
+#' "NegBin1M".
+#' @param model_colors a named vector of the model colors corresponding to each
+#' observation model
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a ggplot object with one facet per nowcasting horizon
+#'
+#' @import dplyr ggplot2
+#'
+#' @export
 plot_coverage <- function(
   df_summarized_nowcast,
   model_codes,
@@ -151,6 +202,24 @@ plot_coverage <- function(
   coverage_plot
 }
 
+#' Plot and save the CRPS density
+#'
+#' @description This function plots and possibly saves the chart of CRPS
+#' densities for all models.
+#'
+#' @param df_summarized_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `CRPS` (the empirical
+#' distribution of the CRPS) and `delay` (the nowcasting horizon)
+#' @param model_colors a named vector of the model colors corresponding to each
+#' observation model
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a ggplot object with one facet per nowcasting horizon
+#'
+#' @import dplyr ggplot2
+#'
+#' @export
 plot_crps <- function(
   df_summarized_nowcast,
   model_colors,
@@ -178,6 +247,24 @@ plot_crps <- function(
   crps_plot
 }
 
+#' Plot the whole incidence trajectory
+#'
+#' @description This function plots and possibly saves the incidence trajectory
+#' used for the case study. The first and the last estimation windows will be
+#' highlighted to see the chunk of the data we use for model training.
+#' @param full_data a data frame of the whole trajectory containing columns
+#' `date` and columns `value_0w`, `value_1w`, etc. until `max_lag - 1`.
+#' @param start_date a date (indeed in the date format), where the training data
+#' start. The starting point will be included.
+#' @param length_of_train_data a number, the length of the estimation window
+#' (endpoints included)
+#' @param max_lag maximum reporting delay represented by the number of columns
+#' of the reporting table. In this way, the 0-th lag counts as the first, 1-st
+#' lag as the second and so on.
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggplot2::ggsave()}
+#' @return a ggplot object
+#' @export
 plot_trajectory <- function(
   full_data,
   start_date,
@@ -260,6 +347,20 @@ plot_trajectory <- function(
   trajectory_plot
 }
 
+#' Save a figure in the PDF and the PNG format
+#'
+#' @param figure a ggplot chart to be saved
+#' @param path a file path indicating where to save the plot, typically starting
+#'  with "inst/figure". No file extention should be included.
+#' @param width,height plot size as accepted by the \code{ggplot2::ggsave()}
+#' function
+#'
+#' @return the path to the saved file resulting from the last
+#' \code{ggplot2::ggsave()} will be returned as a string
+#'
+#' @import ggplot2
+#'
+#' @export
 save_figure <- function(figure, path, width, height) {
   # Save the figure in PDF for a LaTeX manuscript
   ggsave(
