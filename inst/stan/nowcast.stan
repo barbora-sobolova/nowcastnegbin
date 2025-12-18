@@ -48,7 +48,7 @@ transformed parameters {
   // Complete reports
   array[d*n] real exp_obs_complete = observe_onsets_with_delay(exp_total_obs, reporting_delay, D, rep_array(d, n));
   // Size parameter of the NegBin distribution expanded according to the
-  // observation modelto match the length of the mean value
+  // observation model to match the length of the mean value
   // Right truncated reports
   array[m] real nb_size_expanded = expand_nb_size(exp_obs, nb_size, reporting_delay, model_obs, P, p);
   // Size parameter of the NegBin distribution expanded according to the
