@@ -5,15 +5,16 @@ library(qs2)
 # Set targets options
 tar_option_set(
   packages = c(
-    "scoringutils",
+    "cmdstanr",
+    "dplyr",
     "ggplot2",
     "ggpubr",
-    "purrr",
     "here",
-    "tidyr",
-    "dplyr",
+    "purrr",
     "qs2",
-    "readr"
+    "readr",
+    "scoringutils",
+    "tidyr"
   ),
   format = "qs", # Use qs format (qs2 is used via repository option)
   memory = "transient", # Free memory after each target completes
