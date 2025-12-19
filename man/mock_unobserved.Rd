@@ -11,7 +11,7 @@ mock_unobserved(obs_counts)
 counts in its columns.}
 }
 \value{
-a matrix with the same number of columns, with the bottom-left part
+a matrix with the same number of columns, with the bottom-right part
 of the reporting triangle filled by \code{NA} values.
 }
 \description{

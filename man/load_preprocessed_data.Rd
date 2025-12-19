@@ -20,6 +20,7 @@ a data frame containing columns \code{date} and columns
 \code{value_0w}, \code{value_1w}, etc. until \code{max_lag - 1}.
 }
 \description{
-This function extracts the data to fit the nowcasting model to
-a single rolling window. The data are returned in the form of a matrix.
+This function loads the full preprocessed dataset, that is
+already in the form of a reporting triangle, and restricts it to the period
+used in the case study
 }

@@ -27,11 +27,6 @@ list of the data frames with the MCMC draws of different quantities:
 \item{\code{nb_size}}{The draws of the size parameter of the negative
 binomial distribution. Not applicable for the Poisson model.}
 }
-
-@import dplyr
-@importFrom tidybayes gather_draws
-
-@export
 }
 \description{
 Fit the compiled STAN model and return the draws of selected

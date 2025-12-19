@@ -31,8 +31,9 @@ get_time_horizons <- function(
 
 #' Load the data in the reporting triangle format
 #'
-#' @description This function extracts the data to fit the nowcasting model to
-#' a single rolling window. The data are returned in the form of a matrix.
+#' @description This function loads the full preprocessed dataset, that is
+#' already in the form of a reporting triangle, and restricts it to the period
+#' used in the case study
 #'
 #' @param path the path of the data file
 #' @param start_date a date in the date format, the starting date for the whole
@@ -99,7 +100,7 @@ filter_train_period <- function(full_data, start_date, end_date, max_lag) {
 #' @param obs_counts a matrix of the partial counts with the complete delayed
 #' counts in its columns.
 #'
-#' @return a matrix with the same number of columns, with the bottom-left part
+#' @return a matrix with the same number of columns, with the bottom-right part
 #' of the reporting triangle filled by `NA` values.
 #'
 #' @export

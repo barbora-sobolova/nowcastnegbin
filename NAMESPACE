@@ -2,6 +2,7 @@
 
 export(create_totals_data_frame)
 export(filter_train_period)
+export(fit_stan_model)
 export(generate_reports)
 export(get_stan_data)
 export(get_time_horizons)
@@ -24,3 +25,4 @@ importFrom(stats,rnbinom)
 importFrom(stats,rnorm)
 importFrom(stats,rpois)
 importFrom(tibble,as_tibble)
+importFrom(tidybayes,gather_draws)

@@ -9,7 +9,8 @@
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
 #' `quantile_97.5` (bounds of the prediction intervals) and `date` (x-axis
 #' dates)
-#' @param df_total a data frame
+#' @param df_total a data frame with columns `date`, `counts` and `data`
+#' returned by the function create_totals_data_frame()
 #' @param model_codes a vector of observation model names. Must be in the
 #' correct order to label the models correctly. The order in case all models are
 #' used is: "Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M",

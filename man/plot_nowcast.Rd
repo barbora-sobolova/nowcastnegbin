@@ -20,7 +20,8 @@ plot_nowcast(
 \code{quantile_97.5} (bounds of the prediction intervals) and \code{date} (x-axis
 dates)}
 
-\item{df_total}{a data frame}
+\item{df_total}{a data frame with columns \code{date}, \code{counts} and \code{data}
+returned by the function create_totals_data_frame()}
 
 \item{model_codes}{a vector of observation model names. Must be in the
 correct order to label the models correctly. The order in case all models are
