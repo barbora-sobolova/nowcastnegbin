@@ -59,9 +59,9 @@ transformed parameters {
 
 model {
   // Prior
-  init_onsets ~ normal(3, 2) T[0,];
+  init_onsets ~ normal(3, 2) T[0, ];
   rw_noise ~ std_normal();
-  rw_sd ~ normal(0, 0.2) T[0,];
+  rw_sd ~ normal(0, 0.2) T[0, ];
   reporting_delay ~ dirichlet(rep_vector(1, d));
   nb_size ~ normal(1, 3) T[0, ];
   // Random effect for the NegBin1M and NegBin2M models
