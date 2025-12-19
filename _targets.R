@@ -95,8 +95,8 @@ list(
   tar_target(full_data, {
     load_preprocessed_data(
       here::here(
-        "data",
-        "SARI",
+        "inst",
+        "extdata",
         "reporting_triangle-icosari-sari-preprocessed.csv"
       ),
       start_date = analysis_start_date,
