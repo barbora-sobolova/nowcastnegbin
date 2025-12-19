@@ -164,7 +164,8 @@ plot_coverage <- function(
     group_by(.data$delay, .data$Distribution) |>
     summarize(
       coverage_50 = sum(
-        .data$true_val >= .data$quantile_25 & .data$true_val <=.data$quantile_75
+        .data$true_val >= .data$quantile_25 &
+          .data$true_val <= .data$quantile_75
       ) / n(),
       coverage_95 = sum(
         .data$true_val >= .data$quantile_2.5 &

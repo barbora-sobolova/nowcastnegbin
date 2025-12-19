@@ -52,7 +52,7 @@ transformed parameters {
   // Right truncated reports
   array[m] real nb_size_expanded = expand_nb_size(exp_obs, nb_size, reporting_delay, model_obs, P, p);
   // Size parameter of the NegBin distribution expanded according to the
-  // observation modelto match the length of the mean value
+  // observation model to match the length of the mean value
   // Complete reports
   array[d*n] real nb_size_expanded_complete = expand_nb_size(exp_obs_complete, nb_size, reporting_delay, model_obs, D, rep_array(d, n));
 }
