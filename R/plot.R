@@ -367,7 +367,7 @@ plot_trajectory <- function(
 #'
 #' @param figure a ggplot chart to be saved
 #' @param path a file path indicating where to save the plot, typically starting
-#'  with "inst/figure". No file extention should be included.
+#'  with "inst/figure". No file extension should be included.
 #' @param width,height plot size as accepted by the \code{ggplot2::ggsave()}
 #' function
 #'
