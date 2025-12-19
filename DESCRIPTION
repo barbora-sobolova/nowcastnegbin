@@ -27,6 +27,7 @@ Imports:
   tarchetypes,
   targets,
   tibble,
+  tidybayes,
   tidyr
 Suggests:
   qs2,
