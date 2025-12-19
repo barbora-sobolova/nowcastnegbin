@@ -16,7 +16,7 @@ tar_option_set(
     "scoringutils",
     "tidyr"
   ),
-  format = "qs", # Use qs format (qs2 is used via repository option)
+  format = "qs", # Use qs format
   memory = "transient", # Free memory after each target completes
   garbage_collection = TRUE, # Run garbage collection
   repository = "local", # Use qs2 backend for storage
