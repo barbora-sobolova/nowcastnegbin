@@ -174,7 +174,7 @@ plot_coverage <- function(
     ) |>
     ungroup() |>
     # Pivot for easier definition of the alpha aesthetic
-    pivot_longer(
+    dplyr::pivot_longer(
       cols = starts_with("coverage"),
       names_to = "nominal_coverage",
       values_to = "empirical_coverage"
