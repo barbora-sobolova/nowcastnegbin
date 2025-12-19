@@ -5,7 +5,7 @@ functions {
   #include "functions/combine_obs_with_predicted_obs.stan"
   #include "functions/multiply_array.stan"
   #include "functions/calc_exp_total_obs.stan"
-  #include "functions/calc_re_parametres.stan"
+  #include "functions/calc_re_parameters.stan"
   #include "functions/expand_nb_size.stan"
   #include "functions/obs_lpmf.stan"
 }
