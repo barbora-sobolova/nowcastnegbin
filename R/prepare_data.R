@@ -86,7 +86,7 @@ filter_train_period <- function(full_data, start_date, end_date, max_lag) {
     # Filter only the desired time period including the last date
     date >= start_date & date <= end_date
   ) |>
-    dplyr::select(paste0("value_", 1:max_lag - 1, "w")) |>
+    dplyr::select(paste0("value_", seq_len(max_lag) - 1, "w")) |>
     # Convert to matrix for simpler calculations
     as.matrix()
 }

@@ -111,11 +111,10 @@ summarize_nowcast <- function(
         )
       )
     ) |>
-    tidyr::unnest(.data$quantiles) |>
+    tidyr::unnest("quantiles") |>
     dplyr::ungroup()
   # Rename the quantile columns to have nicer names
-  cols_to_rename <- ncol(df_nowcast_plot) + 1 -
-    rev(seq_along(quantiles_to_get))
+  cols_to_rename <- colnames(df_nowcast_plot) %in% paste0(quantiles_to_get, "%")
   colnames(df_nowcast_plot)[cols_to_rename] <- paste(
     "quantile",
     quantiles_to_get,
