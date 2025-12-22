@@ -21,8 +21,10 @@ array[] real calc_re_parameters(array[] real lambda, vector nb_size, int model_o
   int n = num_elements(lambda);
   array[n] real re_params;
   if (model_obs == 4) {
+    // NegBin2M
     re_params = rep_array(nb_size[1], n);
   } else if (model_obs == 5) {
+    // NegBin1M
     re_params = multiply_array(nb_size[1], lambda);
   }
   return(re_params);
