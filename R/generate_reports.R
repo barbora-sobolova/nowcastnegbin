@@ -1,7 +1,7 @@
 #' Generate the reporting table of a nowcasting problem
 #'
-#' Generate the full reporting table, i.e. with no right censoring. The
-#' mean process follows an exponential random walk.
+#' @description Generate the full reporting table, i.e. with no right censoring.
+#' The mean process follows an exponential random walk.
 #'
 #' @param lgt Integer, the length of the simulated table.
 #' @param max_lag Integer, the maximum reporting delay, the width of the table.

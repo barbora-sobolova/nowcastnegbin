@@ -5,7 +5,7 @@ functions {
   #include "functions/combine_obs_with_predicted_obs.stan"
   #include "functions/multiply_array.stan"
   #include "functions/calc_exp_total_obs.stan"
-  #include "functions/calc_re_parametres.stan"
+  #include "functions/calc_re_parameters.stan"
   #include "functions/expand_nb_size.stan"
   #include "functions/obs_lpmf.stan"
 }
@@ -48,20 +48,20 @@ transformed parameters {
   // Complete reports
   array[d*n] real exp_obs_complete = observe_onsets_with_delay(exp_total_obs, reporting_delay, D, rep_array(d, n));
   // Size parameter of the NegBin distribution expanded according to the
-  // observation modelto match the length of the mean value
+  // observation model to match the length of the mean value
   // Right truncated reports
   array[m] real nb_size_expanded = expand_nb_size(exp_obs, nb_size, reporting_delay, model_obs, P, p);
   // Size parameter of the NegBin distribution expanded according to the
-  // observation modelto match the length of the mean value
+  // observation model to match the length of the mean value
   // Complete reports
   array[d*n] real nb_size_expanded_complete = expand_nb_size(exp_obs_complete, nb_size, reporting_delay, model_obs, D, rep_array(d, n));
 }
 
 model {
   // Prior
-  init_onsets ~ normal(3, 2) T[0,];
+  init_onsets ~ normal(3, 2) T[0, ];
   rw_noise ~ std_normal();
-  rw_sd ~ normal(0, 0.2) T[0,];
+  rw_sd ~ normal(0, 0.2) T[0, ];
   reporting_delay ~ dirichlet(rep_vector(1, d));
   nb_size ~ normal(1, 3) T[0, ];
   // Random effect for the NegBin1M and NegBin2M models
