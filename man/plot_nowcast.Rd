@@ -10,6 +10,7 @@ plot_nowcast(
   model_codes,
   model_colors,
   nowcast_date,
+  fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 )
 }

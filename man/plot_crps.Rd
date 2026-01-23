@@ -4,7 +4,12 @@
 \alias{plot_crps}
 \title{Plot and save the CRPS density}
 \usage{
-plot_crps(df_summarized_nowcast, model_colors, save_plot = TRUE)
+plot_crps(
+  df_summarized_nowcast,
+  model_colors,
+  fitting_method = c("mcmc", "glm"),
+  save_plot = TRUE
+)
 }
 \arguments{
 \item{df_summarized_nowcast}{a data frame containing columns \code{Distribution}
@@ -13,6 +18,9 @@ distribution of the CRPS) and \code{delay} (the nowcasting horizon)}
 
 \item{model_colors}{a named vector of the model colors corresponding to each
 observation model}
+
+\item{fitting_method}{a method used for fitting the nowcasting model, either
+"mcmc", or "glm"}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}
