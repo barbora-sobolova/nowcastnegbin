@@ -109,7 +109,8 @@ summarize_nowcast <- function(
             quantile(.data$.value, probs = quantiles_to_get / 100)
           )
         )
-      )
+      ),
+      .groups = "drop"
     ) |>
     tidyr::unnest("quantiles") |>
     dplyr::ungroup()

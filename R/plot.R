@@ -184,8 +184,8 @@ plot_coverage <- function(
         .data$true_val >= .data$quantile_2.5 &
           .data$true_val <= .data$quantile_97.5
       ) / n(),
+      .groups = "drop"
     ) |>
-    ungroup() |>
     # Pivot for easier definition of the alpha aesthetic
     tidyr::pivot_longer(
       cols = starts_with("coverage"),
