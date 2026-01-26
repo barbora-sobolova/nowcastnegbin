@@ -101,10 +101,10 @@ select_gamlss_model <- function(
   # relationship.
   family <- switch(
     model_name,
-    Poisson = PO(),
-    NegBinX = NBI(),
-    NegBin2D = NBI(),
-    NegBin1D = NBII()
+    Poisson = gamlss.dist::PO(),
+    NegBinX = gamlss.dist::NBI(),
+    NegBin2D = gamlss.dist::NBI(),
+    NegBin1D = gamlss.dist::NBII()
   )
   # Sigma formula is different for NegBin2D, where we have to multiply the
   # overdispersion parameter by the delay probability, in order for the
@@ -232,7 +232,7 @@ generate_glm_nowcasts <- function(
   # time and delay. We could include only the last part of the reporting table,
   # where we want to do the prediction, but will calculate everything to be able
   # to return the whole mean process (lambda_t).
-  df_skeleton_grid <- expand_grid(
+  df_skeleton_grid <- tidyr::expand_grid(
     week = seq_len(t_len),
     delay = seq_len(max_lag)
   )
@@ -593,7 +593,7 @@ fit_glm_model <- function(
   # time points, where we want to do the nowcasting. For this, we can use
   # `stan_data`, since it contains all the look-up indices.
   basis_time_inds <- cumsum(stan_data$p)
-  basis <- predict.gam(mod_mgcv, type = "lpmatrix")[
+  basis <- mgcv::predict.gam(mod_mgcv, type = "lpmatrix")[
     basis_time_inds,
     smooth_coeffs_inds
   ]
