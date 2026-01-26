@@ -2,9 +2,14 @@
 % Please edit documentation in R/create_plot_data_frames.R
 \name{summarize_nowcast}
 \alias{summarize_nowcast}
-\title{Summarize the MCMC draws from STAN}
+\title{Summarize the sample from the predictive distribution of the nowcasts}
 \usage{
-summarize_nowcast(df_nowcast, df_total, date_of_the_nowcast)
+summarize_nowcast(
+  df_nowcast,
+  df_total,
+  date_of_the_nowcast,
+  fitting_method = c("mcmc", "glm")
+)
 }
 \arguments{
 \item{df_nowcast}{a data frame with columns \code{week}, \code{.value}, \code{Distribution}}
@@ -15,6 +20,9 @@ column are the final sums of the counts, or the preliminary data version.}
 
 \item{date_of_the_nowcast}{a date indicating the day when the nowcasting
 takes place.}
+
+\item{fitting_method}{a method used for fitting the nowcasting model, either
+"mcmc", or "glm"}
 }
 \value{
 a data frame with columns
@@ -33,8 +41,8 @@ nowcast to,}
 }
 \description{
 This function creates a data frame containing summarized
-nowcast draws from the MCMC model-fitting procedure. The summaries calculated
-are the mean, the median, the CRPS and selected quantiles. We calculate
-the 2.5\%, 25\%, 75\% and the 97.5\% quantiles to prepare for the plotting
-of the 50\% and 95\% prediction intervals.
+nowcast draws from the MCMC, or GLM model-fitting procedure. The summaries
+calculated are the mean, the median, the CRPS and selected quantiles. We
+calculate the 2.5\%, 25\%, 75\% and the 97.5\% quantiles to prepare for the
+plotting of the 50\% and 95\% prediction intervals.
 }

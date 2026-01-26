@@ -17,7 +17,7 @@
 #' "NegBin1M".
 #' @param model_colors a named vector of the model colors corresponding to each
 #' observation model
-#' @param nowcast_date a date, when the nowcast is made
+#' @param date_of_the_nowcast a date, when the nowcast is made
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
@@ -33,7 +33,7 @@ plot_nowcast <- function(
   df_total,
   model_codes,
   model_colors,
-  nowcast_date,
+  date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
@@ -41,7 +41,8 @@ plot_nowcast <- function(
   # Convert and order factors so that they display with correct labels and in a
   # correct order
   df_summarized_nowcast <- df_summarized_nowcast |>
-    mutate(Distribution = factor(.data$Distribution, labels = model_codes))
+    mutate(Distribution = factor(.data$Distribution, labels = model_codes)) |>
+    dplyr::filter(.data$nowcast_date == date_of_the_nowcast)
   df_total <- df_total |>
     mutate(data = factor(data, levels = c("Preliminary", "Final")))
   # Plot the nowcasts
@@ -129,7 +130,7 @@ plot_nowcast <- function(
       path = paste(
         "inst/figure/nowcast_plots/nowcast",
         fitting_method,
-        nowcast_date,
+        date_of_the_nowcast,
         sep = "_"
       ),
       width = 9,
@@ -265,7 +266,7 @@ plot_crps <- function(
   if (save_plot) {
     save_figure(
       crps_plot,
-      paste("inst/figure/crps_plot", fitting_method, sep ="_"),
+      paste("inst/figure/crps_plot", fitting_method, sep = "_"),
       width = 7,
       height = 5.5
     )

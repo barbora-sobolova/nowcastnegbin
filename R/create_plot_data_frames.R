@@ -28,13 +28,13 @@ create_totals_data_frame <- function(
   )
 }
 
-#' Summarize the MCMC draws from STAN
+#' Summarize the sample from the predictive distribution of the nowcasts
 #'
 #' @description This function creates a data frame containing summarized
-#' nowcast draws from the MCMC model-fitting procedure. The summaries calculated
-#' are the mean, the median, the CRPS and selected quantiles. We calculate
-#' the 2.5%, 25%, 75% and the 97.5% quantiles to prepare for the plotting
-#' of the 50% and 95% prediction intervals.
+#' nowcast draws from the MCMC, or GLM model-fitting procedure. The summaries
+#' calculated are the mean, the median, the CRPS and selected quantiles. We
+#' calculate the 2.5%, 25%, 75% and the 97.5% quantiles to prepare for the
+#' plotting of the 50% and 95% prediction intervals.
 #'
 #' @param df_nowcast a data frame with columns `week`, `.value`, `Distribution`
 #' @param df_total a data frame containing columns `date`, `counts` and `data`.
@@ -42,6 +42,8 @@ create_totals_data_frame <- function(
 #' column are the final sums of the counts, or the preliminary data version.
 #' @param date_of_the_nowcast a date indicating the day when the nowcasting
 #' takes place.
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
 #'
 #' @return a data frame with columns
 #' \describe{
@@ -66,8 +68,10 @@ create_totals_data_frame <- function(
 summarize_nowcast <- function(
   df_nowcast,
   df_total,
-  date_of_the_nowcast
+  date_of_the_nowcast,
+  fitting_method = c("mcmc", "glm")
 ) {
+  fitting_method <- match.arg(fitting_method)
   # Recover the beginning of the estimation window from the total
   # counts
   start_date <- min(df_total$date)
@@ -112,8 +116,7 @@ summarize_nowcast <- function(
       ),
       .groups = "drop"
     ) |>
-    tidyr::unnest("quantiles") |>
-    dplyr::ungroup()
+    tidyr::unnest("quantiles")
   # Rename the quantile columns to have nicer names
   cols_to_rename <- colnames(df_nowcast_plot) %in% paste0(quantiles_to_get, "%")
   colnames(df_nowcast_plot)[cols_to_rename] <- paste(
