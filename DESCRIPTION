@@ -19,9 +19,13 @@ RoxygenNote: 7.3.3
 Imports:
   cmdstanr,
   dplyr,
+  gamlss.dist,
+  gamlss2,
   ggplot2,
   ggpubr,
   here,
+  MASS,
+  mgcv,
   readr,
   scoringutils,
   tarchetypes,
@@ -29,6 +33,7 @@ Imports:
   tibble,
   tidybayes,
   tidyr
+Remotes: gamlss-dev/gamlss2
 Suggests:
   qs2,
   testthat (>= 3.1.9)
