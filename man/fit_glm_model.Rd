@@ -44,9 +44,9 @@ NOT sampled using MCMC. Instead, they are generated from the multivariate
 normal distribution based on the regression model output - parameter
 estimates and their standard errors - to account for uncertainty in the
 estimation. This method is taken from van de Kassteele (2019). The model is
-fit using the \href{github.com/gamlss-dev/gamlss2}{\code{gamlss2}} package
-that implements the GAMLSS (GAM for location scale and shape) framework
-by Stasinopoulos and Rigby (2007).
+fit using the \href{https://github.com/gamlss-dev/gamlss2}{\code{gamlss2}}
+package that implements the GAMLSS (GAM for location scale and shape)
+framework by Stasinopoulos and Rigby (2007).
 }
 \details{
 We fit a simple generalized regression model, that has one smooth
@@ -72,7 +72,7 @@ an additional regression model for the scale parameter:
 
 The resulting model will not strictly be the NegBin2D model, since the
 \eqn{\beta} and \eqn{\gamma} parameters can't be enforced to be identical.
-However, this is an acceptable aproximation of the model.
+However, this is an acceptable approximation of the model.
 }
 \references{
 Stasinopoulos DM, Rigby RA (2007).

@@ -89,7 +89,7 @@ fit_stan_model <- function(
 #'
 #' @param model_name string, name of the observational model to be fit using the
 #' GAMLSS framework
-#' @return list containing the GAMLSS family and the formula for the its scale
+#' @return list containing the GAMLSS family and the formula for its scale
 #' parameter sigma
 select_gamlss_model <- function(
   model_name = c("Poisson", "NegBinX", "NegBin2D", "NegBin1D")
@@ -466,9 +466,9 @@ generate_glm_nowcasts <- function(
 #' normal distribution based on the regression model output - parameter
 #' estimates and their standard errors - to account for uncertainty in the
 #' estimation. This method is taken from van de Kassteele (2019). The model is
-#' fit using the \href{github.com/gamlss-dev/gamlss2}{\code{gamlss2}} package
-#' that implements the GAMLSS (GAM for location scale and shape) framework
-#' by Stasinopoulos and Rigby (2007).
+#' fit using the \href{https://github.com/gamlss-dev/gamlss2}{\code{gamlss2}}
+#' package that implements the GAMLSS (GAM for location scale and shape)
+#' framework by Stasinopoulos and Rigby (2007).
 #'
 #' @param stan_data a list of data and parameters accepted by the STAN model
 #' returned by the \code{get_stan_data()} function. This list is reused here to
@@ -500,7 +500,7 @@ generate_glm_nowcasts <- function(
 #'
 #' The resulting model will not strictly be the NegBin2D model, since the
 #' \eqn{\beta} and \eqn{\gamma} parameters can't be enforced to be identical.
-#' However, this is an acceptable aproximation of the model.
+#' However, this is an acceptable approximation of the model.
 #'
 #' @return List of the data frames with the draws of different model parameters:
 #' \describe{

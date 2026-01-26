@@ -13,7 +13,7 @@ select_gamlss_model(
 GAMLSS framework}
 }
 \value{
-list containing the GAMLSS family and the formula for the its scale
+list containing the GAMLSS family and the formula for its scale
 parameter sigma
 }
 \description{
