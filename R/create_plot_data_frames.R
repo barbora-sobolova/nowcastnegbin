@@ -47,7 +47,7 @@ create_totals_data_frame <- function(
 #' \describe{
 #'   \item{\code{date}}{date of the nowcasting target,}
 #'   \item{\code{nowcast_date}}{date when the nowcast was calculated,}
-#'   \item{\code{Distribution}}{numeric code of the observation model,}
+#'   \item{\code{Distribution}}{factor, label of the observation model,}
 #'   \item{\code{CRPS}}{the CRPS calculated from the sample of the nowcasts,}
 #'   \item{\code{true_val}}{the final value  of the incidence to compare the
 #'   nowcast to,}
