@@ -142,7 +142,7 @@ test_that("Model output from the GLM method is stable and plausible", {
       nb_size_sampled <- c(
         quantile(fit$nb_size$.value, probs = 0.025),
         quantile(fit$nb_size$.value, probs = 0.975)
-        )
+      )
       expect_lt(nb_size_sampled[1], params$nb_size)
       expect_gt(nb_size_sampled[2], params$nb_size)
     }
@@ -150,9 +150,9 @@ test_that("Model output from the GLM method is stable and plausible", {
     expect_true(all(probs_sampled$quantile_97.5 > params$probs))
     expect_true(
       all(lambda_sampled$quantile_2.5 < obs_full$exp_obs_total[lgt - 1:0])
-      )
+    )
     expect_true(
       all(lambda_sampled$quantile_97.5 > obs_full$exp_obs_total[lgt - 1:0])
-      )
+    )
   }
 })
