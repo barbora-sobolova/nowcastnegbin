@@ -259,7 +259,7 @@ list(
       fitting_method = "mcmc"
     )
   }),
-  tar_target(crps_glm, {
+  tar_target(crps_plot_glm, {
     plot_crps(
       df_summarized_nowcast_glm,
       model_colors = model_colors[seq_len(4)],
