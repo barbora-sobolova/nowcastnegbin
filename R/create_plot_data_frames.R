@@ -117,12 +117,11 @@ summarize_nowcast <- function(
       # Calculate the nowcasting horizon and save it as a factor for easier
       # plotting
       delay = factor(as.numeric(date - .data$nowcast_date) / 7),
-      # Replace the model number by the text label of the model
+      # Replace the model number by the text label of the model. The indexing
+      # must be shifted by 1, since the `Distribution` column indexes from 0.
       Distribution = factor(
-        .data$Distribution,
-        # Select the right model label. The indexing must be shifted by 1,
-        # since the `Distribution` column indexes from 0.
-        labels = get_model_names()[.data$Distribution[1] + 1]
+        get_model_names()[.data$Distribution + 1],
+        levels = get_model_names()
       )
     )
   # Rename the quantile columns to have nicer names
