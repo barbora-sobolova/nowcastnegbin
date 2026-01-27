@@ -116,7 +116,19 @@ summarize_nowcast <- function(
       ),
       .groups = "drop"
     ) |>
-    tidyr::unnest("quantiles")
+    tidyr::unnest("quantiles") |>
+    mutate(
+      # Calculate the nowcasting horizon and save it as a factor for easier
+      # plotting
+      delay = factor(as.numeric(date - nowcast_date) / 7),
+      # Replace the model number by the text label of the model
+      Distribution = factor(
+        Distribution,
+        # Select the right model label. The indexing must be shifted by 1,
+        # since the `Distribution` column indexes from 0.
+        labels = get_model_names()[Distribution[1] + 1]
+      )
+    )
   # Rename the quantile columns to have nicer names
   cols_to_rename <- colnames(df_nowcast_plot) %in% paste0(quantiles_to_get, "%")
   colnames(df_nowcast_plot)[cols_to_rename] <- paste(

@@ -53,14 +53,7 @@ timesteps_to_fit <- 44
 
 # A data frame encoding the observation model
 obs_model <- data.frame(
-  model_name = c(
-    "Poisson",
-    "NegBinX",
-    "NegBin2D",
-    "NegBin1D",
-    "NegBin2M",
-    "NegBin1M"
-  ),
+  model_name = get_model_names(),
   model_number = 0:5
 )
 
@@ -183,14 +176,7 @@ list(
       df_total,
       time_horizons$nowcast_date,
       "glm"
-    ) |>
-      mutate(
-        # Calculate the nowcasting horizon and save it as a factor for easier
-        # plotting
-        delay = factor(as.numeric(date - nowcast_date) / 7),
-        # Replace the model number by the text label of the model
-        Distribution = factor(Distribution, labels = model_names_glm)
-      )
+    )
   },
   pattern = map(fitted_glm, cross(map(time_horizons, df_total), model_names_glm))
   ),
@@ -203,14 +189,7 @@ list(
         df_summarized_nowcast_NegBin1D,
         df_summarized_nowcast_NegBin2M,
         df_summarized_nowcast_NegBin1M
-    ) |>
-      mutate(
-        # Calculate the nowcasting horizon and save it as a factor for easier
-        # plotting
-        delay = factor(as.numeric(date - nowcast_date) / 7),
-        # Replace the model number by the text label of the model
-        Distribution = factor(Distribution, labels = obs_model$model_name)
-      )
+    )
   },
   pattern = map(
     df_summarized_nowcast_Poisson,
