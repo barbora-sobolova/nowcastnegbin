@@ -4,12 +4,7 @@
 \alias{summarize_nowcast}
 \title{Summarize the sample from the predictive distribution of the nowcasts}
 \usage{
-summarize_nowcast(
-  df_nowcast,
-  df_total,
-  date_of_the_nowcast,
-  fitting_method = c("mcmc", "glm")
-)
+summarize_nowcast(df_nowcast, df_total, date_of_the_nowcast)
 }
 \arguments{
 \item{df_nowcast}{a data frame with columns \code{week}, \code{.value}, \code{Distribution}}
@@ -20,9 +15,6 @@ column are the final sums of the counts, or the preliminary data version.}
 
 \item{date_of_the_nowcast}{a date indicating the day when the nowcasting
 takes place.}
-
-\item{fitting_method}{a method used for fitting the nowcasting model, either
-"mcmc", or "glm"}
 }
 \value{
 a data frame with columns

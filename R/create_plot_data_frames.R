@@ -42,8 +42,6 @@ create_totals_data_frame <- function(
 #' column are the final sums of the counts, or the preliminary data version.
 #' @param date_of_the_nowcast a date indicating the day when the nowcasting
 #' takes place.
-#' @param fitting_method a method used for fitting the nowcasting model, either
-#' "mcmc", or "glm"
 #'
 #' @return a data frame with columns
 #' \describe{
@@ -68,10 +66,8 @@ create_totals_data_frame <- function(
 summarize_nowcast <- function(
   df_nowcast,
   df_total,
-  date_of_the_nowcast,
-  fitting_method = c("mcmc", "glm")
+  date_of_the_nowcast
 ) {
-  fitting_method <- match.arg(fitting_method)
   # Recover the beginning of the estimation window from the total
   # counts
   start_date <- min(df_total$date)
