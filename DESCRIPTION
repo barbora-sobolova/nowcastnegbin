@@ -20,6 +20,7 @@ Imports:
   cmdstanr,
   dplyr,
   gamlss.dist,
+  gamlss,
   gamlss2,
   ggplot2,
   ggpubr,
