@@ -102,7 +102,7 @@ test_that("Model output from the GLM method is stable and plausible", {
   model_names <- get_model_names()
   for (model_obs in 0:3) {
     # Generate data
-    set.seed(12345678)
+    set.seed(123456)
     obs_full <- with(
       params,
       generate_reports(
@@ -126,33 +126,33 @@ test_that("Model output from the GLM method is stable and plausible", {
     probs_sampled <- fit$delay_prob |>
       group_by(delay) |>
       summarize(
-        quantile_1 = quantile(.data$.value, probs = 0.01),
-        quantile_99 = quantile(.data$.value, probs = 0.99)
+        quantile_2.5 = quantile(.data$.value, probs = 0.025),
+        quantile_97.5 = quantile(.data$.value, probs = 0.975)
       )
     lambda_sampled <- fit$lambda |>
       filter(week > lgt - params$max_lag + 1) |>
       group_by(week) |>
       summarize(
-        quantile_1 = quantile(.data$.value, probs = 0.01),
-        quantile_99 = quantile(.data$.value, probs = 0.99)
+        quantile_2.5 = quantile(.data$.value, probs = 0.025),
+        quantile_97.5 = quantile(.data$.value, probs = 0.975)
       )
 
-    # Compare, whether the true value is inside the 98% CI.
+    # Compare, whether the true value is inside the 95% CI.
     if (model_obs != 0) {
       nb_size_sampled <- c(
-        quantile(fit$nb_size$.value, probs = 0.01),
-        quantile(fit$nb_size$.value, probs = 0.99)
+        quantile(fit$nb_size$.value, probs = 0.025),
+        quantile(fit$nb_size$.value, probs = 0.975)
       )
       expect_lt(nb_size_sampled[1], params$nb_size)
       expect_gt(nb_size_sampled[2], params$nb_size)
     }
-    expect_true(all(probs_sampled$quantile_1 < params$probs))
-    expect_true(all(probs_sampled$quantile_99 > params$probs))
+    expect_true(all(probs_sampled$quantile_2.5 < params$probs))
+    expect_true(all(probs_sampled$quantile_97.5 > params$probs))
     expect_true(
-      all(lambda_sampled$quantile_1 < obs_full$exp_obs_total[lgt - 1:0])
+      all(lambda_sampled$quantile_2.5 < obs_full$exp_obs_total[lgt - 1:0])
     )
     expect_true(
-      all(lambda_sampled$quantile_99 > obs_full$exp_obs_total[lgt - 1:0])
+      all(lambda_sampled$quantile_97.5 > obs_full$exp_obs_total[lgt - 1:0])
     )
   }
 })
