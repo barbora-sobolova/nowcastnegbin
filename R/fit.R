@@ -552,7 +552,7 @@ fit_glm_model <- function(
   # construct the data frame for the GLM
   glm_data <- data.frame(
     obs = stan_data$obs,
-    delay = factor(unlist(sapply(stan_data$p, seq_len))),
+    delay = factor(sequence(stan_data$p)),
     week = rep(seq_len(stan_data$n), times = stan_data$p)
   )
 
