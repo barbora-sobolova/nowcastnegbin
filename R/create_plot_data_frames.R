@@ -81,8 +81,8 @@ summarize_nowcast <- function(
     ) |>
     # Remove the, now redundant, week column
     dplyr::select(-"week")
-  # Quantiles of the MCMC sample to calculate - the median and quantiles for
-  # constructing the 95% and 50% prediction interval
+  # Quantiles of the sampled nowcasts to calculate - the median and quantiles
+  # for constructing the 95% and 50% prediction interval
   quantiles_to_get <- c(50, 2.5, 25, 75, 97.5)
   # Summarize the sample of the nowcasts
   df_nowcast_plot <- df_total |>
@@ -93,7 +93,7 @@ summarize_nowcast <- function(
     dplyr::inner_join(df_nowcast, by = "date") |>
     dplyr::group_by(.data$date, .data$nowcast_date, .data$Distribution) |>
     dplyr::summarize(
-      # Calculate the CRPS from the MCMC sample. We pass counts[1] as the true
+      # Calculate the CRPS from the sample. We pass counts[1] as the true
       # observed value, since this is the same value for each date.
       CRPS = scoringutils::crps_sample(
         observed = .data$counts[1],
