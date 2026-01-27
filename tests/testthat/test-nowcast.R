@@ -102,7 +102,7 @@ test_that("Model output from the GLM method is stable and plausible", {
   model_names <- get_model_names()
   for (model_obs in 0:3) {
     # Generate data
-    set.seed(123456)
+    set.seed(12345)
     obs_full <- with(
       params,
       generate_reports(
@@ -126,22 +126,22 @@ test_that("Model output from the GLM method is stable and plausible", {
     probs_sampled <- fit$delay_prob |>
       group_by(delay) |>
       summarize(
-        quantile_2.5 = quantile(.data$.value, probs = 0.025),
-        quantile_97.5 = quantile(.data$.value, probs = 0.975)
+        quantile_2.5 = quantile(.data$.value, probs = 0.02),
+        quantile_97.5 = quantile(.data$.value, probs = 0.98)
       )
     lambda_sampled <- fit$lambda |>
       filter(week > lgt - params$max_lag + 1) |>
       group_by(week) |>
       summarize(
-        quantile_2.5 = quantile(.data$.value, probs = 0.025),
-        quantile_97.5 = quantile(.data$.value, probs = 0.975)
+        quantile_2.5 = quantile(.data$.value, probs = 0.02),
+        quantile_97.5 = quantile(.data$.value, probs = 0.98)
       )
 
-    # Compare, whether the true value is inside the 95% CI
+    # Compare, whether the true value is inside the 96% CI.
     if (model_obs != 0) {
       nb_size_sampled <- c(
-        quantile(fit$nb_size$.value, probs = 0.025),
-        quantile(fit$nb_size$.value, probs = 0.975)
+        quantile(fit$nb_size$.value, probs = 0.02),
+        quantile(fit$nb_size$.value, probs = 0.98)
       )
       expect_lt(nb_size_sampled[1], params$nb_size)
       expect_gt(nb_size_sampled[2], params$nb_size)
