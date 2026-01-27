@@ -605,7 +605,8 @@ fit_glm_model <- function(
     basis,
     stan_data$n,
     stan_data$d,
-    model_name
+    model_name,
+    n_samples
   )
   ret_list
 }
