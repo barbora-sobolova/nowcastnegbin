@@ -243,8 +243,11 @@ list(
   tar_target(coverage_plot_glm, {
     plot_coverage(
       df_summarized_nowcast_glm,
-      model_codes = setNames(obs_model$model_name, obs_model$model_number),
-      model_colors = model_colors,
+      model_codes = setNames(
+        obs_model$model_name[seq_len(4)],
+        obs_model$model_number[seq_len(4)]
+      ),
+      model_colors = model_colors[seq_len(4)],
       fitting_method = "glm"
     )
   }),
@@ -259,7 +262,7 @@ list(
   tar_target(crps_glm, {
     plot_crps(
       df_summarized_nowcast_glm,
-      model_colors = model_colors,
+      model_colors = model_colors[seq_len(4)],
       fitting_method = "glm"
     )
   }),
