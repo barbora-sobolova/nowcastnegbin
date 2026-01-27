@@ -152,8 +152,7 @@ list(
       summarize_nowcast(
         fitted$nowcast,
         df_total,
-        time_horizons$nowcast_date,
-        "mcmc"
+        time_horizons$nowcast_date
       )
     },
     pattern = map(time_horizons, df_total, fitted),
@@ -174,8 +173,7 @@ list(
     summarize_nowcast(
       fitted_glm$nowcast,
       df_total,
-      time_horizons$nowcast_date,
-      "glm"
+      time_horizons$nowcast_date
     )
   },
   pattern = map(fitted_glm, cross(map(time_horizons, df_total), model_names_glm))
