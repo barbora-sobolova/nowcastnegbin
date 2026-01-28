@@ -1,4 +1,4 @@
-test_that("Model sampling output is stable and plausible", {
+test_that("Model output from the MCMC method is stable and plausible", {
   # Compile the model
   mod <- cmdstanr::cmdstan_model(system.file(
     "stan",
@@ -85,5 +85,74 @@ test_that("Model sampling output is stable and plausible", {
     expect_true(all(probs_sampled[2, ] > params$probs))
     expect_true(all(lambda_sampled[1, ] < obs_full$exp_obs_total[lgt - 1:0]))
     expect_true(all(lambda_sampled[2, ] > obs_full$exp_obs_total[lgt - 1:0]))
+  }
+})
+
+test_that("Model output from the GLM method is stable and plausible", {
+  # Example parameters
+  params <- list()
+  params$log_lambda0 <- log(100)
+  params$rw_sd <- 0.01
+  lgt <- 100
+  params$max_lag <- 3
+  params$probs <- c(0.5, 0.3, 0.2)
+  params$nb_size <- 1.5
+
+  # Loop over the model types
+  model_names <- get_model_names()
+  for (model_obs in 0:3) {
+    # Generate data
+    set.seed(123456)
+    obs_full <- with(
+      params,
+      generate_reports(
+        lgt,
+        max_lag,
+        log_lambda0,
+        rw_sd,
+        probs,
+        nb_size,
+        model = model_names[model_obs + 1]
+      )
+    )
+
+    # Fit the model
+    fit <- fit_glm_model(
+      stan_data = get_stan_data(obs_full$reports),
+      model_name = model_names[model_obs + 1]
+    )
+
+    # Extract the quantiles
+    probs_sampled <- fit$delay_prob |>
+      group_by(delay) |>
+      summarize(
+        quantile_2.5 = quantile(.data$.value, probs = 0.025),
+        quantile_97.5 = quantile(.data$.value, probs = 0.975)
+      )
+    lambda_sampled <- fit$lambda |>
+      filter(week > lgt - params$max_lag + 1) |>
+      group_by(week) |>
+      summarize(
+        quantile_2.5 = quantile(.data$.value, probs = 0.025),
+        quantile_97.5 = quantile(.data$.value, probs = 0.975)
+      )
+
+    # Compare, whether the true value is inside the 95% CI.
+    if (model_obs != 0) {
+      nb_size_sampled <- c(
+        quantile(fit$nb_size$.value, probs = 0.025),
+        quantile(fit$nb_size$.value, probs = 0.975)
+      )
+      expect_lt(nb_size_sampled[1], params$nb_size)
+      expect_gt(nb_size_sampled[2], params$nb_size)
+    }
+    expect_true(all(probs_sampled$quantile_2.5 < params$probs))
+    expect_true(all(probs_sampled$quantile_97.5 > params$probs))
+    expect_true(
+      all(lambda_sampled$quantile_2.5 < obs_full$exp_obs_total[lgt - 1:0])
+    )
+    expect_true(
+      all(lambda_sampled$quantile_97.5 > obs_full$exp_obs_total[lgt - 1:0])
+    )
   }
 })
