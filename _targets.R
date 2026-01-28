@@ -7,6 +7,8 @@ tar_option_set(
   packages = c(
     "cmdstanr",
     "dplyr",
+    "gamlss.dist",
+    "gamlss2",
     "ggplot2",
     "ggpubr",
     "here",
@@ -29,12 +31,12 @@ ggplot2::theme_set(ggplot2::theme_bw())
 
 # Set the global objects =======================================================
 model_colors <- c(
+  "Poisson" = "#CC79A7",
+  "NegBinX" = "#D55E00",
   "NegBin2D" = "#009E73",
   "NegBin1D" = "#56B4E9",
   "NegBin2M" = "#004282",
-  "NegBin1M" = "#F0E442",
-  "Poisson" = "#CC79A7",
-  "NegBinX" = "#D55E00"
+  "NegBin1M" = "#F0E442"
 )
 
 max_lag <- 5
@@ -51,14 +53,7 @@ timesteps_to_fit <- 44
 
 # A data frame encoding the observation model
 obs_model <- data.frame(
-  model_name = c(
-    "Poisson",
-    "NegBinX",
-    "NegBin2D",
-    "NegBin1D",
-    "NegBin2M",
-    "NegBin1M"
-  ),
+  model_name = get_model_names(),
   model_number = 0:5
 )
 
@@ -154,14 +149,37 @@ list(
     iteration = "list"),
     # Summarize the STAN draws of the nowcasts
     tar_target(df_summarized_nowcast, {
-      summarize_nowcast(fitted$nowcast, df_total, time_horizons$nowcast_date)
+      summarize_nowcast(
+        fitted$nowcast,
+        df_total,
+        time_horizons$nowcast_date
+      )
     },
     pattern = map(time_horizons, df_total, fitted),
     iteration = "list"
     )
   ),
-  # Combine the summarized nowcasts into a single table
-  tar_target(df_summarized_nowcast, {
+  # Select the names of models we want to fit with the GLM method to branch over
+  # it.
+  tar_target(model_names_glm, obs_model$model_name[obs_model$model_number < 4]),
+  # Fit the gamlss models
+  tar_target(fitted_glm, {
+    fit_glm_model(stan_data = stan_data, model_name = model_names_glm)
+  },
+  pattern = cross(stan_data, model_names_glm),
+  iteration = "list"
+  ),
+  tar_target(df_summarized_nowcast_glm, {
+    summarize_nowcast(
+      fitted_glm$nowcast,
+      df_total,
+      time_horizons$nowcast_date
+    )
+  },
+  pattern = map(fitted_glm, cross(map(time_horizons, df_total), model_names_glm))
+  ),
+  # Combine the summarized nowcasts from the MCMC method into a single table
+  tar_target(df_summarized_nowcast_mcmc, {
     dplyr::bind_rows(
         df_summarized_nowcast_Poisson,
         df_summarized_nowcast_NegBinX,
@@ -169,14 +187,7 @@ list(
         df_summarized_nowcast_NegBin1D,
         df_summarized_nowcast_NegBin2M,
         df_summarized_nowcast_NegBin1M
-    ) |>
-      mutate(
-        # Calculate the nowcasting horizon and save it as a factor for easier
-        # plotting
-        delay = factor(as.numeric(date - nowcast_date) / 7),
-        # Replace the model number by the text label of the model
-        Distribution = factor(Distribution, labels = obs_model$model_name)
-      )
+    )
   },
   pattern = map(
     df_summarized_nowcast_Poisson,
@@ -186,32 +197,71 @@ list(
     df_summarized_nowcast_NegBin2M,
     df_summarized_nowcast_NegBin1M
   )
-  ),
-  # Plot the nowcasts for each estimation window
-  tar_target(nowcast_plot, {
+   ),
+  # Plot the nowcasts from the STAN model for each estimation window
+  tar_target(nowcast_plot_mcmc, {
     plot_nowcast(
-      df_summarized_nowcast,
+      df_summarized_nowcast_mcmc,
       df_total,
       model_codes = setNames(obs_model$model_name, obs_model$model_number),
       model_colors = model_colors,
-      nowcast_date = time_horizons$nowcast_date
+      date_of_the_nowcast = time_horizons$nowcast_date,
+      fitting_method = "mcmc"
     )
   },
-  pattern = map(df_total, df_summarized_nowcast, time_horizons),
+  pattern = map(df_total, time_horizons),
+  iteration = "list"),
+  # Plot the nowcasts from the GLM model for each estimation window
+  tar_target(nowcast_plot_glm, {
+    plot_nowcast(
+      df_summarized_nowcast_glm,
+      df_total,
+      # Select only the codes and colors of the first 4 models (that is
+      # excluding NegBin2M and NegBin1M)
+      model_codes = setNames(
+        obs_model$model_name[seq_len(4)],
+        obs_model$model_number[seq_len(4)]
+      ),
+      model_colors = model_colors[seq_len(4)],
+      date_of_the_nowcast = time_horizons$nowcast_date,
+      fitting_method = "glm"
+    )
+  },
+  pattern = map(df_total, time_horizons),
   iteration = "list"),
   # Plot the overall coverage of the models
-  tar_target(coverage_plot, {
+  tar_target(coverage_plot_mcmc, {
     plot_coverage(
-      df_summarized_nowcast,
+      df_summarized_nowcast_mcmc,
       model_codes = setNames(obs_model$model_name, obs_model$model_number),
-      model_colors = model_colors
+      model_colors = model_colors,
+      fitting_method = "mcmc"
+    )
+  }),
+  tar_target(coverage_plot_glm, {
+    plot_coverage(
+      df_summarized_nowcast_glm,
+      model_codes = setNames(
+        obs_model$model_name[seq_len(4)],
+        obs_model$model_number[seq_len(4)]
+      ),
+      model_colors = model_colors[seq_len(4)],
+      fitting_method = "glm"
     )
   }),
   # Plot the distribution of the CRPS
-  tar_target(crps_plot, {
+  tar_target(crps_plot_mcmc, {
     plot_crps(
-      df_summarized_nowcast,
-      model_colors = model_colors
+      df_summarized_nowcast_mcmc,
+      model_colors = model_colors,
+      fitting_method = "mcmc"
+    )
+  }),
+  tar_target(crps_plot_glm, {
+    plot_crps(
+      df_summarized_nowcast_glm,
+      model_colors = model_colors[seq_len(4)],
+      fitting_method = "glm"
     )
   }),
   # Plot the whole incidence trajectory highlighting the first and the last

@@ -17,7 +17,9 @@
 #' "NegBin1M".
 #' @param model_colors a named vector of the model colors corresponding to each
 #' observation model
-#' @param nowcast_date a date, when the nowcast is made
+#' @param date_of_the_nowcast a date, when the nowcast is made
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -31,13 +33,16 @@ plot_nowcast <- function(
   df_total,
   model_codes,
   model_colors,
-  nowcast_date,
+  date_of_the_nowcast,
+  fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
+  fitting_method <- match.arg(fitting_method)
   # Convert and order factors so that they display with correct labels and in a
   # correct order
   df_summarized_nowcast <- df_summarized_nowcast |>
-    mutate(Distribution = factor(.data$Distribution, labels = model_codes))
+    mutate(Distribution = factor(.data$Distribution, labels = model_codes)) |>
+    dplyr::filter(.data$nowcast_date == date_of_the_nowcast)
   df_total <- df_total |>
     mutate(data = factor(data, levels = c("Preliminary", "Final")))
   # Plot the nowcasts
@@ -122,7 +127,12 @@ plot_nowcast <- function(
   if (save_plot) {
     save_figure(
       nowcasts_plot,
-      path = paste0("inst/figure/nowcast_plots/nowcast_", nowcast_date),
+      path = paste(
+        "inst/figure/nowcast_plots/nowcast",
+        fitting_method,
+        date_of_the_nowcast,
+        sep = "_"
+      ),
       width = 9,
       height = 7
     )
@@ -146,6 +156,8 @@ plot_nowcast <- function(
 #' "NegBin1M".
 #' @param model_colors a named vector of the model colors corresponding to each
 #' observation model
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -158,6 +170,7 @@ plot_coverage <- function(
   df_summarized_nowcast,
   model_codes,
   model_colors,
+  fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
   # Calculate the empirical coverage
@@ -172,8 +185,8 @@ plot_coverage <- function(
         .data$true_val >= .data$quantile_2.5 &
           .data$true_val <= .data$quantile_97.5
       ) / n(),
+      .groups = "drop"
     ) |>
-    ungroup() |>
     # Pivot for easier definition of the alpha aesthetic
     tidyr::pivot_longer(
       cols = starts_with("coverage"),
@@ -205,7 +218,7 @@ plot_coverage <- function(
   if (save_plot) {
     save_figure(
       coverage_plot,
-      "inst/figure/coverage_plot",
+      paste("inst/figure/coverage_plot", fitting_method, sep = "_"),
       width = 9,
       height = 7
     )
@@ -223,6 +236,8 @@ plot_coverage <- function(
 #' distribution of the CRPS) and `delay` (the nowcasting horizon)
 #' @param model_colors a named vector of the model colors corresponding to each
 #' observation model
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -234,6 +249,7 @@ plot_coverage <- function(
 plot_crps <- function(
   df_summarized_nowcast,
   model_colors,
+  fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
   crps_plot <- ggplot(
@@ -250,7 +266,7 @@ plot_crps <- function(
   if (save_plot) {
     save_figure(
       crps_plot,
-      "inst/figure/crps_plot",
+      paste("inst/figure/crps_plot", fitting_method, sep = "_"),
       width = 7,
       height = 5.5
     )

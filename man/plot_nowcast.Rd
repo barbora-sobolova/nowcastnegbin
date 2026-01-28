@@ -9,7 +9,8 @@ plot_nowcast(
   df_total,
   model_codes,
   model_colors,
-  nowcast_date,
+  date_of_the_nowcast,
+  fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 )
 }
@@ -31,7 +32,10 @@ used is: "Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M",
 \item{model_colors}{a named vector of the model colors corresponding to each
 observation model}
 
-\item{nowcast_date}{a date, when the nowcast is made}
+\item{date_of_the_nowcast}{a date, when the nowcast is made}
+
+\item{fitting_method}{a method used for fitting the nowcasting model, either
+"mcmc", or "glm"}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}

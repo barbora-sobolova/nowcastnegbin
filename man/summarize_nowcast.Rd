@@ -2,7 +2,7 @@
 % Please edit documentation in R/create_plot_data_frames.R
 \name{summarize_nowcast}
 \alias{summarize_nowcast}
-\title{Summarize the MCMC draws from STAN}
+\title{Summarize the sample from the predictive distribution of the nowcasts}
 \usage{
 summarize_nowcast(df_nowcast, df_total, date_of_the_nowcast)
 }
@@ -21,7 +21,7 @@ a data frame with columns
 \describe{
 \item{\code{date}}{date of the nowcasting target,}
 \item{\code{nowcast_date}}{date when the nowcast was calculated,}
-\item{\code{Distribution}}{numeric code of the observation model,}
+\item{\code{Distribution}}{factor, label of the observation model,}
 \item{\code{CRPS}}{the CRPS calculated from the sample of the nowcasts,}
 \item{\code{true_val}}{the final value  of the incidence to compare the
 nowcast to,}
@@ -33,8 +33,8 @@ nowcast to,}
 }
 \description{
 This function creates a data frame containing summarized
-nowcast draws from the MCMC model-fitting procedure. The summaries calculated
-are the mean, the median, the CRPS and selected quantiles. We calculate
-the 2.5\%, 25\%, 75\% and the 97.5\% quantiles to prepare for the plotting
-of the 50\% and 95\% prediction intervals.
+nowcast draws from the MCMC, or GLM model-fitting procedure. The summaries
+calculated are the mean, the median, the CRPS and selected quantiles. We
+calculate the 2.5\%, 25\%, 75\% and the 97.5\% quantiles to prepare for the
+plotting of the 50\% and 95\% prediction intervals.
 }
