@@ -42,7 +42,7 @@ model_colors <- c(
 max_lag <- 5
 
 # Where is the beginning of the data used for the case study
-analysis_start_date <- as.Date("2024-07-07")
+analysis_start_date <- as.Date("2024-06-02")
 # How many weeks we want to include as "training" data.
 # This includes the last `max_lag - 1` weeks for which we calculate the nowcast.
 length_of_train_data <- 28
@@ -82,7 +82,8 @@ list(
     get_time_horizons(
       analysis_start_date,
       timesteps_to_fit,
-      length_of_train_data
+      length_of_train_data,
+      skip_dates = c("2024-12-22", "2024-12-29")
     )
   }),
   # Load the preprocessed data with no stratification, restricted to the time
@@ -106,7 +107,8 @@ list(
       full_data,
       start_date = time_horizons$train_data_begin,
       end_date = time_horizons$nowcast_date,
-      max_lag = max_lag
+      max_lag = max_lag,
+      skip_dates = c("2024-12-22", "2024-12-29")
     ),
     pattern = map(time_horizons),
     iteration = "list"
@@ -114,7 +116,7 @@ list(
   # Create the list of data and parameters to pass to the STAN model
   tar_target(
     stan_data,
-    get_stan_data(train_data),
+    get_stan_data(train_data$train_data, train_data$skip_rows),
     pattern = map(time_horizons, train_data),
     iteration = "list"
   ),
@@ -123,7 +125,7 @@ list(
   # prediction. The partial sums are used only for plotting.
   tar_target(df_total, {
     create_totals_data_frame(
-      train_data,
+      train_data$train_data,
       time_horizons$train_data_begin
     )
   },

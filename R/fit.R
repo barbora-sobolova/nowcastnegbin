@@ -168,6 +168,7 @@ select_gamlss_model <- function(
 generate_glm_nowcasts <- function(
   fitted_gamlss_obj,
   spline_basis,
+  glm_data_all,
   t_len,
   max_lag,
   model_name,
@@ -404,8 +405,8 @@ generate_glm_nowcasts <- function(
   }
 
   # Aggregate the counts by delay for both the predicted counts and the
-  # observed counts
-  df_obs <- fitted_gamlss_obj$model |>
+  # observed counts. The observed counts have to be
+  df_obs <- glm_data_all |>
     group_by(.data$week) |>
     summarize(
       obs_counts = sum(.data$obs)
@@ -549,12 +550,14 @@ fit_glm_model <- function(
   gamlss_specs <- select_gamlss_model(model_name)  # nolint
 
   # The list of data for the STAN model contains all the information to
-  # construct the data frame for the GLM
-  glm_data <- data.frame(
+  # construct the data frame for the GLM. We can drop some observations from the
+  # likelihood by filtering according to the `idx_include` vector.
+  glm_data_all <- data.frame(
     obs = stan_data$obs,
     delay = factor(sequence(stan_data$p)),
     week = rep(seq_len(stan_data$n), times = stan_data$p)
   )
+  glm_data <- glm_data_all[stan_data$idx_include, ]
 
   # We use the length of the time period over 5 to determine the number of
   # spline spline basis functions based on van de Kasstelee 2019. The s() way
@@ -588,21 +591,25 @@ fit_glm_model <- function(
     family = poisson
   )
   smooth_coeffs_inds <- grep(pattern = "s()", names(mod_mgcv$coefficients))
-  # Extract the basis. Since the data contain multiple rows for each day,
-  # we filter them to have only one per day. We also extract only the latest
-  # time points, where we want to do the nowcasting. For this, we can use
-  # `stan_data`, since it contains all the look-up indices.
-  basis_time_inds <- cumsum(stan_data$p)
-  basis <- mgcv::predict.gam(mod_mgcv, type = "lpmatrix")[
-    basis_time_inds,
-    smooth_coeffs_inds
-  ]
+  # Extract the basis using `predict.gam(type = "lpmatrix", ...)`. Often,
+  # we can just extract the design matrix as is, but when we skip certain
+  # observations, some weeks might not be represented in the data. For these
+  # cases, we need to create a data frame with no gaps.
+  basis <- mgcv::predict.gam(
+    mod_mgcv,
+    newdata = data.frame(
+      week = seq_len(max((glm_data$week))),
+      delay = 1
+    ),
+    type = "lpmatrix"
+  )[, smooth_coeffs_inds]
 
   # Generate nowcasts by the van de Kasstelee 2019 method, using sampling from
   # the multivariate normal distribution for the parameters.
   ret_list <- generate_glm_nowcasts(
     fit,
     basis,
+    glm_data_all,
     stan_data$n,
     stan_data$d,
     model_name,

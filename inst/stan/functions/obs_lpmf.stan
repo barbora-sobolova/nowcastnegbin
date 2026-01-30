@@ -29,15 +29,16 @@
  * `poisson_lpmf` for the Poisson, NegBin2M and NegBin1M models.
  */
 real obs_lpmf(array[] int obs, array[] real exp_obs, array[] real nb_size,
-                  int model_obs, array[] int P, array[] int p) {
+                  array[] int idx_include, int model_obs, array[] int P,
+                  array[] int p) {
    real tar = 0;
 
    if (model_obs == 0 || model_obs == 4 || model_obs == 5) {
      // Poisson, NegBin2M and NegBin1M
-     tar = poisson_lpmf(obs | exp_obs);
+     tar = poisson_lpmf(obs[idx_include] | exp_obs[idx_include]);
    } else {
      // NegBinX, NegBin2D and NegBin1D
-     tar = neg_binomial_2_lpmf(obs | exp_obs, nb_size);
+     tar = neg_binomial_2_lpmf(obs[idx_include] | exp_obs[idx_include], nb_size[idx_include]);
    }
    return(tar);
 }
