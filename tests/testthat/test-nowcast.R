@@ -14,16 +14,17 @@ test_that("Model output from the MCMC method is stable and plausible", {
   params$max_lag <- 3
   params$probs <- c(0.5, 0.3, 0.2)
   params$nb_size <- 1.5
+  # Include skipping one "Christmas" week
+  params$skip_rows <- 50
 
-  index_mat <- lower.tri(
-    matrix(nrow = lgt, ncol = params$max_lag),
-    diag = TRUE
-  )[lgt:1, ]
-  data_list <- list(
-    n = nrow(index_mat),
-    m = sum(index_mat),
-    p = apply(index_mat, 1, sum),
-    d = params$max_lag
+  stan_settings <- list(
+    seed = 123,
+    parallel_chains = 4,
+    iter_warmup = 1000,
+    iter_sampling = 1000,
+    show_messages = FALSE,
+    show_exceptions = FALSE,
+    refresh = 0
   )
 
   # Loop over the model types
@@ -50,41 +51,45 @@ test_that("Model output from the MCMC method is stable and plausible", {
         model = model_names[model_obs + 1]
       )
     )
-    obs_flat <- t(obs_full$reports)[t(index_mat)]
+    data_list <- get_stan_data(obs_full$reports, skip_rows = params$skip_rows)
 
     # Run sampling with fixed seed
-    fit <- mod$sample(
-      data = c(data_list, model_obs = model_obs, obs = list(obs_flat)),
-      seed = 123,
-      parallel_chains = 4,
-      iter_sampling = 1000,
-      iter_warmup = 1000,
-      refresh = 0,
-      show_messages = FALSE,
-      show_exceptions = FALSE
-    )
+    fit <- fit_stan_model(mod$sample, data_list, model_obs, stan_settings)
 
     # Extract the quantiles
-    probs_sampled <- fit$draws(
-      variables = paste0("reporting_delay[", 1:params$max_lag, "]")
-    ) |>
-      apply(3, quantile, probs = c(0.025, 0.975))
-    lambda_sampled <- fit$draws(
-      variables = paste0("lambda[", lgt - 1:0, "]")
-    ) |>
-      apply(3, quantile, probs = c(0.025, 0.975))
+    probs_sampled <- fit$delay_prob |>
+      group_by(delay) |>
+      summarise(
+        quantile_2.5 = quantile(.value, 0.025),
+        quantile_97.5 = quantile(.value, 0.975)
+      )
+    lambda_sampled <- fit$lambda |>
+      filter(week >= lgt - 1) |>
+      group_by(week) |>
+      summarise(
+        quantile_2.5 = quantile(.value, 0.025),
+        quantile_97.5 = quantile(.value, 0.975)
+      )
 
     # Compare, whether the true value is inside the 95% CI
     if (model_obs != 0) {
-      nb_size_sampled <- fit$draws(variables = paste0("nb_size[1]")) |>
-        apply(3, quantile, probs = c(0.025, 0.975))
-      expect_lt(nb_size_sampled[1], params$nb_size)
-      expect_gt(nb_size_sampled[2], params$nb_size)
+      nb_size_sampled <- fit$nb_size |>
+        mutate(.value = unlist(.value)) |>
+        summarise(
+          quantile_2.5 = quantile(.value, 0.025),
+          quantile_97.5 = quantile(.value, 0.975)
+        )
+      expect_lt(nb_size_sampled$quantile_2.5, params$nb_size)
+      expect_gt(nb_size_sampled$quantile_97.5, params$nb_size)
     }
-    expect_true(all(probs_sampled[1, ] < params$probs))
-    expect_true(all(probs_sampled[2, ] > params$probs))
-    expect_true(all(lambda_sampled[1, ] < obs_full$exp_obs_total[lgt - 1:0]))
-    expect_true(all(lambda_sampled[2, ] > obs_full$exp_obs_total[lgt - 1:0]))
+    expect_true(all(probs_sampled$quantile_2.5 < params$probs))
+    expect_true(all(probs_sampled$quantile_97.5 > params$probs))
+    expect_true(
+      all(lambda_sampled$quantile_2.5 < obs_full$exp_obs_total[lgt - 1:0])
+    )
+    expect_true(
+      all(lambda_sampled$quantile_97.5 > obs_full$exp_obs_total[lgt - 1:0])
+    )
   }
 })
 
