@@ -55,7 +55,7 @@ timesteps_to_fit <- 44
 #  1. No nowcast will be produced on these days
 #  2. The diagonal of the reporting triangle corresponding to these dates and
 #     most of the one directly following will be dropped from the likelihood.
-skip_dates <- c("2024-12-22", "2024-12-29")
+skip_dates <- as.Date(c("2024-12-22", "2024-12-29"))
 
 # A data frame encoding the observation model
 obs_model <- data.frame(
