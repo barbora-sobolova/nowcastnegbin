@@ -103,6 +103,8 @@ test_that("Model output from the GLM method is stable and plausible", {
   params$max_lag <- 3
   params$probs <- c(0.5, 0.3, 0.2)
   params$nb_size <- 1.5
+  # Include skipping one "Christmas" week
+  params$skip_rows <- 50
 
   # Loop over the model types
   model_names <- get_model_names()
@@ -124,7 +126,7 @@ test_that("Model output from the GLM method is stable and plausible", {
 
     # Fit the model
     fit <- fit_glm_model(
-      stan_data = get_stan_data(obs_full$reports),
+      stan_data = get_stan_data(obs_full$reports, params$skip_rows),
       model_name = model_names[model_obs + 1]
     )
 
