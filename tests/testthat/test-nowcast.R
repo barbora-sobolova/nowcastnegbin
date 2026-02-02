@@ -74,6 +74,7 @@ test_that("Model output from the MCMC method is stable and plausible", {
     # Compare, whether the true value is inside the 95% CI
     if (model_obs != 0) {
       nb_size_sampled <- fit$nb_size |>
+        # The `.value` column contains a list with one element per row
         mutate(.value = unlist(.value)) |>
         summarise(
           quantile_2.5 = quantile(.value, 0.025),
