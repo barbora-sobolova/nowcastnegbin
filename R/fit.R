@@ -405,7 +405,9 @@ generate_glm_nowcasts <- function(
   }
 
   # Aggregate the counts by delay for both the predicted counts and the
-  # observed counts. The observed counts have to be
+  # observed counts. The observed counts have to contain the observations that
+  # were skipped due to the reporting anomaly around Christmas, in order to
+  # include them in the nowcast.
   df_obs <- glm_data_all |>
     group_by(.data$week) |>
     summarize(
