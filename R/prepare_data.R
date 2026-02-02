@@ -19,14 +19,16 @@
 get_time_horizons <- function(
   start_date,
   timesteps_to_fit,
-  length_of_train_data
+  length_of_train_data,
+  skip_dates = NULL
 ) {
   data.frame(
     train_data_begin = start_date + (seq_len(timesteps_to_fit) - 1) * 7
   ) |>
     mutate(
       nowcast_date = .data$train_data_begin + (length_of_train_data - 1) * 7
-    )
+    ) |>
+    filter(!(.data$nowcast_date %in% skip_dates))
 }
 
 #' Load the data in the reporting triangle format
@@ -75,20 +77,45 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
 #' @param max_lag maximum reporting delay represented by the number of columns
 #' of the reporting table. In this way, the 0-th lag counts as the first, 1-st
 #' lag as the second and so on.
+#' @param skip_dates a vector of dates, on which we don't calculate the nowcast.
+#' This is typically one or two weeks during the Christmas period.
 #'
-#' @return a matrix with `max_lag` columns containing the partial counts of the
-#' reporting table The bottom-right part, which is usually unobserved,
-#' still contains the partial count values, which will be hidden later.
+#' @return a list of two elements:
+#' \describe{
+#'   \item{\code{train_data}}{matrix with `max_lag` columns containing the
+#'   partial counts of the reporting table. The bottom-right part, which is
+#'   usually unobserved, still contains the partial count values, which will be
+#'   hidden later,}
+#'   \item{\code{skip_rows}}{indices of rows, corresponding to the  dates, on
+#'   which we don't calculate the nowcast due to Christmas. These are used by
+#'   \code{get_stan_data} to calculate the specific reporting pattern of the
+#'   Christmas period.}
+#' }
 #'
 #' @export
-filter_train_period <- function(full_data, start_date, end_date, max_lag) {
-  full_data |> dplyr::filter(
+filter_train_period <- function(
+  full_data,
+  start_date,
+  end_date,
+  max_lag,
+  skip_dates = NULL
+) {
+  full_data_filtered <- full_data |> dplyr::filter(
     # Filter only the desired time period including the last date
     date >= start_date & date <= end_date
-  ) |>
+  )
+  # Select only the columns containing the values
+  train_data <- full_data_filtered |>
     dplyr::select(paste0("value_", seq_len(max_lag) - 1, "w")) |>
     # Convert to matrix for simpler calculations
     as.matrix()
+  # Find indices of rows, where we don't want to do the nowcasting due to the
+  # Christmas break. These will be used in `get_stan_data()` to calculate the
+  # indices of cells, we want to skip. The Christmas break has a very specific
+  # pattern. Change accordingly here and in `get_stan_data()`, if the pattern
+  # becomes more general.
+  skip_rows <- which(full_data_filtered$date %in% skip_dates)
+  list(train_data = train_data, skip_rows = skip_rows)
 }
 
 #' Mock the unobserved counts
@@ -126,6 +153,10 @@ mock_unobserved <- function(obs_counts) {
 #'
 #' @param train_data a matrix of the partial counts with the complete delayed
 #' counts in its columns.
+#' @param skip_rows indices of rows, corresponding to the  dates, on
+#'   which we don't calculate the nowcast due to Christmas. These are used to
+#'   calculate the specific reporting pattern of the
+#'   Christmas period.
 #'
 #' @return a list of parameters for the STAN model:
 #' \describe{
@@ -138,16 +169,22 @@ mock_unobserved <- function(obs_counts) {
 #'   triangle}
 #'   \item{\code{obs}}{the flattened counts from the reporting triangle.
 #'   The flattening is done by row with unobserved entries (`NA`s) skipped.}
+#'   \item{\code{idx_include}}{the indices of observations in the flat
+#'   observation matrix, we want to include in the likelihood.}
+#'   \item{\code{n_idx_include}}{number of observations in the flat observation
+#'   matrix, we want to include in the likelihood. Equals to \code{m} if all
+#'   shall be included.}
 #' }
 #'
 #' @export
-get_stan_data <- function(train_data) {
+get_stan_data <- function(train_data, skip_rows = NULL) {
+  # Grab the maximum lag
+  max_lag <- ncol(train_data)
   # Replace the known counts by NAs to create the reporting triangle
   obs_mat_truncated <- mock_unobserved(train_data)
-
   # Flatten the observation matrix by row
   obs_flat <- obs_mat_truncated |> t() |> c()
-  list(
+  stan_data <- list(
     # Total number of days/weeks/time units. This is the number of rows of the
     # reporting triangle
     n = nrow(obs_mat_truncated),
@@ -160,10 +197,65 @@ get_stan_data <- function(train_data) {
     p = apply(obs_mat_truncated, 1, function(x) sum(!is.na(x))),
     # Maximum lag with delay zero counting as the first lag. This is the number
     # of columns of the reporting triangle.
-    d = ncol(obs_mat_truncated),
+    d = max_lag,
     # Observations in the flat format with the unobserved entries skipped. Must
     # be defined like this, otherwise the look-up indices in the STAN algorithm
     # won't work.
     obs = obs_flat[!is.na(obs_flat)]
   )
+
+  # Find indices of cells, where we drop observations due to the Christmas
+  # break. The Christmas break has a very specific pattern. Change accordingly
+  # here and in `filter_train_period()`, if the pattern becomes more general.
+  # Currently, we remove the diagonal observations corresponding to the days,
+  # where nothing was reported. In addition we remove the cells to the right of
+  # the last dropped diagonal, because here the reports compensate for the
+  # lack of reports in the previous week(s).
+  # The `skip_rows` vector is empty, if the skipped dates are not present in the
+  # filtered time period.
+  if (!purrr::is_empty(skip_rows)) {
+    # Calculate the pairs of indices of the cells we skip. They are constructed
+    # in a way, that we start in the top-right corner and follow the diagonal to
+    # the bottom-left corner. Then we move one diagonal down and go again from
+    # its top-right corner to the bottom-left one.
+    skip_row_ind <- c(
+      # The diagonals we skip completely
+      sequence(
+        rep(max_lag, length(skip_rows)),
+        from = skip_rows - max_lag + 1
+      ),
+      # The diagonal after the Christmas break, where we keep the bottom-left
+      # cell
+      seq(from = max(skip_rows) - max_lag + 2, to = max(skip_rows))
+    )
+    skip_col_ind <- c(
+      # The diagonals we skip completely
+      rev(sequence(rep(max_lag, length(skip_rows)))),
+      # The diagonal after the Christmas break, where we keep the bottom-left
+      # cell
+      max_lag:2
+    )
+    # If the skipped dates are at the beginning of the training data, the
+    # calculated row indices might be negative.
+    skip_ind_pair <- cbind(skip_row_ind, skip_col_ind)[skip_row_ind > 0, ]
+
+    # Create a copy of the observation matrix and fill the skipped cells by an
+    # arbitrary value, which can't possibly appear in the data. In our case,
+    # anything negative will do.
+    obs_mat_truncated_copy <- obs_mat_truncated
+    obs_mat_truncated_copy[skip_ind_pair] <- -100
+    # Flatten the observation matrix by row
+    obs_flat_copy <- obs_mat_truncated_copy |> t() |> c()
+    # Remove the unobserved part from the flat observation matrix and locate the
+    # negative values. This way we can correctly identify, which observations
+    # from the flat matrix we want to include and which shall be skipped.
+    stan_data$idx_include <- which(obs_flat_copy[!is.na(obs_flat_copy)] != -100)
+    stan_data$n_idx_include <- length(stan_data$idx_include)
+  } else {
+    # If nothing is skipped, we simply include the whole flat observation
+    # matrix.
+    stan_data$idx_include <- seq_len(stan_data$m)
+    stan_data$n_idx_include <- stan_data$m
+  }
+  stan_data
 }

@@ -16,7 +16,11 @@ data {
   array[n] int p;       // number of observations per day
   array[m] int obs;     // observed symptom onsets
   int d;                // number of reporting delays
-  int model_obs;        // observation model number
+  int model_obs;        // observation model numbers
+  // Indices of included observations. Most of the time, this will be just
+  // a sequence of numbers from 1 to m.
+  int n_idx_include;
+  array[n_idx_include] int idx_include;
 }
 
 transformed data{
@@ -69,7 +73,7 @@ model {
     random_effect ~ gamma(re_params, re_params);
   }
   // Likelihood
-  obs ~ obs(exp_obs, nb_size_expanded, model_obs, P, p);
+  obs ~ obs(exp_obs, nb_size_expanded, idx_include, model_obs, P, p);
 }
 
 generated quantities {
