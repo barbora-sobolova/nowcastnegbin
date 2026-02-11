@@ -7,6 +7,7 @@
 generate_glm_nowcasts(
   fitted_gamlss_obj,
   spline_basis,
+  glm_data_all,
   t_len,
   max_lag,
   model_name,
@@ -18,6 +19,11 @@ generate_glm_nowcasts(
 function}
 
 \item{spline_basis}{a matrix with \code{t_len} rows}
+
+\item{glm_data_all}{the data frame used for fitting the GLM model including
+the entries dropped from the likelihood. The dropped, but already observed
+entries are needed to be added to the predicted part, when calculating the
+nowcast.}
 
 \item{t_len}{an integer indicating how many time units are spanned by the
 data}

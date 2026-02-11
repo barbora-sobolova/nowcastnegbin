@@ -8,6 +8,8 @@
 #' estimation window.
 #' @param timesteps_to_fit the number of rolling estimation windows.
 #' @param length_of_train_data the size of one estimation window.
+#' @param skip_dates a date vector containing the dates, where we don't wish to
+#' calculate the nowcast
 #'
 #' @return a data frame containing columns `train_data_begin`, with the
 #' estimation window starts in the date format, and `nowcast_date`, where the
@@ -66,7 +68,8 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
 #' Extract data from one rolling window
 #'
 #' @description This function extracts the data of a single rolling window.
-#' The data are returned in the form of a matrix.
+#' The data are returned in the form of a list containing a matrix and indices
+#' of skipped rows.
 #'
 #' @param full_data a data frame containing columns `date` and columns
 #' `value_0w`, `value_1w`, etc. until `max_lag - 1`.
@@ -86,7 +89,7 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
 #'   partial counts of the reporting table. The bottom-right part, which is
 #'   usually unobserved, still contains the partial count values, which will be
 #'   hidden later,}
-#'   \item{\code{skip_rows}}{indices of rows, corresponding to the  dates, on
+#'   \item{\code{skip_rows}}{indices of rows, corresponding to the dates, on
 #'   which we don't calculate the nowcast due to Christmas. These are used by
 #'   \code{get_stan_data} to calculate the specific reporting pattern of the
 #'   Christmas period.}

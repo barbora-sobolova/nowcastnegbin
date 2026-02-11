@@ -4,11 +4,16 @@
 \alias{get_stan_data}
 \title{Get the list of STAN data}
 \usage{
-get_stan_data(train_data)
+get_stan_data(train_data, skip_rows = NULL)
 }
 \arguments{
 \item{train_data}{a matrix of the partial counts with the complete delayed
 counts in its columns.}
+
+\item{skip_rows}{indices of rows, corresponding to the  dates, on
+which we don't calculate the nowcast due to Christmas. These are used to
+calculate the specific reporting pattern of the
+Christmas period.}
 }
 \value{
 a list of parameters for the STAN model:
@@ -22,6 +27,11 @@ per row}
 triangle}
 \item{\code{obs}}{the flattened counts from the reporting triangle.
 The flattening is done by row with unobserved entries (\code{NA}s) skipped.}
+\item{\code{idx_include}}{the indices of observations in the flat
+observation matrix, we want to include in the likelihood.}
+\item{\code{n_idx_include}}{number of observations in the flat observation
+matrix, we want to include in the likelihood. Equals to \code{m} if all
+shall be included.}
 }
 }
 \description{

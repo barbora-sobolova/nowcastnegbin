@@ -1,4 +1,4 @@
-#' Get the names of the observation model
+#' Get the names of the observation models
 #'
 #' @return a character vector containing the names of the 6 observational
 #' models. They are ordered the same way as in the STAN implementation.
