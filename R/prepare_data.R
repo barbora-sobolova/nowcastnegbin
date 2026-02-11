@@ -88,7 +88,7 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
 #'   partial counts of the reporting table. The bottom-right part, which is
 #'   usually unobserved, still contains the partial count values, which will be
 #'   hidden later,}
-#'   \item{\code{skip_rows}}{indices of rows, corresponding to the  dates, on
+#'   \item{\code{skip_rows}}{indices of rows, corresponding to the dates, on
 #'   which we don't calculate the nowcast due to Christmas. These are used by
 #'   \code{get_stan_data} to calculate the specific reporting pattern of the
 #'   Christmas period.}

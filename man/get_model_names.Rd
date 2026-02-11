@@ -2,7 +2,7 @@
 % Please edit documentation in R/helpers.R
 \name{get_model_names}
 \alias{get_model_names}
-\title{Get the names of the observation model}
+\title{Get the names of the observation models}
 \usage{
 get_model_names()
 }
@@ -11,5 +11,5 @@ a character vector containing the names of the 6 observational
 models. They are ordered the same way as in the STAN implementation.
 }
 \description{
-Get the names of the observation model
+Get the names of the observation models
 }
