@@ -168,7 +168,7 @@ list(
   ),
   # Select the names of models we want to fit with the GLM method to branch over
   # it.
-  tar_target(model_names_glm, obs_model$model_name[obs_model$model_number < 4]),
+  tar_target(model_names_glm, obs_model$model_name[seq_len(4)]),
   # Fit the gamlss models
   tar_target(fitted_glm, {
     fit_glm_model(stan_data = stan_data, model_name = model_names_glm)
@@ -226,10 +226,10 @@ list(
       # Select only the codes and colors of the first 4 models (that is
       # excluding NegBin2M and NegBin1M)
       model_codes = setNames(
-        obs_model$model_name[seq_len(4)],
-        obs_model$model_number[seq_len(4)]
+        model_names_glm,
+        obs_model$model_number[obs_model$model_name %in% model_names_glm]
       ),
-      model_colors = model_colors[seq_len(4)],
+      model_colors = model_colors[model_names_glm],
       date_of_the_nowcast = time_horizons$nowcast_date,
       fitting_method = "glm"
     )
@@ -249,10 +249,10 @@ list(
     plot_coverage(
       df_summarized_nowcast_glm,
       model_codes = setNames(
-        obs_model$model_name[seq_len(4)],
-        obs_model$model_number[seq_len(4)]
+        model_names_glm,
+        obs_model$model_number[obs_model$model_name %in% model_names_glm]
       ),
-      model_colors = model_colors[seq_len(4)],
+      model_colors = model_colors[model_names_glm],
       fitting_method = "glm"
     )
   }),
@@ -267,7 +267,7 @@ list(
   tar_target(crps_plot_glm, {
     plot_crps(
       df_summarized_nowcast_glm,
-      model_colors = model_colors[seq_len(4)],
+      model_colors = model_colors[model_names_glm],
       fitting_method = "glm"
     )
   }),
