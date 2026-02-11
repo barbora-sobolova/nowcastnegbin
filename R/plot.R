@@ -380,6 +380,75 @@ plot_trajectory <- function(
   trajectory_plot
 }
 
+#' Plot the summary of MCMC diagnostics
+#'
+#' @description This function plots and possibly saves the summary of the
+#' MCMC fitting diagnostics for each time step.
+#'
+#' @param df_diagnostics a data frame containing the diagnostic summaries for
+#' each model and each run (timesteps). It contains columns `num_divergent`,
+#' `num_max_treedepth`, `ebfmi` (currently neither plotted, nor needed),
+#' `Distribution`, `date_of_the_nowcast`.
+#' @param model_colors a named vector of the model colors corresponding to each
+#' observation model
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggplot2::ggsave()}
+#'
+#' @return a ggplot object
+#'
+#' @import dplyr ggplot2
+#' @importFrom tidyr pivot_longer
+#'
+#' @export
+plot_mcmc_diagnostics <- function(
+  df_diagnostics,
+  model_colors,
+  save_plot = TRUE
+) {
+  df_diagnostics_long <- df_diagnostics |>
+    # Create a long data frame to plot the number of divergent transitions and
+    # the maximum tree depth in different facets
+    pivot_longer(
+      c(.data$num_divergent, .data$num_max_treedepth),
+      names_to = "Quantity",
+      values_to = "Problematic"
+    ) |>
+    # Sum the numbers of problematic transitions from different chains
+    group_by(.data$Distribution, .data$date_of_the_nowcast, .data$Quantity) |>
+    summarise(Problematic = sum(.data$Problematic), .groups = "drop") |>
+    # Assign colors to the models
+    mutate(
+      Distribution = factor(
+        .data$Distribution,
+        levels = seq(0, length(model_colors) - 1),
+        labels = names(model_colors)
+      )
+    )
+
+  diag_plot <- ggplot(
+    df_diagnostics_long,
+    aes(
+      x = .data$date_of_the_nowcast,
+      y = .data$Problematic,
+      color = .data$Distribution
+    )
+  ) +
+    geom_line() +
+    scale_color_manual(values = model_colors) +
+    facet_wrap(~Quantity, nrow = 2, scales = "free_y")
+
+  # Save the plot if required, the width, height and path is hard-coded here
+  if (save_plot) {
+    save_figure(
+      diag_plot,
+      "inst/figure/diagnostics_plot",
+      width = 9,
+      height = 7
+    )
+  }
+  diag_plot
+}
+
 #' Save a figure in the PDF and the PNG format
 #'
 #' @param figure a ggplot chart to be saved

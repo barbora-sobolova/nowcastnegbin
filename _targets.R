@@ -42,20 +42,20 @@ model_colors <- c(
 max_lag <- 5
 
 # Where is the beginning of the data used for the case study
-analysis_start_date <- as.Date("2024-06-02")
+analysis_start_date <- as.Date("2024-07-28")
 # How many weeks we want to include as "training" data.
 # This includes the last `max_lag - 1` weeks for which we calculate the nowcast.
-length_of_train_data <- 28
+length_of_train_data <- 20
 # For how many dates we want to do the fitting. For each time step, we shift the
 # window of the train data to include a new week of observations mimicking a
 # real-time analysis.
-timesteps_to_fit <- 44
+timesteps_to_fit <- 55
 # What dates shall be skipped due to the Christmas break. These dates indicate
 # two things:
 #  1. No nowcast will be produced on these days
 #  2. The diagonal of the reporting triangle corresponding to these dates and
 #     most of the one directly following will be dropped from the likelihood.
-skip_dates <- as.Date(c("2024-12-22", "2024-12-29"))
+skip_dates <- as.Date(c("2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28"))
 
 # A data frame encoding the observation model
 obs_model <- data.frame(
@@ -72,8 +72,7 @@ list(
   # STAN settings
   tar_target(stan_settings, {
     list(
-      chains = 4,
-      parallel_chains = 1,
+      parallel_chains = 4,
       iter_warmup = 1000,
       iter_sampling = 1000,
       show_messages = FALSE,
@@ -169,7 +168,7 @@ list(
   ),
   # Select the names of models we want to fit with the GLM method to branch over
   # it.
-  tar_target(model_names_glm, obs_model$model_name[obs_model$model_number < 4]),
+  tar_target(model_names_glm, obs_model$model_name[seq_len(4)]),
   # Fit the gamlss models
   tar_target(fitted_glm, {
     fit_glm_model(stan_data = stan_data, model_name = model_names_glm)
@@ -206,6 +205,34 @@ list(
     df_summarized_nowcast_NegBin1M
   )
    ),
+  # Collect the diagnostic summaries for the MCMC models
+  tar_target(diagnostic_summaries, {
+    bind_rows(
+        fitted_Poisson$diagnostics,
+        fitted_NegBinX$diagnostics,
+        fitted_NegBin2D$diagnostics,
+        fitted_NegBin1D$diagnostics,
+        fitted_NegBin2M$diagnostics,
+        fitted_NegBin1M$diagnostics
+    ) |>
+      mutate(
+        date_of_the_nowcast = time_horizons$nowcast_date
+      )
+  },
+  pattern = map(
+    time_horizons,
+    fitted_Poisson,
+    fitted_NegBinX,
+    fitted_NegBin2D,
+    fitted_NegBin1D,
+    fitted_NegBin2M,
+    fitted_NegBin1M
+  )
+  ),
+  # Plot the diagnostics of the MCMC procedure
+  tar_target(plot_diagnostics, {
+    plot_mcmc_diagnostics(diagnostic_summaries, model_colors)
+  }),
   # Plot the nowcasts from the STAN model for each estimation window
   tar_target(nowcast_plot_mcmc, {
     plot_nowcast(
@@ -227,10 +254,10 @@ list(
       # Select only the codes and colors of the first 4 models (that is
       # excluding NegBin2M and NegBin1M)
       model_codes = setNames(
-        obs_model$model_name[seq_len(4)],
-        obs_model$model_number[seq_len(4)]
+        model_names_glm,
+        obs_model$model_number[obs_model$model_name %in% model_names_glm]
       ),
-      model_colors = model_colors[seq_len(4)],
+      model_colors = model_colors[model_names_glm],
       date_of_the_nowcast = time_horizons$nowcast_date,
       fitting_method = "glm"
     )
@@ -250,10 +277,10 @@ list(
     plot_coverage(
       df_summarized_nowcast_glm,
       model_codes = setNames(
-        obs_model$model_name[seq_len(4)],
-        obs_model$model_number[seq_len(4)]
+        model_names_glm,
+        obs_model$model_number[obs_model$model_name %in% model_names_glm]
       ),
-      model_colors = model_colors[seq_len(4)],
+      model_colors = model_colors[model_names_glm],
       fitting_method = "glm"
     )
   }),
@@ -268,7 +295,7 @@ list(
   tar_target(crps_plot_glm, {
     plot_crps(
       df_summarized_nowcast_glm,
-      model_colors = model_colors[seq_len(4)],
+      model_colors = model_colors[model_names_glm],
       fitting_method = "glm"
     )
   }),
