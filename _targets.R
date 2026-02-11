@@ -45,17 +45,17 @@ max_lag <- 5
 analysis_start_date <- as.Date("2024-06-02")
 # How many weeks we want to include as "training" data.
 # This includes the last `max_lag - 1` weeks for which we calculate the nowcast.
-length_of_train_data <- 28
+length_of_train_data <- 20
 # For how many dates we want to do the fitting. For each time step, we shift the
 # window of the train data to include a new week of observations mimicking a
 # real-time analysis.
-timesteps_to_fit <- 44
+timesteps_to_fit <- 52
 # What dates shall be skipped due to the Christmas break. These dates indicate
 # two things:
 #  1. No nowcast will be produced on these days
 #  2. The diagonal of the reporting triangle corresponding to these dates and
 #     most of the one directly following will be dropped from the likelihood.
-skip_dates <- as.Date(c("2024-12-22", "2024-12-29"))
+skip_dates <- as.Date(c("2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28"))
 
 # A data frame encoding the observation model
 obs_model <- data.frame(
@@ -72,8 +72,7 @@ list(
   # STAN settings
   tar_target(stan_settings, {
     list(
-      chains = 4,
-      parallel_chains = 1,
+      parallel_chains = 4,
       iter_warmup = 1000,
       iter_sampling = 1000,
       show_messages = FALSE,
