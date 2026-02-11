@@ -68,7 +68,8 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
 #' Extract data from one rolling window
 #'
 #' @description This function extracts the data of a single rolling window.
-#' The data are returned in the form of a matrix.
+#' The data are returned in the form of a list containing a matrix and indices
+#' of skipped rows.
 #'
 #' @param full_data a data frame containing columns `date` and columns
 #' `value_0w`, `value_1w`, etc. until `max_lag - 1`.

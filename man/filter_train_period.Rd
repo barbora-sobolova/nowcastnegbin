@@ -44,5 +44,6 @@ Christmas period.}
 }
 \description{
 This function extracts the data of a single rolling window.
-The data are returned in the form of a matrix.
+The data are returned in the form of a list containing a matrix and indices
+of skipped rows.
 }
