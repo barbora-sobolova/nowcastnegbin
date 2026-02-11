@@ -383,7 +383,7 @@ plot_trajectory <- function(
 #' Plot the summary of MCMC diagnostics
 #'
 #' @description This function plots and possibly saves the summary of the
-#' MCMC fitting diagnostics for each time steps.
+#' MCMC fitting diagnostics for each time step.
 #'
 #' @param df_diagnostics a data frame containing the diagnostic summaries for
 #' each model and each run (timesteps). It contains columns `num_divergent`,
@@ -418,7 +418,11 @@ plot_mcmc_diagnostics <- function(
     summarise(Problematic = sum(.data$Problematic), .groups = "drop") |>
     # Assign colors to the models
     mutate(
-      Distribution = factor(.data$Distribution, labels = names(model_colors))
+      Distribution = factor(
+        .data$Distribution,
+        levels = seq(0, length(model_colors) - 1),
+        labels = names(model_colors)
+      )
     )
 
   diag_plot <- ggplot(

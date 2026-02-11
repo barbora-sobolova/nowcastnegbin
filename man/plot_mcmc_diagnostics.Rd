@@ -23,5 +23,5 @@ a ggplot object
 }
 \description{
 This function plots and possibly saves the summary of the
-MCMC fitting diagnostics for each time steps.
+MCMC fitting diagnostics for each time step.
 }
