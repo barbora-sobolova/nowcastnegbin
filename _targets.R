@@ -205,6 +205,34 @@ list(
     df_summarized_nowcast_NegBin1M
   )
    ),
+  # Collect the diagnostic summaries for the MCMC models
+  tar_target(diagnostic_summaries, {
+    bind_rows(
+        fitted_Poisson$diagnostics,
+        fitted_NegBinX$diagnostics,
+        fitted_NegBin2D$diagnostics,
+        fitted_NegBin1D$diagnostics,
+        fitted_NegBin2M$diagnostics,
+        fitted_NegBin1M$diagnostics
+    ) |>
+      mutate(
+        date_of_the_nowcast = time_horizons$nowcast_date
+      )
+  },
+  pattern = map(
+    time_horizons,
+    fitted_Poisson,
+    fitted_NegBinX,
+    fitted_NegBin2D,
+    fitted_NegBin1D,
+    fitted_NegBin2M,
+    fitted_NegBin1M
+  )
+  ),
+  # Plot the diagnostics of the MCMC procedure
+  tar_target(plot_diagnostics, {
+    plot_mcmc_diagnostics(diagnostic_summaries, model_colors)
+  }),
   # Plot the nowcasts from the STAN model for each estimation window
   tar_target(nowcast_plot_mcmc, {
     plot_nowcast(
