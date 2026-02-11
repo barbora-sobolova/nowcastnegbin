@@ -8,6 +8,8 @@
 #' estimation window.
 #' @param timesteps_to_fit the number of rolling estimation windows.
 #' @param length_of_train_data the size of one estimation window.
+#' @param skip_dates a date vector containing the dates, where we don't wish to
+#' calculate the nowcast
 #'
 #' @return a data frame containing columns `train_data_begin`, with the
 #' estimation window starts in the date format, and `nowcast_date`, where the

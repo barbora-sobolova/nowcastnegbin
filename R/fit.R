@@ -132,6 +132,10 @@ select_gamlss_model <- function(
 #' @param fitted_gamlss_obj a fitted GLM model using the \code{gamlss2()}
 #' function
 #' @param spline_basis a matrix with \code{t_len} rows
+#' @param glm_data_all the data frame used for fitting the GLM model including
+#' the entries dropped from the likelihood. The dropped, but already observed
+#' entries are needed to be added to the predicted part, when calculating the
+#' nowcast.
 #' @param t_len an integer indicating how many time units are spanned by the
 #' data
 #' @param max_lag an integer, the maximum reporting delay. Here, they are
