@@ -4,7 +4,12 @@
 \alias{get_time_horizons}
 \title{Create the data frame defining the estimation windows}
 \usage{
-get_time_horizons(start_date, timesteps_to_fit, length_of_train_data)
+get_time_horizons(
+  start_date,
+  timesteps_to_fit,
+  length_of_train_data,
+  skip_dates = NULL
+)
 }
 \arguments{
 \item{start_date}{a date in the date format, the starting date for a single
@@ -13,6 +18,9 @@ estimation window.}
 \item{timesteps_to_fit}{the number of rolling estimation windows.}
 
 \item{length_of_train_data}{the size of one estimation window.}
+
+\item{skip_dates}{a date vector containing the dates, where we don't wish to
+calculate the nowcast}
 }
 \value{
 a data frame containing columns \code{train_data_begin}, with the

@@ -4,7 +4,13 @@
 \alias{filter_train_period}
 \title{Extract data from one rolling window}
 \usage{
-filter_train_period(full_data, start_date, end_date, max_lag)
+filter_train_period(
+  full_data,
+  start_date,
+  end_date,
+  max_lag,
+  skip_dates = NULL
+)
 }
 \arguments{
 \item{full_data}{a data frame containing columns \code{date} and columns
@@ -19,13 +25,25 @@ ends. The ending point will be included.}
 \item{max_lag}{maximum reporting delay represented by the number of columns
 of the reporting table. In this way, the 0-th lag counts as the first, 1-st
 lag as the second and so on.}
+
+\item{skip_dates}{a vector of dates, on which we don't calculate the nowcast.
+This is typically one or two weeks during the Christmas period.}
 }
 \value{
-a matrix with \code{max_lag} columns containing the partial counts of the
-reporting table The bottom-right part, which is usually unobserved,
-still contains the partial count values, which will be hidden later.
+a list of two elements:
+\describe{
+\item{\code{train_data}}{matrix with \code{max_lag} columns containing the
+partial counts of the reporting table. The bottom-right part, which is
+usually unobserved, still contains the partial count values, which will be
+hidden later,}
+\item{\code{skip_rows}}{indices of rows, corresponding to the dates, on
+which we don't calculate the nowcast due to Christmas. These are used by
+\code{get_stan_data} to calculate the specific reporting pattern of the
+Christmas period.}
+}
 }
 \description{
 This function extracts the data of a single rolling window.
-The data are returned in the form of a matrix.
+The data are returned in the form of a list containing a matrix and indices
+of skipped rows.
 }
