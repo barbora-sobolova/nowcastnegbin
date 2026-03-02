@@ -75,7 +75,6 @@ list(
       parallel_chains = 4,
       iter_warmup = 1000,
       iter_sampling = 1000,
-      max_treedepth = 12,
       show_messages = FALSE,
       show_exceptions = FALSE,
       refresh = 0,

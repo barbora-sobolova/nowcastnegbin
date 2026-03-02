@@ -4,6 +4,7 @@ functions {
   #include "functions/predict_rng.stan"
   #include "functions/combine_obs_with_predicted_obs.stan"
   #include "functions/multiply_array.stan"
+  #include "functions/divide_vector.stan"
   #include "functions/calc_exp_total_obs.stan"
   #include "functions/calc_re_parameters.stan"
   #include "functions/expand_nb_size.stan"
@@ -44,7 +45,7 @@ transformed parameters {
   // Parameters of the random effect distribution
   array[n] real re_params = calc_re_parameters(lambda, nb_size, model_obs);
   // Mean value of the total counts with the random effect
-  array[n] real exp_total_obs = calc_exp_total_obs(lambda, random_effect, model_obs);
+  array[n] real exp_total_obs = calc_exp_total_obs(lambda, random_effect, re_params, model_obs);
   // Mean value of the counts split by the delay with the random effect
   // Right truncated reports
   array[m] real exp_obs = observe_onsets_with_delay(exp_total_obs, reporting_delay, P, p);
@@ -63,14 +64,14 @@ transformed parameters {
 
 model {
   // Prior
-  init_onsets ~ normal(3, 2) T[0, ];
+  init_onsets ~ normal(10, 2) T[0, ];
   rw_noise ~ std_normal();
-  rw_sd ~ normal(0, 0.2) T[0, ];
-  reporting_delay ~ dirichlet(rep_vector(1, d));
+  rw_sd ~ normal(0, 0.15) T[0, ];
+  reporting_delay ~ dirichlet([5, 1.5, 0.5, 0.25, 0.25]);
   nb_size ~ normal(1, 3) T[0, ];
   // Random effect for the NegBin1M and NegBin2M models
   if (model_obs == 4 || model_obs == 5) {
-    random_effect ~ gamma(re_params, re_params);
+    random_effect ~ gamma(re_params, 1);
   }
   // Likelihood
   obs ~ obs(exp_obs, nb_size_expanded, idx_include, model_obs, P, p);

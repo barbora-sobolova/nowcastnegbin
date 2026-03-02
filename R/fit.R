@@ -35,6 +35,39 @@ fit_stan_model <- function(
     compiled_model,
     c(data = list(c(stan_data, model_obs = model_obs)), stan_settings)
   )
+  # Extract the diagnostic summary
+  diagnostics <- fitted_model$diagnostic_summary() |>
+    suppressMessages() |>
+    as.data.frame()
+  # Refit the model, if we get too many divergent transitions, or the ebfmi is
+  # low in at least one chain.
+  refit <- 0
+  while (
+    (any(diagnostics$num_divergent >= 100) || any(diagnostics$ebfmi < 0.3)) &&
+      refit < 3
+  ) {
+    # Shift the seed and refit
+    stan_settings$seed <- stan_settings$seed + 1
+    refitted_model <- do.call(
+      compiled_model,
+      c(data = list(c(stan_data, model_obs = model_obs)), stan_settings)
+    )
+    diagnostics_refit <- refitted_model$diagnostic_summary() |>
+      suppressMessages() |>
+      as.data.frame()
+    refit <- refit + 1
+    # If the diagnostics of the refitted model is better than for the first fit,
+    # store the refit
+    if (
+      max(diagnostics_refit$num_divergent) < max(diagnostics$num_divergent) &&
+        min(diagnostics_refit$ebfmi) > min(diagnostics$ebfmi)
+    ) {
+      fitted_model <- refitted_model
+      diagnostics <- diagnostics_refit |>
+        mutate(seed = stan_settings$seed)
+    }
+  }
+
   # Extract the nowcasts
   df_nowcast <- fitted_model |>
     tidybayes::gather_draws(nowcast[week]) |> # nolint
@@ -58,9 +91,8 @@ fit_stan_model <- function(
     ungroup() |>
     mutate(Distribution = model_obs) |>
     dplyr::select(-".variable")
-  # Extract the diagnostic summary
-  diagnostics <- fitted_model$diagnostic_summary() |>
-    as.data.frame() |>
+  # Add the seed and the model number to the diagnostic summary
+  diagnostics <- diagnostics |>
     mutate(Distribution = model_obs)
   # Return the draws as a list
   ret_list <- list(
