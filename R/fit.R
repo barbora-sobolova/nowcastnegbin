@@ -63,8 +63,7 @@ fit_stan_model <- function(
         min(diagnostics_refit$ebfmi) > min(diagnostics$ebfmi)
     ) {
       fitted_model <- refitted_model
-      diagnostics <- diagnostics_refit |>
-        mutate(seed = stan_settings$seed)
+      diagnostics <- diagnostics_refit
     }
   }
 
@@ -93,7 +92,7 @@ fit_stan_model <- function(
     dplyr::select(-".variable")
   # Add the seed and the model number to the diagnostic summary
   diagnostics <- diagnostics |>
-    mutate(Distribution = model_obs)
+    mutate(Distribution = model_obs, seed = stan_settings$seed)
   # Return the draws as a list
   ret_list <- list(
     nowcast = df_nowcast,
