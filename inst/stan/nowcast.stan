@@ -17,6 +17,7 @@ data {
   array[n] int p;       // number of observations per day
   array[m] int obs;     // observed symptom onsets
   int d;                // number of reporting delays
+  vector[d] prior_delay_param;  // reporting delay distribution prior params
   int model_obs;        // observation model numbers
   // Indices of included observations. Most of the time, this will be just
   // a sequence of numbers from 1 to m.
@@ -67,7 +68,7 @@ model {
   init_onsets ~ normal(10, 2) T[0, ];
   rw_noise ~ std_normal();
   rw_sd ~ normal(0, 0.15) T[0, ];
-  reporting_delay ~ dirichlet([5, 1.5, 0.5, 0.25, 0.25]);
+  reporting_delay ~ dirichlet(prior_delay_param);
   nb_size ~ normal(1, 3) T[0, ];
   // Random effect for the NegBin1M and NegBin2M models
   if (model_obs == 4 || model_obs == 5) {

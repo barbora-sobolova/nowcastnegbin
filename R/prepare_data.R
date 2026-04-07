@@ -156,10 +156,13 @@ mock_unobserved <- function(obs_counts) {
 #'
 #' @param train_data a matrix of the partial counts with the complete delayed
 #' counts in its columns.
-#' @param skip_rows indices of rows, corresponding to the  dates, on
-#'   which we don't calculate the nowcast due to Christmas. These are used to
-#'   calculate the specific reporting pattern of the
-#'   Christmas period.
+#' @param prior_delay_param a vector of positive real values, parameters of the
+#' prior Dirichlet distribution of the reporting delay. The higher the sum of
+#' its elements is, the more informative the prior distribution of the reporting
+#' delay becomes.
+#' @param skip_rows indices of rows, corresponding to the  dates, on which we
+#' don't calculate the nowcast due to Christmas. These are used to calculate the
+#' specific reporting pattern of the Christmas period.
 #'
 #' @return a list of parameters for the STAN model:
 #' \describe{
@@ -180,9 +183,17 @@ mock_unobserved <- function(obs_counts) {
 #' }
 #'
 #' @export
-get_stan_data <- function(train_data, skip_rows = NULL) {
+get_stan_data <- function(
+  train_data,
+  prior_delay_param = NULL,
+  skip_rows = NULL
+) {
   # Grab the maximum lag
   max_lag <- ncol(train_data)
+  #
+  if (length(prior_delay_param) != max_lag) {
+    stop("The vector of prior parameters of the reporting delay must have the same length as there are columns in the reporting triangle.")  # nolint
+  }
   # Replace the known counts by NAs to create the reporting triangle
   obs_mat_truncated <- mock_unobserved(train_data)
   # Flatten the observation matrix by row
@@ -201,6 +212,8 @@ get_stan_data <- function(train_data, skip_rows = NULL) {
     # Maximum lag with delay zero counting as the first lag. This is the number
     # of columns of the reporting triangle.
     d = max_lag,
+    # Parameters of the prior Dirichlet distribution of the reporting delay
+    prior_delay_param = prior_delay_param,
     # Observations in the flat format with the unobserved entries skipped. Must
     # be defined like this, otherwise the look-up indices in the STAN algorithm
     # won't work.
