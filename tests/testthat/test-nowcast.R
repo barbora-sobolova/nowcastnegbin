@@ -132,7 +132,7 @@ test_that("Model output from the GLM method is stable and plausible", {
 
     # Fit the model
     fit <- fit_glm_model(
-      stan_data = get_stan_data(obs_full$reports, params$skip_rows),
+      stan_data = get_stan_data(obs_full$reports, skip_rows = params$skip_rows),
       model_name = model_names[model_obs + 1]
     )
 

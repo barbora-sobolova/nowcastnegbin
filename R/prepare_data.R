@@ -191,7 +191,7 @@ get_stan_data <- function(
   # Grab the maximum lag
   max_lag <- ncol(train_data)
   #
-  if (length(prior_delay_param) != max_lag) {
+  if (!is.null(prior_delay_param) && length(prior_delay_param) != max_lag) {
     stop("The vector of prior parameters of the reporting delay must have the same length as there are columns in the reporting triangle.")  # nolint
   }
   # Replace the known counts by NAs to create the reporting triangle
