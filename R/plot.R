@@ -416,7 +416,7 @@ plot_mcmc_diagnostics <- function(
     # Create a long data frame to plot the number of divergent transitions,
     # the maximum tree depth and the lowest ebfmi in different facets
     pivot_longer(
-      c(.data$num_divergent, .data$num_max_treedepth, .data$min_ebfmi),
+      cols = c("num_divergent", "num_max_treedepth", "min_ebfmi"),
       names_to = "Quantity",
       values_to = "Value"
     ) |>
