@@ -38,7 +38,8 @@ fit_stan_model <- function(
   # Extract the diagnostic summary
   diagnostics <- fitted_model$diagnostic_summary() |>
     suppressMessages() |>
-    as.data.frame()
+    as.data.frame() |>
+    mutate(seed = stan_settings$seed)
   # Refit the model, if we get too many divergent transitions, or the ebfmi is
   # low in at least one chain.
   refit <- 0
@@ -63,7 +64,7 @@ fit_stan_model <- function(
         min(diagnostics_refit$ebfmi) > min(diagnostics$ebfmi)
     ) {
       fitted_model <- refitted_model
-      diagnostics <- diagnostics_refit
+      diagnostics <- diagnostics_refit |> mutate(seed = stan_settings$seed)
     }
   }
 
@@ -92,7 +93,7 @@ fit_stan_model <- function(
     dplyr::select(-".variable")
   # Add the seed and the model number to the diagnostic summary
   diagnostics <- diagnostics |>
-    mutate(Distribution = model_obs, seed = stan_settings$seed)
+    mutate(Distribution = model_obs)
   # Return the draws as a list
   ret_list <- list(
     nowcast = df_nowcast,
