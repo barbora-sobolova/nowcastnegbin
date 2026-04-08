@@ -59,10 +59,18 @@ fit_stan_model <- function(
     refit <- refit + 1
     # If the diagnostics of the refitted model is better than for the first fit,
     # store the refit
-    if (
-      max(diagnostics_refit$num_divergent) < max(diagnostics$num_divergent) &&
-        min(diagnostics_refit$ebfmi) > min(diagnostics$ebfmi)
-    ) {
+    store_refit <- (
+      # Accept if divergences improve and ebfmi doesn't get critically worse
+      max(diagnostics$num_divergent) > max(diagnostics_refit$num_divergent) &&
+        min(diagnostics$ebfmi) - min(diagnostics_refit$ebfmi) < 0.1
+    ) ||
+      (
+        # Or if ebfmi improves and divergences don't get critically worse
+        min(diagnostics$ebfmi) < min(diagnostics_refit$ebfmi) &&
+          max(diagnostics$num_divergent) -
+            max(diagnostics_refit$num_divergent) < 50
+      )
+    if (store_refit) {
       fitted_model <- refitted_model
       diagnostics <- diagnostics_refit |> mutate(seed = stan_settings$seed)
     }
