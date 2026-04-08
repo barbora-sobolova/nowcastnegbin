@@ -96,10 +96,11 @@ summarize_nowcast <- function(
     dplyr::summarize(
       # Calculate the CRPS from the sample. We pass counts[1] as the true
       # observed value, since this is the same value for each date.
-      CRPS = scoringutils::crps_sample(
+      CRPS = as_tibble(scoringutils::crps_sample(
         observed = .data$counts[1],
-        predicted = .data$.value
-      ),
+        predicted = .data$.value,
+        separate_results = TRUE
+      )),
       # Keep the true value
       true_val = .data$counts[1],
       # Calculate the mean and the quantiles
@@ -113,7 +114,7 @@ summarize_nowcast <- function(
       ),
       .groups = "drop"
     ) |>
-    tidyr::unnest("quantiles") |>
+    tidyr::unnest(c("quantiles", "CRPS")) |>
     mutate(
       # Calculate the nowcasting horizon and save it as a factor for easier
       # plotting
