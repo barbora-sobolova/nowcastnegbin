@@ -81,9 +81,10 @@ summarize_nowcast <- function(
     ) |>
     # Remove the, now redundant, week column
     dplyr::select(-"week")
-  # Quantiles of the sampled nowcasts to calculate - the median and quantiles
-  # for constructing the 95% and 50% prediction interval
-  quantiles_to_get <- c(50, 2.5, 25, 75, 97.5)
+  # Quantiles of the sampled nowcasts to calculate - 5 % to 95 % quantiles with
+  # a 5 % step in between and the 2.5 % and 97.5 % quantiles for constructing
+  # the 95% and 50% prediction interval
+  quantiles_to_get <- c(2.5, seq(5, 95, by = 5), 97.5)
   # Summarize the sample of the nowcasts
   df_nowcast_plot <- df_total |>
     # The `df_total` data frame contains the final and the preliminary counts.
