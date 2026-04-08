@@ -9,8 +9,7 @@ plot_mcmc_diagnostics(df_diagnostics, model_colors, save_plot = TRUE)
 \arguments{
 \item{df_diagnostics}{a data frame containing the diagnostic summaries for
 each model and each run (timesteps). It contains columns \code{num_divergent},
-\code{num_max_treedepth}, \code{ebfmi} (currently neither plotted, nor needed),
-\code{Distribution}, \code{date_of_the_nowcast}.}
+\code{num_max_treedepth}, \code{ebfmi}, \code{Distribution}, \code{date_of_the_nowcast}.}
 
 \item{model_colors}{a named vector of the model colors corresponding to each
 observation model}

@@ -56,6 +56,8 @@ timesteps_to_fit <- 55
 #  2. The diagonal of the reporting triangle corresponding to these dates and
 #     most of the one directly following will be dropped from the likelihood.
 skip_dates <- as.Date(c("2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28"))
+# Parameters of the prior reporting delay distribution.
+prior_delay_param <- c(5, 1.5, 0.5, 0.25, 0.25)
 
 # A data frame encoding the observation model
 obs_model <- data.frame(
@@ -121,7 +123,11 @@ list(
   # Create the list of data and parameters to pass to the STAN model
   tar_target(
     stan_data,
-    get_stan_data(train_data$train_data, train_data$skip_rows),
+    get_stan_data(
+      train_data$train_data,
+      prior_delay_param,
+      train_data$skip_rows
+    ),
     pattern = map(time_horizons, train_data),
     iteration = "list"
   ),
