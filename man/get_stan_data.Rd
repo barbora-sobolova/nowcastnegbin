@@ -13,7 +13,9 @@ counts in its columns.}
 \item{prior_delay_param}{a vector of positive real values, parameters of the
 prior Dirichlet distribution of the reporting delay. The higher the sum of
 its elements is, the more informative the prior distribution of the reporting
-delay becomes.}
+delay becomes. If NULL, the NULL value will be propagated to the output,
+which is fine for fitting the GLM model, but for the STAN model,
+\code{prior_delay_param} must be specified.}
 
 \item{skip_rows}{indices of rows, corresponding to the  dates, on which we
 don't calculate the nowcast due to Christmas. These are used to calculate the
