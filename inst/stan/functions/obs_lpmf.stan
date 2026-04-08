@@ -35,10 +35,10 @@ real obs_lpmf(array[] int obs, array[] real exp_obs, array[] real nb_size,
 
    if (model_obs == 0 || model_obs == 4 || model_obs == 5) {
      // Poisson, NegBin2M and NegBin1M
-     tar = poisson_lpmf(obs[idx_include] | exp_obs[idx_include]);
+     tar = poisson_log_lpmf(obs[idx_include] | log(exp_obs[idx_include]));
    } else {
      // NegBinX, NegBin2D and NegBin1D
-     tar = neg_binomial_2_lpmf(obs[idx_include] | exp_obs[idx_include], nb_size[idx_include]);
+     tar = neg_binomial_2_log_lpmf(obs[idx_include] | log(exp_obs[idx_include]), nb_size[idx_include]);
    }
    return(tar);
 }

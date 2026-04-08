@@ -16,6 +16,8 @@ test_that("Model output from the MCMC method is stable and plausible", {
   params$nb_size <- 1.5
   # Include skipping one "Christmas" week
   params$skip_rows <- 50
+  # Prior parameters of the reporting delay distribution
+  params$prior_delay_param <- c(1, 1, 1)
 
   stan_settings <- list(
     seed = 123,
@@ -51,7 +53,11 @@ test_that("Model output from the MCMC method is stable and plausible", {
         model = model_names[model_obs + 1]
       )
     )
-    data_list <- get_stan_data(obs_full$reports, skip_rows = params$skip_rows)
+    data_list <- get_stan_data(
+      obs_full$reports,
+      prior_delay_param = params$prior_delay_param,
+      skip_rows = params$skip_rows
+    )
 
     # Run sampling with fixed seed
     fit <- fit_stan_model(mod$sample, data_list, model_obs, stan_settings)
@@ -126,7 +132,7 @@ test_that("Model output from the GLM method is stable and plausible", {
 
     # Fit the model
     fit <- fit_glm_model(
-      stan_data = get_stan_data(obs_full$reports, params$skip_rows),
+      stan_data = get_stan_data(obs_full$reports, skip_rows = params$skip_rows),
       model_name = model_names[model_obs + 1]
     )
 
