@@ -387,8 +387,7 @@ plot_trajectory <- function(
 #'
 #' @param df_diagnostics a data frame containing the diagnostic summaries for
 #' each model and each run (timesteps). It contains columns `num_divergent`,
-#' `num_max_treedepth`, `ebfmi` (currently neither plotted, nor needed),
-#' `Distribution`, `date_of_the_nowcast`.
+#' `num_max_treedepth`, `ebfmi`, `Distribution`, `date_of_the_nowcast`.
 #' @param model_colors a named vector of the model colors corresponding to each
 #' observation model
 #' @param save_plot logical indicator, whether to save the plot using
@@ -406,16 +405,23 @@ plot_mcmc_diagnostics <- function(
   save_plot = TRUE
 ) {
   df_diagnostics_long <- df_diagnostics |>
-    # Create a long data frame to plot the number of divergent transitions and
-    # the maximum tree depth in different facets
-    pivot_longer(
-      c(.data$num_divergent, .data$num_max_treedepth),
-      names_to = "Quantity",
-      values_to = "Problematic"
+    group_by(.data$Distribution, .data$date_of_the_nowcast) |>
+    summarise(
+      # Sum the numbers of problematic transitions from different chains
+      num_max_treedepth = sum(.data$num_max_treedepth),
+      num_divergent = sum(.data$num_divergent),
+      # Find the chain with the lowest ebmfi value
+      min_ebfmi = min(.data$ebfmi),
+      .groups = "drop"
     ) |>
-    # Sum the numbers of problematic transitions from different chains
+    # Create a long data frame to plot the number of divergent transitions,
+    # the maximum tree depth and the lowest ebfmi in different facets
+    pivot_longer(
+      cols = c("num_divergent", "num_max_treedepth", "min_ebfmi"),
+      names_to = "Quantity",
+      values_to = "Value"
+    ) |>
     group_by(.data$Distribution, .data$date_of_the_nowcast, .data$Quantity) |>
-    summarise(Problematic = sum(.data$Problematic), .groups = "drop") |>
     # Assign colors to the models
     mutate(
       Distribution = factor(
@@ -425,17 +431,24 @@ plot_mcmc_diagnostics <- function(
       )
     )
 
+  date_breaks <- seq(
+    min(df_diagnostics$date_of_the_nowcast),
+    max(df_diagnostics$date_of_the_nowcast),
+    by = 4 * 7
+  )
   diag_plot <- ggplot(
     df_diagnostics_long,
     aes(
       x = .data$date_of_the_nowcast,
-      y = .data$Problematic,
+      y = .data$Value,
       color = .data$Distribution
     )
   ) +
     geom_line() +
+    labs(y = NULL, x = "Date") +
     scale_color_manual(values = model_colors) +
-    facet_wrap(~Quantity, nrow = 2, scales = "free_y")
+    scale_x_date(breaks = date_breaks, date_labels = "%d %b") +
+    facet_wrap(~Quantity, nrow = 3, scales = "free_y")
 
   # Save the plot if required, the width, height and path is hard-coded here
   if (save_plot) {

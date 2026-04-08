@@ -16,11 +16,13 @@
  *
  * @return The expectation of the total
  **/
-array[] real calc_exp_total_obs(array[] real lambda, vector random_effect, int model_obs) {
+array[] real calc_exp_total_obs(array[] real lambda, vector random_effect,
+                                    array[] real re_params, int model_obs) {
   int n = num_elements(lambda);
   array[n] real exp_total_obs;
   if (model_obs == 4 || model_obs == 5) {
-    exp_total_obs = multiply_array(random_effect, lambda);
+    array[n] real random_effect_scaled = divide_vector(random_effect, re_params);
+    exp_total_obs = multiply_array(random_effect_scaled, lambda);
   } else {
     exp_total_obs = lambda;
   }
