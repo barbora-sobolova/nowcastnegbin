@@ -411,7 +411,8 @@ plot_mcmc_diagnostics <- function(
       num_max_treedepth = sum(.data$num_max_treedepth),
       num_divergent = sum(.data$num_divergent),
       # Find the chain with the lowest ebmfi value
-      min_ebfmi = min(.data$ebfmi)
+      min_ebfmi = min(.data$ebfmi),
+      .groups = "drop"
     ) |>
     # Create a long data frame to plot the number of divergent transitions,
     # the maximum tree depth and the lowest ebfmi in different facets
