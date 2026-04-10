@@ -232,7 +232,7 @@ plot_coverage <- function(
 #' densities for all models.
 #'
 #' @param df_summarized_nowcast a data frame containing columns `Distribution`
-#' (containing the name of the observation model), `CRPS` (the empirical
+#' (containing the name of the observation model), `crps` (the empirical
 #' distribution of the CRPS) and `delay` (the nowcasting horizon)
 #' @param model_colors a named vector of the model colors corresponding to each
 #' observation model
@@ -254,7 +254,7 @@ plot_crps <- function(
 ) {
   crps_plot <- ggplot(
     df_summarized_nowcast,
-    aes(x = .data$CRPS, color = .data$Distribution)
+    aes(x = .data$crps, color = .data$Distribution)
   ) +
     # Plot the density of the CRPS
     geom_line(stat = "density", alpha = 0.6) +

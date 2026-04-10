@@ -59,12 +59,6 @@ skip_dates <- as.Date(c("2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28"))
 # Parameters of the prior reporting delay distribution.
 prior_delay_param <- c(5, 1.5, 0.5, 0.25, 0.25)
 
-# A data frame encoding the observation model
-obs_model <- data.frame(
-  model_name = get_model_names(),
-  model_number = 0:5
-)
-
 # Define the pipeline ==========================================================
 list(
   # Compile the STAN model
@@ -142,44 +136,40 @@ list(
   },
   pattern = map(time_horizons, train_data),
   iteration = "list"),
-  # Static branching over 6 observational models defined in `obs_model`.
-  # By using static branching, we can easily remove some of the models (possibly
-  # NegBin1M and NegBin2M) if required.
-  tar_map(
-    unlist = TRUE,
-    values = obs_model,
-    names = model_name,
-    # Fit each observational model to each rolling window
-    tar_target(fitted, {
-      fit_stan_model(
-        compiled_model$sample,
-        stan_data = stan_data,
-        model_obs = model_number,
-        stan_settings = stan_settings
-      )
-    },
-    pattern = map(time_horizons, stan_data),
-    iteration = "list"),
-    # Summarize the STAN draws of the nowcasts
-    tar_target(df_summarized_nowcast, {
-      summarize_nowcast(
-        fitted$nowcast,
-        df_total,
-        time_horizons$nowcast_date
-      )
-    },
-    pattern = map(time_horizons, df_total, fitted),
-    iteration = "list"
+  # A data frame encoding the observation model
+  tar_target(obs_model, {
+    data.frame(model_name = get_model_names(), model_number = 0:5)
+  }),
+  # Fitting of all models using dynamic branching over 6 observational models
+  # defined in `obs_model` and rolling windows defined in `time_horizons`.
+  tar_target(fitted_mcmc, {
+    fit_stan_model(
+      compiled_model$sample,
+      stan_data = stan_data,
+      model_obs = obs_model$model_number,
+      stan_settings = stan_settings
     )
+  },
+  pattern = cross(obs_model, map(time_horizons, stan_data)),
+  iteration = "list"
+  ),
+  tar_target(df_summarized_nowcast_mcmc, {
+    summarize_nowcast(
+      fitted_mcmc$nowcast,
+      df_total,
+      time_horizons$nowcast_date
+    )
+  },
+  pattern = map(cross(obs_model, map(time_horizons, df_total)), fitted_mcmc)
   ),
   # Select the names of models we want to fit with the GLM method to branch over
   # it.
-  tar_target(model_names_glm, obs_model$model_name[seq_len(4)]),
+  tar_target(obs_model_glm, c("Poisson", "NegBinX", "NegBin2D", "NegBin1D")),
   # Fit the gamlss models
   tar_target(fitted_glm, {
-    fit_glm_model(stan_data = stan_data, model_name = model_names_glm)
+    fit_glm_model(stan_data = stan_data, model_name = obs_model_glm)
   },
-  pattern = cross(stan_data, model_names_glm),
+  pattern = cross(stan_data, obs_model_glm),
   iteration = "list"
   ),
   tar_target(df_summarized_nowcast_glm, {
@@ -189,51 +179,16 @@ list(
       time_horizons$nowcast_date
     )
   },
-  pattern = map(fitted_glm, cross(map(time_horizons, df_total), model_names_glm))
+  pattern = map(fitted_glm, cross(map(time_horizons, df_total), obs_model_glm))
   ),
-  # Combine the summarized nowcasts from the MCMC method into a single table
-  tar_target(df_summarized_nowcast_mcmc, {
-    dplyr::bind_rows(
-        df_summarized_nowcast_Poisson,
-        df_summarized_nowcast_NegBinX,
-        df_summarized_nowcast_NegBin2D,
-        df_summarized_nowcast_NegBin1D,
-        df_summarized_nowcast_NegBin2M,
-        df_summarized_nowcast_NegBin1M
-    )
-  },
-  pattern = map(
-    df_summarized_nowcast_Poisson,
-    df_summarized_nowcast_NegBinX,
-    df_summarized_nowcast_NegBin2D,
-    df_summarized_nowcast_NegBin1D,
-    df_summarized_nowcast_NegBin2M,
-    df_summarized_nowcast_NegBin1M
-  )
-   ),
   # Collect the diagnostic summaries for the MCMC models
   tar_target(diagnostic_summaries, {
-    bind_rows(
-        fitted_Poisson$diagnostics,
-        fitted_NegBinX$diagnostics,
-        fitted_NegBin2D$diagnostics,
-        fitted_NegBin1D$diagnostics,
-        fitted_NegBin2M$diagnostics,
-        fitted_NegBin1M$diagnostics
-    ) |>
+    fitted_mcmc$diagnostics |>
       mutate(
         date_of_the_nowcast = time_horizons$nowcast_date
       )
   },
-  pattern = map(
-    time_horizons,
-    fitted_Poisson,
-    fitted_NegBinX,
-    fitted_NegBin2D,
-    fitted_NegBin1D,
-    fitted_NegBin2M,
-    fitted_NegBin1M
-  )
+  pattern = map(cross(obs_model, time_horizons), fitted_mcmc)
   ),
   # Plot the diagnostics of the MCMC procedure
   tar_target(plot_diagnostics, {
@@ -260,10 +215,10 @@ list(
       # Select only the codes and colors of the first 4 models (that is
       # excluding NegBin2M and NegBin1M)
       model_codes = setNames(
-        model_names_glm,
-        obs_model$model_number[obs_model$model_name %in% model_names_glm]
+        obs_model_glm,
+        obs_model$model_number[obs_model$model_name %in% obs_model_glm]
       ),
-      model_colors = model_colors[model_names_glm],
+      model_colors = model_colors[obs_model_glm],
       date_of_the_nowcast = time_horizons$nowcast_date,
       fitting_method = "glm"
     )
@@ -283,10 +238,10 @@ list(
     plot_coverage(
       df_summarized_nowcast_glm,
       model_codes = setNames(
-        model_names_glm,
-        obs_model$model_number[obs_model$model_name %in% model_names_glm]
+        obs_model_glm,
+        obs_model$model_number[obs_model$model_name %in% obs_model_glm]
       ),
-      model_colors = model_colors[model_names_glm],
+      model_colors = model_colors[obs_model_glm],
       fitting_method = "glm"
     )
   }),
@@ -301,7 +256,7 @@ list(
   tar_target(crps_plot_glm, {
     plot_crps(
       df_summarized_nowcast_glm,
-      model_colors = model_colors[model_names_glm],
+      model_colors = model_colors[obs_model_glm],
       fitting_method = "glm"
     )
   }),
@@ -313,6 +268,6 @@ list(
       analysis_start_date,
       length_of_train_data,
       max_lag
-    )}
-  )
+    )
+  })
 )
