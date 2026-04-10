@@ -68,7 +68,7 @@ fit_stan_model <- function(
         # Or if ebfmi improves and divergences don't get critically worse
         min(diagnostics$ebfmi) < min(diagnostics_refit$ebfmi) &&
           max(diagnostics$num_divergent) -
-            max(diagnostics_refit$num_divergent) < 50
+            max(diagnostics_refit$num_divergent) > -50
       )
     if (store_refit) {
       fitted_model <- refitted_model
