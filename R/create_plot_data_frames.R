@@ -48,13 +48,15 @@ create_totals_data_frame <- function(
 #'   \item{\code{date}}{date of the nowcasting target,}
 #'   \item{\code{nowcast_date}}{date when the nowcast was calculated,}
 #'   \item{\code{Distribution}}{factor, label of the observation model,}
-#'   \item{\code{CRPS}}{the CRPS calculated from the sample of the nowcasts,}
+#'   \item{\code{crps}}{the CRPS calculated from the sample of the nowcasts,}
+#'   \item{\code{dispersion}}{the dispersion component of the CRPS,}
+#'   \item{\code{overprediction}}{the overprediction component of the CRPS,}
+#'   \item{\code{underprediction}}{the underprediction component of the CRPS,}
 #'   \item{\code{true_val}}{the final value  of the incidence to compare the
 #'   nowcast to,}
 #'   \item{\code{mean}}{mean of the sampled nowcasts,}
-#'   \item{\code{quantile_50}}{median of the sampled nowcasts,}
-#'   \item{\code{quantile_2.5}, \code{quantile_25}, \code{quantile_75},
-#'   \code{quantile_97.5}}{quantiles of the sampled nowcasts,}
+#'   \item{\code{quantile_*}}{quantiles of the sampled nowcasts ranging from 5 %
+#'    to 95 % wit a 5 % step and also the 2.5 % and 97.5 % quantiles}
 #' }
 #'
 #' @import dplyr
