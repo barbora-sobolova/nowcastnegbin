@@ -164,7 +164,7 @@ list(
   ),
   # Select the names of models we want to fit with the GLM method to branch over
   # it.
-  tar_target(obs_model_glm, obs_model$model_name[seq_len(4)]),
+  tar_target(obs_model_glm, c("Poisson", "NegBinX", "NegBin2D", "NegBin1D")),
   # Fit the gamlss models
   tar_target(fitted_glm, {
     fit_glm_model(stan_data = stan_data, model_name = obs_model_glm)
