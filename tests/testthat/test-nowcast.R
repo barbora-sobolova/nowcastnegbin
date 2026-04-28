@@ -46,9 +46,9 @@ test_that("Model output from the MCMC method is stable and plausible", {
       generate_reports(
         lgt,
         max_lag,
+        probs,
         log_lambda0,
         rw_sd,
-        probs,
         nb_size,
         model = model_names[model_obs + 1]
       )

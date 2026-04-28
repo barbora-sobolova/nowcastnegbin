@@ -65,6 +65,80 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
     )
 }
 
+#' Simulate the reporting table of a nowcasting problem based on existing data
+#'
+#' @description Generate the full reporting table, i.e. with no right censoring.
+#' The mean process is based on a real data set, where we smooth the observed
+#' counts using a moving average process.
+#'
+#' @param df_series Data frame with a column `value`, where observed counts are
+#' stored. These are smoothed by a moving average and taken as the mean process
+#' to be passed to \code{generate_reports}.
+#' @param ma_degree Integer, the order of the moving average process.
+#' @param lgt Integer, the length of the simulated table.
+#' @param max_lag Integer, the maximum reporting delay, the width of the table.
+#' @param log_lambda0 Numeric, the initial value of the random walk.
+#' @param probs Numeric, a numeric vector specifying the delay distribution.
+#' @param nb_size Numeric, a positive real value specifying the size of the
+#' negbin distribution. The lower, the more dispersed
+#' @param model name of the observation model
+#' @param seed An integer for seeding the simulation
+#'
+#' @return The reporting table as a matrix
+#'
+#' @importFrom stats filter
+#' @importFrom dplyr mutate
+simulate_full_data <- function(
+  df_series,
+  ma_degree,
+  max_lag,
+  probs,
+  nb_size = NULL,
+  model = c(
+    "Poisson",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBin2M",
+    "NegBin1M"
+  ),
+  seed = 123456
+) {
+  model <- match.arg(
+    model,
+    c("Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M", "NegBin1M")
+  )
+
+  lgt <- nrow(df_series) - ma_degree + 1
+
+  # Use tail to skip the initial `ma_degree` - 1 observations that are set to
+  # NA.
+  mean_proc <- tail(
+    stats::filter(
+      df_series$value, rep(1, ma_degree), "convolution", side = 1
+    ) / ma_degree,
+    lgt
+  )
+  # Generate the reporting table in the format of a matrix
+  reporting_table <- generate_reports(
+    lgt,
+    max_lag,
+    probs,
+    nb_size = nb_size,
+    model = model,
+    fixed_lambda = mean_proc,
+    seed = seed
+  )$reports
+  # Coerce the matrix o a data frame and name the columns appropriately
+  colnames(reporting_table) <- paste0("value_", seq_len(max_lag) - 1, "w")
+  reporting_table <- reporting_table |>
+    as.data.frame() |>
+    dplyr::mutate(
+      date = tail(df_series$date, lgt)
+    )
+  list(reports = reporting_table, mean_proc = as.vector(mean_proc))
+}
+
 #' Extract data from one rolling window
 #'
 #' @description This function extracts the data of a single rolling window.

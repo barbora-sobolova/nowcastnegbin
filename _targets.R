@@ -41,7 +41,7 @@ model_colors <- c(
 
 max_lag <- 5
 
-# Where is the beginning of the data used for the case study
+# Where the beginning of the data used for the case study is.
 analysis_start_date <- as.Date("2024-07-28")
 # How many weeks we want to include as "training" data.
 # This includes the last `max_lag - 1` weeks for which we calculate the nowcast.
@@ -58,6 +58,29 @@ timesteps_to_fit <- 55
 skip_dates <- as.Date(c("2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28"))
 # Parameters of the prior reporting delay distribution.
 prior_delay_param <- c(5, 1.5, 0.5, 0.25, 0.25)
+
+# Where the beginning of the data used for the simulation study is. For the
+# simulation study, we take the total SARI counts from several years back,
+# smooth them to obtain a mean process and then simulate the counts according to
+# one of our models.
+sim_start_date <- as.Date("2014-10-05")
+# We smooth the data using moving average of degree 3.
+ma_degree <- 3
+# For how many dates we want to do the fitting.
+sim_timesteps_to_fit <- 512
+# Delay probabilities used in the simulation.
+sim_delay_prob <- c(0.5, 0.3, 0.2, 0.1)
+# Prior parameters of the delay probabilities
+sim_prior_delay_param <- c(3, 1.5, 0.5, 0.25)
+# Size of the negative binomial distribution used in the simulation.
+sim_nb_size <- 0.5
+# Selected models for the simulation study
+sim_obs_model <- data.frame(
+  model_name = c("NegBinX", "NegBin2D", "NegBin1D"),
+  model_number = c(1, 2, 3)
+)
+# Seed used to simulate the counts
+sim_seed <- 2436
 
 # Define the pipeline ==========================================================
 list(
@@ -87,6 +110,101 @@ list(
       skip_dates = skip_dates
     )
   }),
+  # Simulation study ===========================================================
+  tar_target(sim_data_series, {
+    load_preprocessed_data(
+      here::here(
+        "inst",
+        "extdata",
+        "latest_data-SARI-sari.csv"
+      ),
+      start_date = sim_start_date,
+      # Length of training data is identical here and in the case study
+      num_of_weeks = sim_timesteps_to_fit + length_of_train_data - 1
+    )
+  }),
+  # Define the rolling windows for the simulation study
+  tar_target(sim_time_horizons, {
+    get_time_horizons(
+      sim_start_date + (1 - ma_degree) * 7,
+      sim_timesteps_to_fit,
+      length_of_train_data,
+      skip_dates = NULL
+    )
+  }),
+  tar_target(sim_model_numbers, 0:5),
+  tar_map(
+    unlist = TRUE,
+    # We run the simulation only for selected models
+    values = sim_obs_model,
+    names = model_name,
+    tar_target(sim_full_data, {
+      simulate_full_data(
+        sim_data_series,
+        ma_degree,
+        max_lag = length(sim_delay_prob),
+        probs = sim_delay_prob,
+        nb_size = sim_nb_size,
+        model = model_name,
+        seed = sim_seed
+      )
+    }),
+    tar_target(
+      sim_train_data,
+      filter_train_period(
+        sim_full_data$reports,
+        start_date = sim_time_horizons$train_data_begin,
+        end_date = sim_time_horizons$nowcast_date,
+        max_lag = length(sim_delay_prob),
+        skip_dates = NULL
+      ),
+      pattern = map(sim_time_horizons),
+      iteration = "list"
+    ),
+    tar_target(sim_stan_data, {
+      get_stan_data(
+        sim_train_data$train_data,
+        sim_prior_delay_param,
+        sim_train_data$skip_rows
+      )
+    },
+    pattern = map(sim_time_horizons, sim_train_data),
+    iteration = "list"),
+    tar_target(sim_df_total, {
+      create_totals_data_frame(
+        sim_train_data$train_data,
+        sim_time_horizons$train_data_begin
+      )
+    },
+    pattern = map(sim_time_horizons, sim_train_data),
+    iteration = "list"),
+    # Fit each observational model to each rolling window
+    tar_target(sim_fitted_mcmc, {
+      fit_stan_model(
+        compiled_model$sample,
+        stan_data = sim_stan_data,
+        model_obs = sim_model_numbers,
+        stan_settings = stan_settings
+      )
+    },
+    pattern = cross(sim_model_numbers, map(sim_time_horizons, sim_stan_data)),
+    iteration = "list"
+    ),
+    tar_target(sim_fitted_glm, {
+      fit_glm_model(stan_data = sim_stan_data, model_name = obs_model_glm)
+    },
+    pattern = cross(obs_model_glm, sim_stan_data),
+    iteration = "list"),
+    tar_target(sim_df_summarized_mcmc, {
+      summarize_nowcast(
+        sim_fitted_mcmc$nowcast,
+        sim_df_total,
+        sim_time_horizons$nowcast_date
+      )
+    },
+    pattern = map(cross(obs_model, map(sim_time_horizons, sim_df_total))))
+  ),
+  # Case study ===========================================================
   # Load the preprocessed data with no stratification, restricted to the time
   # period of interest
   tar_target(full_data, {
