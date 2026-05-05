@@ -123,7 +123,7 @@ plot_nowcast <- function(
     scale_fill_manual(values = model_colors) +
     labs(x = "Date", y = "Incidence") +
     facet_wrap(~Distribution)
-  # Save the plot if required, the width, height and path is hard-coded here
+  # Save the plot if required, the width, height and path are hard-coded here
   if (save_plot) {
     save_figure(
       nowcasts_plot,
@@ -214,7 +214,7 @@ plot_coverage <- function(
     scale_fill_manual(values = model_colors) +
     labs(x = "Empirical coverage", title = "Empirical coverage by horizon") +
     facet_wrap(~delay)
-  # Save the plot if required, the width, height and path is hard-coded here
+  # Save the plot if required, the width, height and path are hard-coded here
   if (save_plot) {
     save_figure(
       coverage_plot,
@@ -340,7 +340,7 @@ plot_crps <- function(
     labs(x = "CRPS", title = "CRPS distribution by horizon") +
     facet_wrap(~delay) +
     xlim(c(0, 2000))
-  # Save the plot if required, the width, height and path is hard-coded here
+  # Save the plot if required, the width, height and path are hard-coded here
   if (save_plot) {
     save_figure(
       crps_plot,
@@ -630,7 +630,7 @@ plot_trajectory <- function(
       label.size = 3
     ) +
     labs(title = "SARI incidence", y = "Incidence")
-  # Save the plot if required, the width, height and path is hard-coded here
+  # Save the plot if required, the width, height and path are hard-coded here
   if (save_plot) {
     save_figure(
       trajectory_plot,
@@ -712,7 +712,7 @@ plot_mcmc_diagnostics <- function(
     scale_x_date(breaks = date_breaks, date_labels = "%d %b") +
     facet_wrap(~Quantity, nrow = 3, scales = "free_y")
 
-  # Save the plot if required, the width, height and path is hard-coded here
+  # Save the plot if required, the width, height and path iare hard-coded here
   if (save_plot) {
     save_figure(
       diag_plot,
