@@ -39,7 +39,9 @@ fit_stan_model <- function(
   diagnostics <- fitted_model$diagnostic_summary() |>
     suppressMessages() |>
     as.data.frame() |>
-    mutate(seed = stan_settings$seed)
+    mutate(seed = stan_settings$seed) |>
+    # Add the information about the sampling duration
+    cbind(fitted_model$time()$chains)
   # Refit the model, if we get too many divergent transitions, or the ebfmi is
   # low in at least one chain.
   refit <- 0
@@ -72,7 +74,9 @@ fit_stan_model <- function(
       )
     if (store_refit) {
       fitted_model <- refitted_model
-      diagnostics <- diagnostics_refit |> mutate(seed = stan_settings$seed)
+      diagnostics <- diagnostics_refit |>
+        mutate(seed = stan_settings$seed) |>
+        cbind(fitted_model$time()$chains)
     }
   }
 
@@ -116,6 +120,7 @@ fit_stan_model <- function(
       tidybayes::gather_draws(nb_size[1]) |> # nolint
       ungroup() |>
       mutate(Distribution = model_obs) |>
+      unnest(.data$.value) |>
       dplyr::select(-".variable")
   } else {
     df_nb_size <- NULL
