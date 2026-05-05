@@ -226,6 +226,84 @@ plot_coverage <- function(
   coverage_plot
 }
 
+#' Plot and save the decomposition of the CRPS
+#'
+#' @description This function plots and possibly saves the decomposition of
+#' the average CRPS decomposed according to the spread, underprediction and
+#' overprediction.
+#'
+#' @param df_summarized_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `dispersion`,
+#' `underprediction`, `overprediction`, `quantile_97.5` (bounds of the
+#' prediction intervals) and `delay` (the nowcasting horizon).
+#' @param model_codes a vector of observation model names. Must be in the
+#' correct order to label the models correctly. The order in case all models are
+#' used is: "Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M",
+#' "NegBin1M".
+#' @param model_colors a named vector of the model colors corresponding to each
+#' observation model
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a ggplot object with one facet per nowcasting horizon
+#'
+#' @import dplyr ggplot2
+#'
+#' @export
+plot_crps_decomp <- function(
+  df_summarized_nowcast,
+  model_codes,
+  model_colors,
+  fitting_method = c("mcmc", "glm"),
+  save_plot = TRUE
+) {
+  # Calculate the decomposition of the average CRPS
+  df_crps_decomp <- df_summarized_nowcast |>
+    group_by(.data$delay, .data$Distribution) |>
+    summarize(
+      Spread = mean(.data$dispersion),
+      Underprediction = mean(.data$underprediction),
+      Overprediction = mean(.data$overprediction),
+      .groups = "drop"
+    ) |>
+    # Pivot for easier definition of the alpha aesthetic
+    tidyr::pivot_longer(
+      cols = c("Spread", "Overprediction", "Underprediction"),
+      names_to = "Component",
+      values_to = "CRPS"
+    )
+  # Plot the empirical coverage as horizontal bars
+  crps_decomp_plot <- ggplot(
+    df_crps_decomp,
+    aes(
+      x = .data$CRPS,
+      y = .data$Distribution,
+      fill = .data$Distribution,
+      alpha = .data$Component
+    )
+  ) +
+    geom_col(position = "stack") +
+    scale_alpha_manual(
+      values = c("Underprediction" = 1, "Spread" = 0.4, "Overprediction" = 0.7),
+      name = ""
+    ) +
+    scale_fill_manual(values = model_colors) +
+    labs(x = "Mean CRPS", title = "CRPS decomposition by horizon") +
+    facet_wrap(~delay, scales = "free_x")
+  # Save the plot if required, the width, height and path are hard-coded here
+  if (save_plot) {
+    save_figure(
+      crps_decomp_plot,
+      paste("inst/figure/crps_decomposition_plot", fitting_method, sep = "_"),
+      width = 9,
+      height = 7
+    )
+  }
+  crps_decomp_plot
+}
+
 #' Plot and save the CRPS density
 #'
 #' @description This function plots and possibly saves the chart of CRPS
@@ -272,6 +350,190 @@ plot_crps <- function(
     )
   }
   crps_plot
+}
+
+#' Plot and save the density plot of the dispersion parameter estimates
+#'
+#' @description This function plots and possibly saves the densities of
+#' dispersion parameter estimates for all fitted negative binomial models.
+#'
+#' @param df_nb_size a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `.value` (the empirical
+#' distribution of the dispersion parameter estimates) and `nowcast_date` (the
+#' date when the nowcast is calculated)
+#' @param model_colors a named vector of the model colors corresponding to each
+#' observation model
+#' @param date_of_the_nowcast a date, when the nowcast is made to filter the
+#' \code{df_nb_size} table
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a ggplot object with one facet showing the density of the dispersion
+#' parameter estimates
+#'
+#' @import dplyr ggplot2
+#'
+#' @export
+plot_disp_par <- function(
+  df_nb_size,
+  model_colors,
+  date_of_the_nowcast,
+  fitting_method = c("mcmc", "glm"),
+  save_plot = TRUE
+) {
+  model_names <- names(model_colors)[names(model_colors) != "Poisson"]
+  # Filter only values from the corresponding time window
+  df_nb_size_filtered <- df_nb_size |>
+    dplyr::filter(.data$nowcast_date == date_of_the_nowcast) |>
+    # Set the model names
+    mutate(
+      Distribution = factor(.data$Distribution, labels = model_names),
+      # Plot the dispersion parameter on the inverted scale, where higher values
+      # indicate more dispersion and 0 corresponds to the Poisson model in the
+      # limit.
+      phi = 1 / .data$.value
+    )
+
+  disp_par_plot <- ggplot() +
+    # Plot the density of the dispersion parameter estimates
+    geom_line(
+      df_nb_size_filtered,
+      mapping = aes(x = .data$phi, color = .data$Distribution),
+      stat = "density",
+      alpha = 0.7
+    )
+  if (fitting_method == "mcmc") {
+    # Draw a line representing the prior distribution. This must be checked
+    # manually to correspond to the prior we are using in STAN.
+
+    # Currently we use the inverse gamma distribution with parameters 0.41 and
+    # 0.29. Since we plot on the inverted scale, we will plot the density of the
+    # gamma distribution with the same parameters.
+    df_prior <- data.frame(
+      phi = seq(0, max(df_nb_size_filtered$phi), length = 500)
+    ) |>
+      mutate(
+        dens = dgamma(.data$phi, 0.41, 0.29)
+      )
+
+    disp_par_plot <- disp_par_plot +
+      geom_line(
+        data = df_prior,
+        aes(x = .data$phi, y = .data$dens, color = "Prior")
+      ) +
+      geom_segment(
+        aes(x = 0, y = -0.2, xend = 54, yend = -0.2),
+        arrow = arrow()
+      ) +
+      geom_text(aes(x = 27, y = -0.3, label = "more dispersion")) +
+      scale_color_manual(values = c(model_colors, "Prior" = "black")) +
+      labs(
+        x = "dispersion parameter",
+        title = "Dispersion parameter posterior"
+      ) +
+      coord_cartesian(ylim = c(-0.4, 2))
+  } else {
+    disp_par_plot <- disp_par_plot +
+      geom_segment(
+        aes(x = 0, y = -0.05, xend = 130, yend = -0.05),
+        arrow = arrow()
+      ) +
+      geom_text(aes(x = 65, y = -0.1, label = "more dispersion")) +
+      scale_color_manual(values = c(model_colors, "Prior" = "black")) +
+      labs(
+        x = "dispersion parameter",
+        title = "Posterior of the dispersion parameter"
+      ) +
+      coord_cartesian(ylim = c(-0.15, 0.5))
+  }
+
+  # Save the plot if required, the width, height and path are hard-coded here
+  if (save_plot) {
+    save_figure(
+      disp_par_plot,
+      paste(
+        "inst/figure/disp_plots/disp_par_plot",
+        fitting_method,
+        date_of_the_nowcast,
+        sep = "_"
+      ),
+      width = 7,
+      height = 5.5
+    )
+  }
+  disp_par_plot
+}
+
+#' Plot and save the density plot of the delay probability estimates
+#'
+#' @description This function plots and possibly saves the densities of
+#' delay probability estimates for all fitted models.
+#'
+#' @param df_delay_prob a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `.value` (the empirical
+#' distribution of the delay probability estimates), `nowcast_date` (the
+#' date when the nowcast is calculated) and `delay` (the discrete delay time)
+#' @param model_colors a named vector of the model colors corresponding to each
+#' observation model
+#' @param date_of_the_nowcast a date, when the nowcast is made to filter the
+#' \code{df_delay_prob} table
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a ggplot object with one facet showing the density of the dispersion
+#' parameter estimates
+#'
+#' @import dplyr ggplot2
+#'
+#' @export
+plot_delay_prob <- function(
+  df_delay_prob,
+  model_colors,
+  date_of_the_nowcast,
+  fitting_method = c("mcmc", "glm"),
+  save_plot = TRUE
+) {
+  # Filter only values from the corresponding time window
+  df_delay_prob_filtered <- df_delay_prob |>
+    dplyr::filter(.data$nowcast_date == date_of_the_nowcast) |>
+    # Set the model names
+    mutate(
+      Distribution = factor(.data$Distribution, labels = names(model_colors)),
+      delay = factor(.data$delay)
+    )
+
+  delay_prob_plot <- ggplot(
+    df_delay_prob_filtered,
+    aes(x = .data$.value, color = .data$Distribution)
+  ) +
+    # Plot the density of the dispersion parameter estimates
+    geom_line(stat = "density", alpha = 0.6, bounds = c(0, 1)) +
+    scale_color_manual(values = model_colors) +
+    labs(
+      x = "delay probability",
+      title = "Posterior of the delay probability"
+    ) +
+    coord_cartesian(ylim = c(0, 80)) +
+    facet_wrap(~delay, scales = "free")
+  # Save the plot if required, the width, height and path are hard-coded here
+  if (save_plot) {
+    save_figure(
+      delay_prob_plot,
+      paste(
+        "inst/figure/delay_prob_plots/delay_prob_plot",
+        fitting_method,
+        date_of_the_nowcast,
+        sep = "_"
+      ),
+      width = 7,
+      height = 5.5
+    )
+  }
+  delay_prob_plot
 }
 
 #' Plot the whole incidence trajectory
