@@ -192,7 +192,8 @@ get_stan_data <- function(
 ) {
   # Grab the maximum lag
   max_lag <- ncol(train_data)
-  #
+  # Make sure that the parameters of the prior distribution of the delay
+  # probabilities have a correct length.
   if (!is.null(prior_delay_param) && length(prior_delay_param) != max_lag) {
     stop("The vector of prior parameters of the reporting delay must have the same length as there are columns in the reporting triangle.")  # nolint
   }
