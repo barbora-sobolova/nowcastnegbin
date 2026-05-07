@@ -10,20 +10,17 @@
 #' `quantile_97.5` (bounds of the prediction intervals) and `date` (x-axis
 #' dates)
 #' @param df_total a data frame with columns `date`, `counts` and `data`
-#' returned by the function create_totals_data_frame()
-#' @param model_codes a vector of observation model names. Must be in the
-#' correct order to label the models correctly. The order in case all models are
-#' used is: "Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M",
-#' "NegBin1M".
-#' @param model_colors a named vector of the model colors corresponding to each
-#' observation model
+#' returned by the function \code{create_totals_data_frame()}
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
 #' @param date_of_the_nowcast a date, when the nowcast is made
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
-#' @return a ggplot object with one facet per observation model
+#' @return a ggplot object with one facet per observation model, or NULL if
+#' \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #'
@@ -31,18 +28,12 @@
 plot_nowcast <- function(
   df_summarized_nowcast,
   df_total,
-  model_codes,
-  model_colors,
+  model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
   fitting_method <- match.arg(fitting_method)
-  # Convert and order factors so that they display with correct labels and in a
-  # correct order
-  df_summarized_nowcast <- df_summarized_nowcast |>
-    mutate(Distribution = factor(.data$Distribution, labels = model_codes)) |>
-    dplyr::filter(.data$nowcast_date == date_of_the_nowcast)
   df_total <- df_total |>
     mutate(data = factor(data, levels = c("Preliminary", "Final")))
   # Plot the nowcasts
@@ -91,7 +82,11 @@ plot_nowcast <- function(
     ) +
     # Set the color of the models and the data versions
     scale_color_manual(
-      values = c(model_colors, "Final" = "black", "Preliminary" = "gray60"),
+      values = c(
+        get_model_colors()[model_names],
+        "Final" = "black",
+        "Preliminary" = "gray60"
+      ),
       guide = "none"
     ) +
     scale_linetype_manual(
@@ -120,10 +115,11 @@ plot_nowcast <- function(
       # of the layers.
       alpha = guide_legend(override.aes = list(alpha = c(0.4, 0.2)))
     ) +
-    scale_fill_manual(values = model_colors) +
+    scale_fill_manual(values = get_model_colors()[model_names]) +
     labs(x = "Date", y = "Incidence") +
     facet_wrap(~Distribution)
-  # Save the plot if required, the width, height and path are hard-coded here
+  # Save the plot if required, the width, height and path are hard-coded here.
+  # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       nowcasts_plot,
@@ -136,8 +132,11 @@ plot_nowcast <- function(
       width = 9,
       height = 7
     )
+    ret <- NULL
+  } else {
+    ret <- nowcasts_plot
   }
-  nowcasts_plot
+  ret
 }
 
 #' Plot and save the coverage
@@ -150,26 +149,22 @@ plot_nowcast <- function(
 #' `quantile_25`, `quantile_75`, `quantile_97.5` (bounds of the prediction
 #' intervals), `delay` (the nowcasting horizon) and the true value of the
 #' prediction target `true_val`
-#' @param model_codes a vector of observation model names. Must be in the
-#' correct order to label the models correctly. The order in case all models are
-#' used is: "Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M",
-#' "NegBin1M".
-#' @param model_colors a named vector of the model colors corresponding to each
-#' observation model
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
-#' @return a ggplot object with one facet per nowcasting horizon
+#' @return a ggplot object with one facet per nowcasting horizon, or NULL if
+#' \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #'
 #' @export
 plot_coverage <- function(
   df_summarized_nowcast,
-  model_codes,
-  model_colors,
+  model_names,
   fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
@@ -211,10 +206,11 @@ plot_coverage <- function(
       labels = c("50% coverage", "95% coverage"),
       name = ""
     ) +
-    scale_fill_manual(values = model_colors) +
+    scale_fill_manual(values = get_model_colors()[model_names]) +
     labs(x = "Empirical coverage", title = "Empirical coverage by horizon") +
     facet_wrap(~delay)
-  # Save the plot if required, the width, height and path are hard-coded here
+  # Save the plot if required, the width, height and path are hard-coded here.
+  # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       coverage_plot,
@@ -222,8 +218,11 @@ plot_coverage <- function(
       width = 9,
       height = 7
     )
+    ret <- NULL
+  } else {
+    ret <- coverage_plot
   }
-  coverage_plot
+  ret
 }
 
 #' Plot and save the decomposition of the CRPS
@@ -236,26 +235,22 @@ plot_coverage <- function(
 #' (containing the name of the observation model), `dispersion`,
 #' `underprediction`, `overprediction`, `quantile_97.5` (bounds of the
 #' prediction intervals) and `delay` (the nowcasting horizon).
-#' @param model_codes a vector of observation model names. Must be in the
-#' correct order to label the models correctly. The order in case all models are
-#' used is: "Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M",
-#' "NegBin1M".
-#' @param model_colors a named vector of the model colors corresponding to each
-#' observation model
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
-#' @return a ggplot object with one facet per nowcasting horizon
+#' @return a ggplot object with one facet per nowcasting horizon, or NULL if
+#' \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #'
 #' @export
 plot_crps_decomp <- function(
   df_summarized_nowcast,
-  model_codes,
-  model_colors,
+  model_names,
   fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
@@ -289,10 +284,11 @@ plot_crps_decomp <- function(
       values = c("Underprediction" = 1, "Spread" = 0.4, "Overprediction" = 0.7),
       name = ""
     ) +
-    scale_fill_manual(values = model_colors) +
+    scale_fill_manual(values = get_model_colors()[model_names]) +
     labs(x = "Mean CRPS", title = "CRPS decomposition by horizon") +
     facet_wrap(~delay, scales = "free_x")
-  # Save the plot if required, the width, height and path are hard-coded here
+  # Save the plot if required, the width, height and path are hard-coded here.
+  # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       crps_decomp_plot,
@@ -300,6 +296,9 @@ plot_crps_decomp <- function(
       width = 9,
       height = 7
     )
+    ret <- NULL
+  } else {
+    ret <- crps_decomp_plot
   }
   crps_decomp_plot
 }
@@ -350,6 +349,7 @@ plot_crps <- function(
     )
   }
   crps_plot
+  ret
 }
 
 #' Plot and save the density plot of the dispersion parameter estimates
@@ -361,8 +361,8 @@ plot_crps <- function(
 #' (containing the name of the observation model), `.value` (the empirical
 #' distribution of the dispersion parameter estimates) and `nowcast_date` (the
 #' date when the nowcast is calculated)
-#' @param model_colors a named vector of the model colors corresponding to each
-#' observation model
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
 #' @param date_of_the_nowcast a date, when the nowcast is made to filter the
 #' \code{df_nb_size} table
 #' @param fitting_method a method used for fitting the nowcasting model, either
@@ -371,25 +371,21 @@ plot_crps <- function(
 #' \code{ggsave()}
 #'
 #' @return a ggplot object with one facet showing the density of the dispersion
-#' parameter estimates
+#' parameter estimates, or NULL if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #'
 #' @export
 plot_disp_par <- function(
   df_nb_size,
-  model_colors,
+  model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
-  model_names <- names(model_colors)[names(model_colors) != "Poisson"]
   # Filter only values from the corresponding time window
-  df_nb_size_filtered <- df_nb_size |>
-    dplyr::filter(.data$nowcast_date == date_of_the_nowcast) |>
-    # Set the model names
+  df_nb_size <- df_nb_size |>
     mutate(
-      Distribution = factor(.data$Distribution, labels = model_names),
       # Plot the dispersion parameter on the inverted scale, where higher values
       # indicate more dispersion and 0 corresponds to the Poisson model in the
       # limit.
@@ -399,7 +395,7 @@ plot_disp_par <- function(
   disp_par_plot <- ggplot() +
     # Plot the density of the dispersion parameter estimates
     geom_line(
-      df_nb_size_filtered,
+      df_nb_size,
       mapping = aes(x = .data$phi, color = .data$Distribution),
       stat = "density",
       alpha = 0.7
@@ -412,7 +408,7 @@ plot_disp_par <- function(
     # 0.29. Since we plot on the inverted scale, we will plot the density of the
     # gamma distribution with the same parameters.
     df_prior <- data.frame(
-      phi = seq(0, max(df_nb_size_filtered$phi), length = 500)
+      phi = seq(0, max(df_nb_size$phi), length = 500)
     ) |>
       mutate(
         dens = dgamma(.data$phi, 0.41, 0.29)
@@ -428,7 +424,7 @@ plot_disp_par <- function(
         arrow = arrow()
       ) +
       geom_text(aes(x = 27, y = -0.3, label = "more dispersion")) +
-      scale_color_manual(values = c(model_colors, "Prior" = "black")) +
+      scale_color_manual(values = c(get_model_colors(), "Prior" = "black")) +
       labs(
         x = "dispersion parameter",
         title = "Dispersion parameter posterior"
@@ -441,7 +437,9 @@ plot_disp_par <- function(
         arrow = arrow()
       ) +
       geom_text(aes(x = 65, y = -0.1, label = "more dispersion")) +
-      scale_color_manual(values = c(model_colors, "Prior" = "black")) +
+      scale_color_manual(
+        values = c(get_model_colors()[model_names], "Prior" = "black")
+      ) +
       labs(
         x = "dispersion parameter",
         title = "Posterior of the dispersion parameter"
@@ -449,7 +447,8 @@ plot_disp_par <- function(
       coord_cartesian(ylim = c(-0.15, 0.5))
   }
 
-  # Save the plot if required, the width, height and path are hard-coded here
+  # Save the plot if required, the width, height and path are hard-coded here.
+  # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       disp_par_plot,
@@ -462,8 +461,11 @@ plot_disp_par <- function(
       width = 7,
       height = 5.5
     )
+    ret <- NULL
+  } else {
+    ret <- disp_par_plot
   }
-  disp_par_plot
+  ret
 }
 
 #' Plot and save the density plot of the delay probability estimates
@@ -475,8 +477,8 @@ plot_disp_par <- function(
 #' (containing the name of the observation model), `.value` (the empirical
 #' distribution of the delay probability estimates), `nowcast_date` (the
 #' date when the nowcast is calculated) and `delay` (the discrete delay time)
-#' @param model_colors a named vector of the model colors corresponding to each
-#' observation model
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
 #' @param date_of_the_nowcast a date, when the nowcast is made to filter the
 #' \code{df_delay_prob} table
 #' @param fitting_method a method used for fitting the nowcasting model, either
@@ -485,41 +487,38 @@ plot_disp_par <- function(
 #' \code{ggsave()}
 #'
 #' @return a ggplot object with one facet showing the density of the dispersion
-#' parameter estimates
+#' parameter estimates, or NULL if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #'
 #' @export
 plot_delay_prob <- function(
   df_delay_prob,
-  model_colors,
+  model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
   # Filter only values from the corresponding time window
-  df_delay_prob_filtered <- df_delay_prob |>
-    dplyr::filter(.data$nowcast_date == date_of_the_nowcast) |>
-    # Set the model names
-    mutate(
-      Distribution = factor(.data$Distribution, labels = names(model_colors)),
-      delay = factor(.data$delay)
-    )
+  df_delay_prob <- df_delay_prob |>
+    # Turn the delay into a factor to allow for easier faceting
+    mutate(delay = factor(.data$delay))
 
   delay_prob_plot <- ggplot(
-    df_delay_prob_filtered,
+    df_delay_prob,
     aes(x = .data$.value, color = .data$Distribution)
   ) +
     # Plot the density of the dispersion parameter estimates
     geom_line(stat = "density", alpha = 0.6, bounds = c(0, 1)) +
-    scale_color_manual(values = model_colors) +
+    scale_color_manual(values = get_model_colors()[model_names]) +
     labs(
       x = "delay probability",
       title = "Posterior of the delay probability"
     ) +
     coord_cartesian(ylim = c(0, 80)) +
     facet_wrap(~delay, scales = "free")
-  # Save the plot if required, the width, height and path are hard-coded here
+  # Save the plot if required, the width, height and path are hard-coded here.
+  # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       delay_prob_plot,
@@ -532,8 +531,12 @@ plot_delay_prob <- function(
       width = 7,
       height = 5.5
     )
+    ret <- NULL
+  } else {
+    ret <- delay_prob_plot
   }
-  delay_prob_plot
+  ret
+}
 }
 
 #' Plot the whole incidence trajectory
@@ -630,7 +633,8 @@ plot_trajectory <- function(
       label.size = 3
     ) +
     labs(title = "SARI incidence", y = "Incidence")
-  # Save the plot if required, the width, height and path are hard-coded here
+  # Save the plot if required, the width, height and path are hard-coded here.
+  # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       trajectory_plot,
@@ -638,8 +642,11 @@ plot_trajectory <- function(
       width = 9,
       height = 7
     )
+    ret <- NULL
+  } else {
+    ret <- trajectory_plot
   }
-  trajectory_plot
+  ret
 }
 
 #' Plot the summary of MCMC diagnostics
@@ -663,11 +670,11 @@ plot_trajectory <- function(
 #' @export
 plot_mcmc_diagnostics <- function(
   df_diagnostics,
-  model_colors,
+  model_names,
   save_plot = TRUE
 ) {
   df_diagnostics_long <- df_diagnostics |>
-    group_by(.data$Distribution, .data$date_of_the_nowcast) |>
+    group_by(.data$Distribution, .data$nowcast_date) |>
     summarise(
       # Sum the numbers of problematic transitions from different chains
       num_max_treedepth = sum(.data$num_max_treedepth),
@@ -683,32 +690,24 @@ plot_mcmc_diagnostics <- function(
       names_to = "Quantity",
       values_to = "Value"
     ) |>
-    group_by(.data$Distribution, .data$date_of_the_nowcast, .data$Quantity) |>
-    # Assign colors to the models
-    mutate(
-      Distribution = factor(
-        .data$Distribution,
-        levels = seq(0, length(model_colors) - 1),
-        labels = names(model_colors)
-      )
-    )
+    group_by(.data$Distribution, .data$nowcast_date, .data$Quantity)
 
   date_breaks <- seq(
-    min(df_diagnostics$date_of_the_nowcast),
-    max(df_diagnostics$date_of_the_nowcast),
+    min(df_diagnostics$nowcast_date),
+    max(df_diagnostics$nowcast_date),
     by = 4 * 7
   )
   diag_plot <- ggplot(
     df_diagnostics_long,
     aes(
-      x = .data$date_of_the_nowcast,
+      x = .data$nowcast_date,
       y = .data$Value,
       color = .data$Distribution
     )
   ) +
     geom_line() +
     labs(y = NULL, x = "Date") +
-    scale_color_manual(values = model_colors) +
+    scale_color_manual(values = get_model_colors()[model_names]) +
     scale_x_date(breaks = date_breaks, date_labels = "%d %b") +
     facet_wrap(~Quantity, nrow = 3, scales = "free_y")
 
@@ -720,8 +719,11 @@ plot_mcmc_diagnostics <- function(
       width = 9,
       height = 7
     )
+    ret <- NULL
+  } else {
+    ret <- diag_plot
   }
-  diag_plot
+  ret
 }
 
 #' Save a figure in the PDF and the PNG format

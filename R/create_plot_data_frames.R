@@ -67,8 +67,7 @@ create_totals_data_frame <- function(
 #' @export
 summarize_nowcast <- function(
   df_nowcast,
-  df_total,
-  date_of_the_nowcast
+  df_total
 ) {
   # Recover the beginning of the estimation window from the total
   # counts
@@ -77,10 +76,7 @@ summarize_nowcast <- function(
   # Reformat the `week` column of the data frame with the nowcasts, so that it's
   # aligned with the actual date
   df_nowcast <- df_nowcast |>
-    mutate(
-      date = start_date + (.data$week - 1) * 7,
-      nowcast_date = date_of_the_nowcast
-    ) |>
+    mutate(date = start_date + (.data$week - 1) * 7) |>
     # Remove the, now redundant, week column
     dplyr::select(-"week")
   # Quantiles of the sampled nowcasts to calculate - 5 % to 95 % quantiles with
@@ -120,13 +116,7 @@ summarize_nowcast <- function(
     mutate(
       # Calculate the nowcasting horizon and save it as a factor for easier
       # plotting
-      delay = factor(as.numeric(date - .data$nowcast_date) / 7),
-      # Replace the model number by the text label of the model. The indexing
-      # must be shifted by 1, since the `Distribution` column indexes from 0.
-      Distribution = factor(
-        get_model_names()[.data$Distribution + 1],
-        levels = get_model_names()
-      )
+      delay = factor(as.numeric(date - .data$nowcast_date) / 7)
     )
   # Rename the quantile columns to have nicer names
   cols_to_rename <- colnames(df_nowcast_plot) %in% paste0(quantiles_to_get, "%")
