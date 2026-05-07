@@ -300,55 +300,6 @@ plot_crps_decomp <- function(
   } else {
     ret <- crps_decomp_plot
   }
-  crps_decomp_plot
-}
-
-#' Plot and save the CRPS density
-#'
-#' @description This function plots and possibly saves the chart of CRPS
-#' densities for all models.
-#'
-#' @param df_summarized_nowcast a data frame containing columns `Distribution`
-#' (containing the name of the observation model), `crps` (the empirical
-#' distribution of the CRPS) and `delay` (the nowcasting horizon)
-#' @param model_colors a named vector of the model colors corresponding to each
-#' observation model
-#' @param fitting_method a method used for fitting the nowcasting model, either
-#' "mcmc", or "glm"
-#' @param save_plot logical indicator, whether to save the plot using
-#' \code{ggsave()}
-#'
-#' @return a ggplot object with one facet per nowcasting horizon
-#'
-#' @import dplyr ggplot2
-#'
-#' @export
-plot_crps <- function(
-  df_summarized_nowcast,
-  model_colors,
-  fitting_method = c("mcmc", "glm"),
-  save_plot = TRUE
-) {
-  crps_plot <- ggplot(
-    df_summarized_nowcast,
-    aes(x = .data$crps, color = .data$Distribution)
-  ) +
-    # Plot the density of the CRPS
-    geom_line(stat = "density", alpha = 0.6) +
-    scale_color_manual(values = model_colors) +
-    labs(x = "CRPS", title = "CRPS distribution by horizon") +
-    facet_wrap(~delay) +
-    xlim(c(0, 2000))
-  # Save the plot if required, the width, height and path are hard-coded here
-  if (save_plot) {
-    save_figure(
-      crps_plot,
-      paste("inst/figure/crps_plot", fitting_method, sep = "_"),
-      width = 7,
-      height = 5.5
-    )
-  }
-  crps_plot
   ret
 }
 
