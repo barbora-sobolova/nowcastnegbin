@@ -6,6 +6,7 @@
 \usage{
 fit_glm_model(
   stan_data,
+  date_of_the_nowcast,
   model_name = c("Poisson", "NegBinX", "NegBin2D", "NegBin1D"),
   n_samples = 4000
 )

@@ -4,18 +4,18 @@
 \alias{plot_mcmc_diagnostics}
 \title{Plot the summary of MCMC diagnostics}
 \usage{
-plot_mcmc_diagnostics(df_diagnostics, model_colors, save_plot = TRUE)
+plot_mcmc_diagnostics(df_diagnostics, model_names, save_plot = TRUE)
 }
 \arguments{
 \item{df_diagnostics}{a data frame containing the diagnostic summaries for
 each model and each run (timesteps). It contains columns \code{num_divergent},
 \code{num_max_treedepth}, \code{ebfmi}, \code{Distribution}, \code{date_of_the_nowcast}.}
 
-\item{model_colors}{a named vector of the model colors corresponding to each
-observation model}
-
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}
+
+\item{model_colors}{a named vector of the model colors corresponding to each
+observation model}
 }
 \value{
 a ggplot object

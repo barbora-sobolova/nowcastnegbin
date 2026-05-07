@@ -4,7 +4,13 @@
 \alias{fit_stan_model}
 \title{Fit the nowcasting model in STAN}
 \usage{
-fit_stan_model(compiled_model, stan_data, model_obs, stan_settings)
+fit_stan_model(
+  compiled_model,
+  stan_data,
+  model_obs,
+  date_of_the_nowcast,
+  stan_settings
+)
 }
 \arguments{
 \item{compiled_model}{a compiled STAN model.}

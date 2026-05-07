@@ -11,6 +11,7 @@ generate_glm_nowcasts(
   t_len,
   max_lag,
   model_name,
+  date_of_the_nowcast,
   n_samples = 4000
 )
 }
