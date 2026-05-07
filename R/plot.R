@@ -537,6 +537,207 @@ plot_delay_prob <- function(
   }
   ret
 }
+
+#' Plot and save the density plot of the delay probability estimates
+#'
+#' @description This function plots and possibly saves the densities of
+#' delay probability estimates for all fitted models.
+#'
+#' @param df_rw_sd a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `.value` (the empirical
+#' distribution of the estimates of the random walk standard deviation) and
+#' `nowcast_date` (the date when the nowcast is calculated)
+#' @param df_nb_size a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `.value` (the empirical
+#' distribution of the dispersion parameter estimates) and `nowcast_date` (the
+#' date when the nowcast is calculated)
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
+#' @param date_of_the_nowcast a date, when the nowcast is made to filter the
+#' \code{df_delay_prob} table
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a ggplot object with one facet showing the density of the dispersion
+#' parameter estimates, or NULL if \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#'
+#' @export
+plot_rw_sd <- function(
+  df_rw_sd,
+  df_nb_size,
+  model_names,
+  date_of_the_nowcast,
+  save_plot = TRUE
+) {
+  # Rename the columns with the parameter values to avoid two columns with the
+  # name ".value"
+  df_rw_sd <- df_rw_sd |>
+    rename("rw_sd" = ".value") |>
+    filter(.data$Distribution != "Poisson")
+  df_nb_size <- df_nb_size |>
+    rename("nb_size" = ".value") |>
+    # Invert the scale, so that larger values mean more overdispersion
+    mutate(phi = 1 / .data$nb_size)
+  df_join <- inner_join(
+    df_nb_size,
+    df_rw_sd,
+    by = c(".draw", "Distribution", ".chain", ".iteration", "nowcast_date"),
+    relationship = "one-to-one"
+  )
+
+  rw_sd_scatter <- ggplot(
+    df_join,
+    aes(x = .data$phi, y = .data$rw_sd, color = .data$Distribution)
+  ) +
+    # Plot the density of the dispersion parameter estimates
+    geom_point(alpha = 0.5, shape = 1) +
+    scale_color_manual(values = get_model_colors()[model_names]) +
+    labs(
+      x = "dispersion parameter",
+      y = "sd of the random walk increments"
+    ) +
+    coord_cartesian(xlim = c(0, 10))
+  # Save the plot if required, the width, height and path are hard-coded here.
+  # If the plot is saved on the disc, we don't return the ggplot object.
+  if (save_plot) {
+    save_figure(
+      rw_sd_scatter,
+      paste(
+        "inst/figure/rw_sd_plots/rw_sd_scatter_plot",
+        date_of_the_nowcast,
+        sep = "_"
+      ),
+      width = 7,
+      height = 5.5
+    )
+    ret <- NULL
+  } else {
+    ret <- rw_sd_scatter
+  }
+  ret
+}
+
+#' A wrapper around plotting functions creating all relevant per-window plots
+#'
+#' @description This is a wrapper around functions that plot the posterior
+#' distributions of parameters in each rolling-window: \code{plot_nowcast()},
+#' \code{plot_delay_prob()}, \code{plot_disp_par} and in the case of the MCMC
+#' method also \code{plot_rw_sd()}.
+#'
+#' @param df_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_50`
+#' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
+#' `quantile_97.5` (bounds of the prediction intervals) and `date` (x-axis
+#' dates)
+#' @param df_delay_prob a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `.value` (the empirical
+#' distribution of the delay probability estimates), `nowcast_date` (the
+#' date when the nowcast is calculated) and `delay` (the discrete delay time)
+#' @param df_disp_par a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `.value` (the empirical
+#' distribution of the dispersion parameter estimates) and `nowcast_date` (the
+#' date when the nowcast is calculated)
+#' @param df_rw_sd a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `.value` (the empirical
+#' distribution of the estimates of the random walk standard deviation) and
+#' `nowcast_date` (the date when the nowcast is calculated)
+#' @param df_total a data frame with columns `date`, `counts` and `data`
+#' returned by the function \code{create_totals_data_frame()}
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
+#' @param date_of_the_nowcast a date, when the nowcast is made
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#'
+#' @export
+plot_per_window <- function(
+  df_nowcast,
+  df_delay_prob,
+  df_disp_par,
+  df_rw_sd,
+  df_total,
+  model_names,
+  date_of_the_nowcast,
+  fitting_method = c("mcmc", "glm"),
+  save_plot = TRUE
+) {
+  p_nowcast <- plot_nowcast(
+    df_nowcast,
+    df_total,
+    model_names,
+    date_of_the_nowcast,
+    fitting_method,
+    save_plot
+  )
+  p_disp <- plot_disp_par(
+    df_disp_par,
+    model_names,
+    date_of_the_nowcast,
+    fitting_method,
+    save_plot
+  )
+  p_prob <- plot_delay_prob(
+    df_delay_prob,
+    model_names,
+    date_of_the_nowcast,
+    fitting_method,
+    save_plot
+  )
+  ret_list <- list(nowcast = p_nowcast, delay_prob = p_prob, disp = p_disp)
+  if (fitting_method == "mcmc") {
+    p_rw_sd <- plot_rw_sd(
+      df_rw_sd,
+      df_disp_par,
+      model_names,
+      date_of_the_nowcast
+    )
+    ret_list <- c(ret_list, p_rw_sd)
+  }
+  return(ret_list)
+}
+
+#' A wrapper around plotting functions creating all relevant aggregated plots
+#'
+#' @description This is a wrapper around functions that plot the aggregated
+#' results: \code{plot_coverage()} and \code{plot_crps_decomp()}.
+#'
+#' @param df_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_50`
+#' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
+#' `quantile_97.5` (bounds of the prediction intervals) and `date` (x-axis
+#' dates). This data frame contains the whole period, where we nowcasting has
+#' been done.
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
+#' @param date_of_the_nowcast a date, when the nowcast is made
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#'
+#' @export
+plot_aggregated <- function(
+  df_nowcast,
+  model_names,
+  fitting_method = c("mcmc", "glm"),
+  save_plot = TRUE
+) {
+  p_coverage <- plot_coverage(df_nowcast, model_names, fitting_method)
+  p_crps_decomp <- plot_crps_decomp(df_nowcast, model_names, fitting_method)
+  ret_list <- list(coverage = p_coverage, crps_decomp = p_crps_decomp)
+  return(ret_list)
 }
 
 #' Plot the whole incidence trajectory
