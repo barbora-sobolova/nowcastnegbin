@@ -265,7 +265,7 @@ list(
   tar_target(aggreg_plots_glm, {
     plot_aggregated(
       bind_rows(map(grouped_results_glm, "nowcast")),
-      obs_model$model_name,
+      obs_model_glm,
       fitting_method = "glm"
     )
   }),
