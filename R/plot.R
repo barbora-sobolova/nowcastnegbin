@@ -489,10 +489,12 @@ plot_delay_prob <- function(
   ret
 }
 
-#' Plot and save the density plot of the delay probability estimates
+#' Plot and save the scatter plot of the dispersion parameter against the random
+#' walk standard deviation
 #'
-#' @description This function plots and possibly saves the densities of
-#' delay probability estimates for all fitted models.
+#' @description This function plots and possibly saves the scatter plot of the
+#' dispersion parameter estimates against the estimates of the standard
+#' deviation of the random walk.
 #'
 #' @param df_rw_sd a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `.value` (the empirical
@@ -509,8 +511,9 @@ plot_delay_prob <- function(
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
-#' @return a ggplot object with one facet showing the density of the dispersion
-#' parameter estimates, or NULL if \code{save_plot = TRUE}
+#' @return a ggplot object with one facet per distribution showing the scatter
+#' plot of the dispersion parameter vs. random walk standard deviation sampled
+#' values, or NULL if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #'
@@ -549,7 +552,7 @@ plot_rw_sd <- function(
       x = "dispersion parameter",
       y = "sd of the random walk increments"
     ) +
-    coord_cartesian(xlim = c(0, 10))
+    facet_wrap(~Distribution, scales = "free")
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
