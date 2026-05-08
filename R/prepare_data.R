@@ -199,7 +199,7 @@ get_stan_data <- function(
       stop("The vector of prior parameters of the reporting delay must have the same length as there are columns in the reporting triangle.")  # nolint
     }
     if (!is.numeric(prior_delay_param) || any(prior_delay_param <= 0)) {
-      stop("`prior_delay_param` must be a numeric vector of strictly positive finite values.")  # nolint
+      stop("`prior_delay_param` must be a numeric vector of strictly positive values.")  # nolint
     }
   }
   # Replace the known counts by NAs to create the reporting triangle
