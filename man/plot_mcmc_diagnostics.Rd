@@ -9,7 +9,7 @@ plot_mcmc_diagnostics(df_diagnostics, model_names, save_plot = TRUE)
 \arguments{
 \item{df_diagnostics}{a data frame containing the diagnostic summaries for
 each model and each run (timesteps). It contains columns \code{num_divergent},
-\code{num_max_treedepth}, \code{ebfmi}, \code{Distribution}, \code{date_of_the_nowcast}.}
+\code{num_max_treedepth}, \code{ebfmi}, \code{Distribution}, \code{nowcast_date}.}
 
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}

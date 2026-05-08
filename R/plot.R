@@ -823,7 +823,7 @@ plot_trajectory <- function(
 #'
 #' @param df_diagnostics a data frame containing the diagnostic summaries for
 #' each model and each run (timesteps). It contains columns `num_divergent`,
-#' `num_max_treedepth`, `ebfmi`, `Distribution`, `date_of_the_nowcast`.
+#' `num_max_treedepth`, `ebfmi`, `Distribution`, `nowcast_date`.
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
 #' @param save_plot logical indicator, whether to save the plot using
