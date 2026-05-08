@@ -33,6 +33,16 @@ fit_stan_model <- function(
   date_of_the_nowcast,
   stan_settings
 ) {
+  # A helper function that adds the model names and date of the nowcast into
+  # a data frame with parameter samples
+  add_meta <- function(df) {
+    mutate(
+      df,
+      # Observation models are numbered from zero
+      Distribution = get_model_names()[model_obs + 1],
+      nowcast_date = date_of_the_nowcast
+    )
+  }
   # Fit the model
   fitted_model <- do.call(
     compiled_model,
@@ -87,14 +97,7 @@ fit_stan_model <- function(
   df_nowcast <- fitted_model |>
     tidybayes::gather_draws(nowcast[week]) |> # nolint
     ungroup() |>
-    mutate(
-      Distribution = factor(
-        model_obs,
-        # Observation models are numbered from zero
-        labels = get_model_names()[model_obs + 1]
-      ),
-      nowcast_date = date_of_the_nowcast
-    ) |>
+    add_meta() |>
     # Keep only the counts that needed correction, which are those located at
     # the last `max_lag - 1`. we can calculate the last positions using the
     # maximum lag `d` and the number of reporting triangle rows `n` from the
@@ -105,50 +108,22 @@ fit_stan_model <- function(
   df_lambda <- fitted_model |>
     tidybayes::gather_draws(lambda[week]) |> # nolint
     ungroup() |>
-    mutate(
-      Distribution = factor(
-        model_obs,
-        # Observation models are numbered from zero
-        labels = get_model_names()[model_obs + 1]
-      ),
-      nowcast_date = date_of_the_nowcast
-    ) |>
+    add_meta() |>
     dplyr::select(-".variable")
   # Extract the delay probabilities
   df_delay_prob <- fitted_model |>
     tidybayes::gather_draws(reporting_delay[delay]) |> # nolint
     ungroup() |>
-    mutate(
-      Distribution = factor(
-        model_obs,
-        # Observation models are numbered from zero
-        labels = get_model_names()[model_obs + 1]
-      ),
-      nowcast_date = date_of_the_nowcast
-    ) |>
+    add_meta() |>
     dplyr::select(-".variable")
   # Extract the standard error of the random walk
   df_rw_sd <- fitted_model |>
     tidybayes::gather_draws(rw_sd) |> # nolint
     ungroup() |>
-    mutate(
-      Distribution = factor(
-        model_obs,
-        # Observation models are numbered from zero
-        labels = get_model_names()[model_obs + 1]
-      ),
-      nowcast_date = date_of_the_nowcast
-    ) |>
+    add_meta() |>
     dplyr::select(-".variable")
   # Add the seed and the model number to the diagnostic summary
-  diagnostics <- diagnostics |>
-    mutate(
-      Distribution = factor(
-        model_obs,
-        # Observation models are numbered from zero
-        labels = get_model_names()[model_obs + 1]
-      )
-    )
+  diagnostics <- diagnostics |> add_meta()
   # Return the draws as a list
   ret_list <- list(
     nowcast = df_nowcast,
@@ -163,14 +138,7 @@ fit_stan_model <- function(
     df_nb_size <- fitted_model |>
       tidybayes::gather_draws(nb_size[1]) |> # nolint
       ungroup() |>
-      mutate(
-        Distribution = factor(
-          model_obs,
-          # Observation models are numbered from zero
-          labels = get_model_names()[model_obs + 1]
-        ),
-        nowcast_date = date_of_the_nowcast
-      ) |>
+      add_meta() |>
       tidyr::unnest(.data$.value) |>
       dplyr::select(-".variable")
   } else {
