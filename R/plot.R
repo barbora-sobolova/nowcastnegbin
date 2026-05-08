@@ -334,7 +334,6 @@ plot_disp_par <- function(
   fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
-  # Filter only values from the corresponding time window
   df_nb_size <- df_nb_size |>
     mutate(
       # Plot the dispersion parameter on the inverted scale, where higher values
@@ -450,7 +449,6 @@ plot_delay_prob <- function(
   fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
-  # Filter only values from the corresponding time window
   df_delay_prob <- df_delay_prob |>
     # Turn the delay into a factor to allow for easier faceting
     mutate(delay = factor(.data$delay))
