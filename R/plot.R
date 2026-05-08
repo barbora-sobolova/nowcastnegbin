@@ -648,7 +648,8 @@ plot_per_window <- function(
       df_rw_sd,
       df_disp_par,
       model_names,
-      date_of_the_nowcast
+      date_of_the_nowcast,
+      save_plot
     )
     ret_list <- c(ret_list, p_rw_sd)
   }
@@ -685,8 +686,18 @@ plot_aggregated <- function(
   fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 ) {
-  p_coverage <- plot_coverage(df_nowcast, model_names, fitting_method)
-  p_crps_decomp <- plot_crps_decomp(df_nowcast, model_names, fitting_method)
+  p_coverage <- plot_coverage(
+    df_nowcast,
+    model_names,
+    fitting_method,
+    save_plot
+  )
+  p_crps_decomp <- plot_crps_decomp(
+    df_nowcast,
+    model_names,
+    fitting_method,
+    save_plot
+  )
   ret_list <- list(coverage = p_coverage, crps_decomp = p_crps_decomp)
   ret_list
 }
