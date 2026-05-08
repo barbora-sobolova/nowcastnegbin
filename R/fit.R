@@ -8,6 +8,8 @@
 #' returned by the `get_stan_data()` function
 #' @param model_obs an integer indicating the observation model. 0 - Poisson,
 #' 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.
+#' @param date_of_the_nowcast a date, when the nowcast is made to add as a
+#' column to the data frame with results
 #' @param stan_settings a list of STAN settings
 #'
 #' @return list of the data frames with the MCMC draws of different quantities:
@@ -237,6 +239,8 @@ select_gamlss_model <- function(
 #' zeroth delay.
 #' @param model_name model_name a string indicating the observation model. One
 #' of "Poisson", "NegBinX", "NegBin2D" and "NegBin1D".
+#' @param date_of_the_nowcast a date, when the nowcast is made to add as a
+#' column to the data frame with results
 #' @param n_samples how many samples from the nowcasting distribution we draw
 #'
 #' @return List of the data frames with the draws of different model parameters:
@@ -571,6 +575,8 @@ generate_glm_nowcasts <- function(
 #' @param stan_data a list of data and parameters accepted by the STAN model
 #' returned by the \code{get_stan_data()} function. This list is reused here to
 #' create a data frame for the regression model.
+#' @param date_of_the_nowcast a date, when the nowcast is made to add as a
+#' column to the data frame with results
 #' @param model_name a string indicating the observation model. One of
 #' "Poisson", "NegBinX", "NegBin2D" and "NegBin1D".
 #' @param n_samples how many samples from the nowcasting distribution we draw

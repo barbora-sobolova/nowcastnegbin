@@ -14,8 +14,7 @@ plot_crps_decomp(
 \arguments{
 \item{df_summarized_nowcast}{a data frame containing columns \code{Distribution}
 (containing the name of the observation model), \code{dispersion},
-\code{underprediction}, \code{overprediction}, \code{quantile_97.5} (bounds of the
-prediction intervals) and \code{delay} (the nowcasting horizon).}
+\code{underprediction}, \code{overprediction} and \code{delay} (the nowcasting horizon).}
 
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}

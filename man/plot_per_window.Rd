@@ -44,7 +44,8 @@ returned by the function \code{create_totals_data_frame()}}
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}
 
-\item{date_of_the_nowcast}{a date, when the nowcast is made}
+\item{date_of_the_nowcast}{a date, when the nowcast is made to name saved
+files correctly}
 
 \item{fitting_method}{a method used for fitting the nowcasting model, either
 "mcmc", or "glm"}

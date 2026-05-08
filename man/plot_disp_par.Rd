@@ -21,8 +21,8 @@ date when the nowcast is calculated)}
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}
 
-\item{date_of_the_nowcast}{a date, when the nowcast is made to filter the
-\code{df_nb_size} table}
+\item{date_of_the_nowcast}{a date, when the nowcast is made to name the
+saved file correctly}
 
 \item{fitting_method}{a method used for fitting the nowcasting model, either
 "mcmc", or "glm"}

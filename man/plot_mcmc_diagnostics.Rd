@@ -11,14 +11,14 @@ plot_mcmc_diagnostics(df_diagnostics, model_names, save_plot = TRUE)
 each model and each run (timesteps). It contains columns \code{num_divergent},
 \code{num_max_treedepth}, \code{ebfmi}, \code{Distribution}, \code{date_of_the_nowcast}.}
 
+\item{model_names}{a vector of names of the observation models, we wish to
+plot.}
+
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}
-
-\item{model_colors}{a named vector of the model colors corresponding to each
-observation model}
 }
 \value{
-a ggplot object
+a ggplot object, or NULL if \code{save_plot = TRUE}
 }
 \description{
 This function plots and possibly saves the summary of the

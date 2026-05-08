@@ -2,7 +2,8 @@
 % Please edit documentation in R/plot.R
 \name{plot_rw_sd}
 \alias{plot_rw_sd}
-\title{Plot and save the density plot of the delay probability estimates}
+\title{Plot and save the scatter plot of the dispersion parameter against the random
+walk standard deviation}
 \usage{
 plot_rw_sd(
   df_rw_sd,
@@ -26,17 +27,19 @@ date when the nowcast is calculated)}
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}
 
-\item{date_of_the_nowcast}{a date, when the nowcast is made to filter the
-\code{df_delay_prob} table}
+\item{date_of_the_nowcast}{a date, when the nowcast is made to name the
+saved file correctly}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}
 }
 \value{
-a ggplot object with one facet showing the density of the dispersion
-parameter estimates, or NULL if \code{save_plot = TRUE}
+a ggplot object with one facet per distribution showing the scatter
+plot of the dispersion parameter vs. random walk standard deviation sampled
+values, or NULL if \code{save_plot = TRUE}
 }
 \description{
-This function plots and possibly saves the densities of
-delay probability estimates for all fitted models.
+This function plots and possibly saves the scatter plot of the
+dispersion parameter estimates against the estimates of the standard
+deviation of the random walk.
 }

@@ -13,7 +13,8 @@
 #' returned by the function \code{create_totals_data_frame()}
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
-#' @param date_of_the_nowcast a date, when the nowcast is made
+#' @param date_of_the_nowcast a date, when the nowcast is made to name the
+#' saved file correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
@@ -313,8 +314,8 @@ plot_crps_decomp <- function(
 #' date when the nowcast is calculated)
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
-#' @param date_of_the_nowcast a date, when the nowcast is made to filter the
-#' \code{df_nb_size} table
+#' @param date_of_the_nowcast a date, when the nowcast is made to name the
+#' saved file correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
@@ -429,8 +430,8 @@ plot_disp_par <- function(
 #' date when the nowcast is calculated) and `delay` (the discrete delay time)
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
-#' @param date_of_the_nowcast a date, when the nowcast is made to filter the
-#' \code{df_delay_prob} table
+#' @param date_of_the_nowcast a date, when the nowcast is made to name the
+#' saved file correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
@@ -505,8 +506,8 @@ plot_delay_prob <- function(
 #' date when the nowcast is calculated)
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
-#' @param date_of_the_nowcast a date, when the nowcast is made to filter the
-#' \code{df_delay_prob} table
+#' @param date_of_the_nowcast a date, when the nowcast is made to name the
+#' saved file correctly
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -600,7 +601,8 @@ plot_rw_sd <- function(
 #' returned by the function \code{create_totals_data_frame()}
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
-#' @param date_of_the_nowcast a date, when the nowcast is made
+#' @param date_of_the_nowcast a date, when the nowcast is made to name saved
+#' files correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
@@ -876,7 +878,7 @@ plot_mcmc_diagnostics <- function(
     scale_x_date(breaks = date_breaks, date_labels = "%d %b") +
     facet_wrap(~Quantity, nrow = 3, scales = "free_y")
 
-  # Save the plot if required, the width, height and path iare hard-coded here
+  # Save the plot if required, the width, height and path are hard-coded here
   if (save_plot) {
     save_figure(
       diag_plot,

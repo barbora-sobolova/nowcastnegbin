@@ -21,6 +21,9 @@ returned by the \code{get_stan_data()} function}
 \item{model_obs}{an integer indicating the observation model. 0 - Poisson,
 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.}
 
+\item{date_of_the_nowcast}{a date, when the nowcast is made to add as a
+column to the data frame with results}
+
 \item{stan_settings}{a list of STAN settings}
 }
 \value{

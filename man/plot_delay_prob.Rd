@@ -21,8 +21,8 @@ date when the nowcast is calculated) and \code{delay} (the discrete delay time)}
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}
 
-\item{date_of_the_nowcast}{a date, when the nowcast is made to filter the
-\code{df_delay_prob} table}
+\item{date_of_the_nowcast}{a date, when the nowcast is made to name the
+saved file correctly}
 
 \item{fitting_method}{a method used for fitting the nowcasting model, either
 "mcmc", or "glm"}
@@ -31,8 +31,8 @@ plot.}
 \code{ggsave()}}
 }
 \value{
-a ggplot object with one facet showing the density of the dispersion
-parameter estimates, or NULL if \code{save_plot = TRUE}
+a ggplot object with one facet per delay showing the density of the
+delay probability estimates per delay, or NULL if \code{save_plot = TRUE}
 }
 \description{
 This function plots and possibly saves the densities of

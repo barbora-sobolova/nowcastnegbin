@@ -15,9 +15,10 @@ plot_aggregated(
 \item{df_nowcast}{a data frame containing columns \code{Distribution}
 (containing the name of the observation model), \code{quantile_50}
 (the point nowcasts), \code{quantile_2.5}, \code{quantile_25}, \code{quantile_75},
-\code{quantile_97.5} (bounds of the prediction intervals) and \code{date} (x-axis
-dates). This data frame contains the whole period, where we nowcasting has
-been done.}
+\code{quantile_97.5} (bounds of the prediction intervals), \code{dispersion} (spread
+component of the CRPS), \code{underprediction} (CRPS component) and
+\code{overprediction} (CRPS component). This data frame contains the whole period,
+where we nowcasting has been done.}
 
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}
@@ -27,8 +28,6 @@ plot.}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}
-
-\item{date_of_the_nowcast}{a date, when the nowcast is made}
 }
 \value{
 a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}
