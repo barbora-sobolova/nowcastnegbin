@@ -374,7 +374,9 @@ plot_disp_par <- function(
         arrow = arrow()
       ) +
       geom_text(aes(x = 27, y = -0.3, label = "more dispersion")) +
-      scale_color_manual(values = c(get_model_colors(), "Prior" = "black")) +
+      scale_color_manual(
+        values = c(get_model_colors()[model_names], "Prior" = "black")
+      ) +
       labs(
         x = "dispersion parameter",
         title = "Dispersion parameter posterior"
