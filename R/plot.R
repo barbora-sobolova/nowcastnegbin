@@ -652,7 +652,7 @@ plot_per_window <- function(
     )
     ret_list <- c(ret_list, p_rw_sd)
   }
-  return(ret_list)
+  ret_list
 }
 
 #' A wrapper around plotting functions creating all relevant aggregated plots
@@ -688,7 +688,7 @@ plot_aggregated <- function(
   p_coverage <- plot_coverage(df_nowcast, model_names, fitting_method)
   p_crps_decomp <- plot_crps_decomp(df_nowcast, model_names, fitting_method)
   ret_list <- list(coverage = p_coverage, crps_decomp = p_crps_decomp)
-  return(ret_list)
+  ret_list
 }
 
 #' Plot the whole incidence trajectory
