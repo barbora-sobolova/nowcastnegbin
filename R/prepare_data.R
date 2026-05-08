@@ -194,8 +194,13 @@ get_stan_data <- function(
   max_lag <- ncol(train_data)
   # Make sure that the parameters of the prior distribution of the delay
   # probabilities have a correct length.
-  if (!is.null(prior_delay_param) && length(prior_delay_param) != max_lag) {
-    stop("The vector of prior parameters of the reporting delay must have the same length as there are columns in the reporting triangle.")  # nolint
+  if (!is.null(prior_delay_param)) {
+    if (length(prior_delay_param) != max_lag) {
+      stop("The vector of prior parameters of the reporting delay must have the same length as there are columns in the reporting triangle.")  # nolint
+    }
+    if (!is.numeric(prior_delay_param) || any(prior_delay_param <= 0)) {
+      stop("`prior_delay_param` must be a numeric vector of strictly positive finite values.")  # nolint
+    }
   }
   # Replace the known counts by NAs to create the reporting triangle
   obs_mat_truncated <- mock_unobserved(train_data)
