@@ -655,7 +655,7 @@ plot_per_window <- function(
       date_of_the_nowcast,
       save_plot
     )
-    ret_list <- c(ret_list, p_rw_sd)
+    ret_list <- c(ret_list, rw_sd = p_rw_sd)
   }
   ret_list
 }
