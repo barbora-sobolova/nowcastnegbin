@@ -233,8 +233,7 @@ plot_coverage <- function(
 #'
 #' @param df_summarized_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `dispersion`,
-#' `underprediction`, `overprediction`, `quantile_97.5` (bounds of the
-#' prediction intervals) and `delay` (the nowcasting horizon).
+#' `underprediction`, `overprediction` and `delay` (the nowcasting horizon).
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
 #' @param fitting_method a method used for fitting the nowcasting model, either
@@ -437,8 +436,8 @@ plot_disp_par <- function(
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
-#' @return a ggplot object with one facet showing the density of the dispersion
-#' parameter estimates, or NULL if \code{save_plot = TRUE}
+#' @return a ggplot object with one facet per delay showing the density of the
+#' delay probability estimates per delay, or NULL if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #'
@@ -667,12 +666,12 @@ plot_per_window <- function(
 #' @param df_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `quantile_50`
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
-#' `quantile_97.5` (bounds of the prediction intervals) and `date` (x-axis
-#' dates). This data frame contains the whole period, where we nowcasting has
-#' been done.
+#' `quantile_97.5` (bounds of the prediction intervals), `dispersion` (spread
+#' component of the CRPS), `underprediction` (CRPS component) and
+#' `overprediction` (CRPS component). This data frame contains the whole period,
+#' where we nowcasting has been done.
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
-#' @param date_of_the_nowcast a date, when the nowcast is made
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
 #' @param save_plot logical indicator, whether to save the plot using
@@ -723,7 +722,7 @@ plot_aggregated <- function(
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
-#' @return a ggplot object
+#' @return a ggplot object, or NULL if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #' @importFrom ggpubr geom_bracket
@@ -823,12 +822,12 @@ plot_trajectory <- function(
 #' @param df_diagnostics a data frame containing the diagnostic summaries for
 #' each model and each run (timesteps). It contains columns `num_divergent`,
 #' `num_max_treedepth`, `ebfmi`, `Distribution`, `date_of_the_nowcast`.
-#' @param model_colors a named vector of the model colors corresponding to each
-#' observation model
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
-#' @return a ggplot object
+#' @return a ggplot object, or NULL if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #' @importFrom tidyr pivot_longer
