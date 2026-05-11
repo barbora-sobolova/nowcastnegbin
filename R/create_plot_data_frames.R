@@ -40,8 +40,6 @@ create_totals_data_frame <- function(
 #' @param df_total a data frame containing columns `date`, `counts` and `data`.
 #' The last column `data` is an indicator, whether the values in the `counts`
 #' column are the final sums of the counts, or the preliminary data version.
-#' @param date_of_the_nowcast a date indicating the day when the nowcasting
-#' takes place.
 #'
 #' @return a data frame with columns
 #' \describe{

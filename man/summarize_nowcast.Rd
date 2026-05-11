@@ -12,9 +12,6 @@ summarize_nowcast(df_nowcast, df_total)
 \item{df_total}{a data frame containing columns \code{date}, \code{counts} and \code{data}.
 The last column \code{data} is an indicator, whether the values in the \code{counts}
 column are the final sums of the counts, or the preliminary data version.}
-
-\item{date_of_the_nowcast}{a date indicating the day when the nowcasting
-takes place.}
 }
 \value{
 a data frame with columns
