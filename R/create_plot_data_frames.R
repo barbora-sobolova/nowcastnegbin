@@ -119,7 +119,7 @@ summarize_nowcast <- function(
       delay = factor(as.numeric(date - .data$nowcast_date) / 7),
       # Convert to factor to make sure, the plotting order of the models is
       # consistent.
-      Distribution = factor(Distribution, levels = get_model_names())
+      Distribution = factor(.data$Distribution, levels = get_model_names())
     )
   # Rename the quantile columns to have nicer names
   cols_to_rename <- colnames(df_nowcast_plot) %in% paste0(quantiles_to_get, "%")
