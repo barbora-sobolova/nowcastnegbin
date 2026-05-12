@@ -10,10 +10,8 @@
 #' @param stan_data a list of data and parameters accepted by the STAN model
 #' returned by the `get_stan_data()` function
 #' @param date_of_the_nowcast a vector of dates, when the nowcast is made
-#' @param model_name a character vector indicating observation models to be
-#' fit. Must be of the same length as `date_of_the_nowcast`
 #' @param model_obs an integer vector indicating the observation model. Must be
-#' of the same length as `date_of_the_nowcast`0 - Poisson,
+#' of the same length as `date_of_the_nowcast`. 0 - Poisson,
 #' 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.
 #' @param stan_settings a list of STAN settings
 #'
@@ -22,13 +20,14 @@
 #'   \item{\code{nowcast}}{samples from the nowcasting distribution,}
 #'   \item{\code{lambda}}{samples of the mean incidence trajectory,}
 #'   \item{\code{delay_prob}}{samples of the delay probability vector,}
+#'   \item{\code{rw_sd}}{samples of the standard deviation of the random walk,}
 #'   \item{\code{diagnostics}}{a diagnostic summary of the Markov chains,}
 #'   \item{\code{nb_size}}{The draws of the size parameter of the negative
 #'   binomial distribution. Not applicable for the Poisson model.}
 #'  }
 #'
-#' @import dplyr
-#' @importFrom tidybayes gather_draws
+#' @importFrom dplyr bind_rows
+#' @importFrom purrr map
 #'
 #' @export
 fit_all_stan_models <- function(
@@ -80,6 +79,7 @@ fit_all_stan_models <- function(
 #'   \item{\code{nowcast}}{samples from the nowcasting distribution,}
 #'   \item{\code{lambda}}{samples of the mean incidence trajectory,}
 #'   \item{\code{delay_prob}}{samples of the delay probability vector,}
+#'   \item{\code{rw_sd}}{samples of the standard deviation of the random walk,}
 #'   \item{\code{diagnostics}}{a diagnostic summary of the Markov chains,}
 #'   \item{\code{nb_size}}{The draws of the size parameter of the negative
 #'   binomial distribution. Not applicable for the Poisson model.}
@@ -788,10 +788,8 @@ fit_glm_model <- function(
 #' \code{fit_stan_model()} to facilitate the processing and plotting of the
 #' results.
 #'
-#' @importFrom dplyr
-#' @importFrom gamlss2 gamlss2
-#' @importFrom mgcv gam
-#' @importFrom mgcv s
+#' @importFrom dplyr bind_rows
+#' @importFrom purrr map
 #'
 #' @export
 fit_all_glm_models <- function(
