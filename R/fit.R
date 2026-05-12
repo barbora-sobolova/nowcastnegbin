@@ -32,11 +32,11 @@
 #'
 #' @export
 fit_all_stan_models <- function(
-    compiled_model,
-    stan_data,
-    model_obs,
-    date_of_the_nowcast,
-    stan_settings
+  compiled_model,
+  stan_data,
+  model_obs,
+  date_of_the_nowcast,
+  stan_settings
 ) {
   fits <- vector("list", length(model_obs))
   for (k in seq_along(model_obs)) {
@@ -52,12 +52,12 @@ fit_all_stan_models <- function(
     )
   }
   ret_list <- list(
-    nowcast = bind_rows(map(fits, "nowcast")),
-    lambda = bind_rows(map(fits, "lambda")),
-    delay_prob = bind_rows(map(fits, "delay_prob")),
-    rw_sd = bind_rows(map(fits, "rw_sd")),
-    diagnostics = bind_rows(map(fits, "diagnostics")),
-    nb_size = bind_rows(map(fits, "nb_size"))
+    nowcast = bind_rows(purrr::map(fits, "nowcast")),
+    lambda = bind_rows(purrr::map(fits, "lambda")),
+    delay_prob = bind_rows(purrr::map(fits, "delay_prob")),
+    rw_sd = bind_rows(purrr::map(fits, "rw_sd")),
+    diagnostics = bind_rows(purrr::map(fits, "diagnostics")),
+    nb_size = bind_rows(purrr::map(fits, "nb_size"))
   )
 }
 
@@ -795,10 +795,10 @@ fit_glm_model <- function(
 #'
 #' @export
 fit_all_glm_models <- function(
-    stan_data,
-    date_of_the_nowcast,
-    model_name,
-    n_samples = 4000
+  stan_data,
+  date_of_the_nowcast,
+  model_name,
+  n_samples = 4000
 ) {
   fits <- vector("list", length(model_name))
   for (k in seq_along(model_name)) {
@@ -813,10 +813,12 @@ fit_all_glm_models <- function(
     )
   }
   ret_list <- list(
-    nowcast = bind_rows(map(fits, "nowcast")),
-    lambda = bind_rows(map(fits, "lambda")),
-    delay_prob = bind_rows(map(fits, "delay_prob")),
-    nb_size = bind_rows(map(fits, "nb_size")),
-    iter = unlist(map(fits, "iter"))
+    nowcast = bind_rows(purrr::map(fits, "nowcast")),
+    lambda = bind_rows(purrr::map(fits, "lambda")),
+    delay_prob = bind_rows(purrr::map(fits, "delay_prob")),
+    nb_size = bind_rows(purrr::map(fits, "nb_size")),
+    log_disp_coeff = bind_rows(purrr::map(fits, "log_disp_coeff")),
+    iter = unlist(purrr::map(fits, "iter"))
   )
+  ret_list
 }
