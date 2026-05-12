@@ -7,8 +7,7 @@
 plot_nowcast(
   df_summarized_nowcast,
   df_total,
-  model_codes,
-  model_colors,
+  model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
@@ -22,17 +21,13 @@ plot_nowcast(
 dates)}
 
 \item{df_total}{a data frame with columns \code{date}, \code{counts} and \code{data}
-returned by the function create_totals_data_frame()}
+returned by the function \code{create_totals_data_frame()}}
 
-\item{model_codes}{a vector of observation model names. Must be in the
-correct order to label the models correctly. The order in case all models are
-used is: "Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M",
-"NegBin1M".}
+\item{model_names}{a vector of names of the observation models, we wish to
+plot.}
 
-\item{model_colors}{a named vector of the model colors corresponding to each
-observation model}
-
-\item{date_of_the_nowcast}{a date, when the nowcast is made}
+\item{date_of_the_nowcast}{a date, when the nowcast is made to name the
+saved file correctly}
 
 \item{fitting_method}{a method used for fitting the nowcasting model, either
 "mcmc", or "glm"}
@@ -41,7 +36,8 @@ observation model}
 \code{ggplot2::ggsave()}}
 }
 \value{
-a ggplot object with one facet per observation model
+a ggplot object with one facet per observation model, or NULL if
+\code{save_plot = TRUE}
 }
 \description{
 This function plots and possibly saves the nowcasts from all
