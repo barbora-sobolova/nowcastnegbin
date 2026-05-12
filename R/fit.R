@@ -753,3 +753,70 @@ fit_glm_model <- function(
   )
   ret_list
 }
+
+#' Fit multiple GLM nowcasting models
+#'
+#' @description This is a wrapper around `fit_glm_model()` that allows fitting
+#' for multiple observation models and also possibly multiple time points. The
+#' purpose of this function is to return the fits from different observation
+#' models for one date in a single bundle to simplify grouping structures in the
+#' targets pipeline.
+#'
+#' @param stan_data a list of data and parameters accepted by the STAN model
+#' returned by the \code{get_stan_data()} function. This list is reused here to
+#' create a data frame for the regression model.
+#' @param date_of_the_nowcast a vector of dates, when the nowcast is made
+#' @param model_name a character vector indicating observation models to be
+#' fit. Must be of the same length as `date_of_the_nowcast`
+#' @param n_samples how many samples from the nowcasting distribution we draw
+#'
+#' @return List of the data frames with the draws of different model parameters
+#' and additional quantities:
+#' \describe{
+#'   \item{\code{nowcast}}{samples from the nowcasting distribution,}
+#'   \item{\code{lambda}}{samples of the mean incidence trajectory,}
+#'   \item{\code{delay_prob}}{samples of the delay probability vector,}
+#'   \item{\code{nb_size}}{The draws of the size parameter of the negative
+#'   binomial distribution. Not applicable for the Poisson model,}
+#'   \item{\code{iter}}{a scalar, the number of iterations necessary for fitting
+#'   the gamlss model.}
+#'  }
+#' The columns of the data frames are a subset of the columns of the
+#' corresponding data frame returned by \code{fit_stan_model}. Columns `.chain`
+#' and `.iteration`, that are relevant only for the MCMC sampling, are not
+#' present here. The return list is designed similarly as the output of
+#' \code{fit_stan_model()} to facilitate the processing and plotting of the
+#' results.
+#'
+#' @importFrom dplyr
+#' @importFrom gamlss2 gamlss2
+#' @importFrom mgcv gam
+#' @importFrom mgcv s
+#'
+#' @export
+fit_all_glm_models <- function(
+    stan_data,
+    date_of_the_nowcast,
+    model_name,
+    n_samples = 4000
+) {
+  fits <- vector("list", length(model_name))
+  for (k in seq_along(model_name)) {
+    fits[[k]] <- fit_glm_model(
+      stan_data,
+      # The grouping structure ensures that date is identical for all
+      # observation models, so we could also pass just `date_of_the_nowcast[1]`
+      # each time
+      date_of_the_nowcast[k],
+      model_name[k],
+      n_samples
+    )
+  }
+  ret_list <- list(
+    nowcast = bind_rows(map(fits, "nowcast")),
+    lambda = bind_rows(map(fits, "lambda")),
+    delay_prob = bind_rows(map(fits, "delay_prob")),
+    nb_size = bind_rows(map(fits, "nb_size")),
+    iter = unlist(map(fits, "iter"))
+  )
+}
