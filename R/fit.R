@@ -779,7 +779,7 @@ fit_glm_model <- function(
 #'   \item{\code{delay_prob}}{samples of the delay probability vector,}
 #'   \item{\code{nb_size}}{The draws of the size parameter of the negative
 #'   binomial distribution. Not applicable for the Poisson model,}
-#'   \item{\code{iter}}{a scalar, the number of iterations necessary for fitting
+#'   \item{\code{iter}}{a vector, the number of iterations necessary for fitting
 #'   the gamlss model.}
 #'  }
 #' The columns of the data frames are a subset of the columns of the
