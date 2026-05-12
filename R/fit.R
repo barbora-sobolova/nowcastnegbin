@@ -8,6 +8,8 @@
 #' returned by the `get_stan_data()` function
 #' @param model_obs an integer indicating the observation model. 0 - Poisson,
 #' 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.
+#' @param date_of_the_nowcast a date, when the nowcast is made to add as a
+#' column to the data frame with results
 #' @param stan_settings a list of STAN settings
 #'
 #' @return list of the data frames with the MCMC draws of different quantities:
@@ -28,8 +30,19 @@ fit_stan_model <- function(
   compiled_model,
   stan_data,
   model_obs,
+  date_of_the_nowcast,
   stan_settings
 ) {
+  # A helper function that adds the model names and date of the nowcast into
+  # a data frame with parameter samples
+  add_meta <- function(df) {
+    mutate(
+      df,
+      # Observation models are numbered from zero
+      Distribution = get_model_names()[model_obs + 1],
+      nowcast_date = date_of_the_nowcast
+    )
+  }
   # Fit the model
   fitted_model <- do.call(
     compiled_model,
@@ -39,7 +52,9 @@ fit_stan_model <- function(
   diagnostics <- fitted_model$diagnostic_summary() |>
     suppressMessages() |>
     as.data.frame() |>
-    mutate(seed = stan_settings$seed)
+    mutate(seed = stan_settings$seed, nowcast_date = date_of_the_nowcast) |>
+    # Add the information about the sampling duration
+    cbind(fitted_model$time()$chains)
   # Refit the model, if we get too many divergent transitions, or the ebfmi is
   # low in at least one chain.
   refit <- 0
@@ -72,7 +87,9 @@ fit_stan_model <- function(
       )
     if (store_refit) {
       fitted_model <- refitted_model
-      diagnostics <- diagnostics_refit |> mutate(seed = stan_settings$seed)
+      diagnostics <- diagnostics_refit |>
+        mutate(seed = stan_settings$seed, nowcast_date = date_of_the_nowcast) |>
+        cbind(fitted_model$time()$chains)
     }
   }
 
@@ -80,7 +97,7 @@ fit_stan_model <- function(
   df_nowcast <- fitted_model |>
     tidybayes::gather_draws(nowcast[week]) |> # nolint
     ungroup() |>
-    mutate(Distribution = model_obs) |>
+    add_meta() |>
     # Keep only the counts that needed correction, which are those located at
     # the last `max_lag - 1`. we can calculate the last positions using the
     # maximum lag `d` and the number of reporting triangle rows `n` from the
@@ -91,22 +108,28 @@ fit_stan_model <- function(
   df_lambda <- fitted_model |>
     tidybayes::gather_draws(lambda[week]) |> # nolint
     ungroup() |>
-    mutate(Distribution = model_obs) |>
+    add_meta() |>
     dplyr::select(-".variable")
   # Extract the delay probabilities
   df_delay_prob <- fitted_model |>
     tidybayes::gather_draws(reporting_delay[delay]) |> # nolint
     ungroup() |>
-    mutate(Distribution = model_obs) |>
+    add_meta() |>
+    dplyr::select(-".variable")
+  # Extract the standard error of the random walk
+  df_rw_sd <- fitted_model |>
+    tidybayes::gather_draws(rw_sd) |> # nolint
+    ungroup() |>
+    add_meta() |>
     dplyr::select(-".variable")
   # Add the seed and the model number to the diagnostic summary
-  diagnostics <- diagnostics |>
-    mutate(Distribution = model_obs)
+  diagnostics <- diagnostics |> add_meta()
   # Return the draws as a list
   ret_list <- list(
     nowcast = df_nowcast,
     lambda = df_lambda,
     delay_prob = df_delay_prob,
+    rw_sd = df_rw_sd,
     diagnostics = diagnostics
   )
   # Extract the draws of the negative binomial size parameter if we don't fit
@@ -115,7 +138,8 @@ fit_stan_model <- function(
     df_nb_size <- fitted_model |>
       tidybayes::gather_draws(nb_size[1]) |> # nolint
       ungroup() |>
-      mutate(Distribution = model_obs) |>
+      add_meta() |>
+      tidyr::unnest(.data$.value) |>
       dplyr::select(-".variable")
   } else {
     df_nb_size <- NULL
@@ -183,6 +207,8 @@ select_gamlss_model <- function(
 #' zeroth delay.
 #' @param model_name model_name a string indicating the observation model. One
 #' of "Poisson", "NegBinX", "NegBin2D" and "NegBin1D".
+#' @param date_of_the_nowcast a date, when the nowcast is made to add as a
+#' column to the data frame with results
 #' @param n_samples how many samples from the nowcasting distribution we draw
 #'
 #' @return List of the data frames with the draws of different model parameters:
@@ -216,18 +242,9 @@ generate_glm_nowcasts <- function(
   t_len,
   max_lag,
   model_name,
+  date_of_the_nowcast,
   n_samples = 4000
 ) {
-  # Set the model code according to the one that is used in the STAN program,
-  # to keep the output from the two fitting methods somewhat consistent.
-  model_code <- switch(
-    model_name,
-    Poisson = 0,
-    NegBinX = 1,
-    NegBin2D = 2,
-    NegBin1D = 3
-  )
-
   # Create nowcasts using the sampling following van de Kasstelee 2019:
   # (1) Draw the parameter values from the multivariate normal distribution
   #     using the estimates and its standard errors.
@@ -335,7 +352,7 @@ generate_glm_nowcasts <- function(
       # Calculate the mean of the counts in each cell of the reporting triangle.
       mu = exp(.data$smooth_lpred + .data$fixed_lpred),
       # Add the code of the model to match the `fit_stan_model()` output
-      Distribution = model_code
+      Distribution = model_name
     ) |>
     # Calculate the value of lambda for each time point. We need to multiply the
     # sum of `mu` across delays by a constant, that got absorbed by the factor
@@ -355,7 +372,8 @@ generate_glm_nowcasts <- function(
   # it will not be a part of returned results.
   if (model_name %in% c("NegBinX", "NegBin1D")) {
     df_nb_size <- data.frame(
-      Distribution = model_code,
+      Distribution = model_name,
+      nowcast_date = date_of_the_nowcast,
       # The theoretical overdispersion parameter is identical for all times and
       # delays.
       nb_size = rep(
@@ -378,7 +396,8 @@ generate_glm_nowcasts <- function(
     # scale parameter. The model with intercept is constructed in the same way
     # as the fixed terms for the mean value, so we can use the same contrasts.
     df_nb_size <- data.frame(
-      Distribution = model_code,
+      Distribution = model_name,
+      nowcast_date = date_of_the_nowcast,
       # Matrix of size `n_samples` x `max_delay`
       nb_size_internal = rep(
         c(exp(-sampled_pars_fixed[, sigma_ind] %*% contrasts_mu)),
@@ -444,7 +463,7 @@ generate_glm_nowcasts <- function(
         # Remove the duplicated values of the overdispersion parameter
         unique() |>
         rename(".value" = "nb_size") |>
-        mutate(".variable" = "nb_size")
+        mutate(".variable" = "nb_size", nowcast_date = date_of_the_nowcast)
     )
   }
 
@@ -475,7 +494,8 @@ generate_glm_nowcasts <- function(
       # Make the column names match those produced by the STAN
       # procedure in `fit_stan_model()`
       .value = .data$obs_counts + .data$predicted_counts,
-      .variable = "nowcast"
+      .variable = "nowcast",
+      nowcast_date = date_of_the_nowcast
     ) |>
     # Drop redundant columns
     select(-c("obs_counts", "predicted_counts"))
@@ -490,13 +510,16 @@ generate_glm_nowcasts <- function(
         # Remove duplicate lambda samples
         unique() |>
         rename(".value" = "lambda_sampled") |>
-        mutate(".variable" = "lambda"),
+        mutate(".variable" = "lambda", nowcast_date = date_of_the_nowcast),
       delay_prob = df_mu_sampled |>
         select("delay", "probs_sampled", ".draw", "Distribution") |>
         # Remove duplicate samples of the delay probabilities
         unique() |>
         rename(".value" = "probs_sampled") |>
-        mutate(".variable" = "reporting_delay"),
+        mutate(
+          ".variable" = "reporting_delay",
+          nowcast_date = date_of_the_nowcast
+        ),
       # Store the information about the number of iterations of the `gamlss2()`
       # optimizing function.
       iter = fitted_gamlss_obj$iterations
@@ -520,6 +543,8 @@ generate_glm_nowcasts <- function(
 #' @param stan_data a list of data and parameters accepted by the STAN model
 #' returned by the \code{get_stan_data()} function. This list is reused here to
 #' create a data frame for the regression model.
+#' @param date_of_the_nowcast a date, when the nowcast is made to add as a
+#' column to the data frame with results
 #' @param model_name a string indicating the observation model. One of
 #' "Poisson", "NegBinX", "NegBin2D" and "NegBin1D".
 #' @param n_samples how many samples from the nowcasting distribution we draw
@@ -587,6 +612,7 @@ generate_glm_nowcasts <- function(
 #' @export
 fit_glm_model <- function(
   stan_data,
+  date_of_the_nowcast,
   model_name = c("Poisson", "NegBinX", "NegBin2D", "NegBin1D"),
   n_samples = 4000
 ) {
@@ -659,6 +685,7 @@ fit_glm_model <- function(
     stan_data$n,
     stan_data$d,
     model_name,
+    date_of_the_nowcast,
     n_samples
   )
   ret_list

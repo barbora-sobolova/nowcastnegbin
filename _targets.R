@@ -30,14 +30,6 @@ tar_source(files = "R")
 ggplot2::theme_set(ggplot2::theme_bw())
 
 # Set the global objects =======================================================
-model_colors <- c(
-  "Poisson" = "#CC79A7",
-  "NegBinX" = "#D55E00",
-  "NegBin2D" = "#009E73",
-  "NegBin1D" = "#56B4E9",
-  "NegBin2M" = "#004282",
-  "NegBin1M" = "#F0E442"
-)
 
 max_lag <- 5
 
@@ -147,116 +139,133 @@ list(
       compiled_model$sample,
       stan_data = stan_data,
       model_obs = obs_model$model_number,
+      date_of_the_nowcast = time_horizons$nowcast_date,
       stan_settings = stan_settings
     )
   },
   pattern = cross(obs_model, map(time_horizons, stan_data)),
   iteration = "list"
   ),
-  tar_target(df_summarized_nowcast_mcmc, {
-    summarize_nowcast(
-      fitted_mcmc$nowcast,
-      df_total,
-      time_horizons$nowcast_date
+  # Put together the MCMC results from the same estimation windows to make
+  # plotting easier.
+  tar_target(grouped_results_mcmc, {
+    same_dates <- unlist(
+      lapply(
+        fitted_mcmc,
+        function (x) x$nowcast$nowcast_date[1] == time_horizons$nowcast_date
+      )
+    )
+    list(
+      nowcast = summarize_nowcast(
+        bind_rows(map(fitted_mcmc[same_dates], "nowcast")),
+        df_total = df_total
+      ),
+      delay_prob = bind_rows(map(fitted_mcmc[same_dates], "delay_prob")),
+      nb_size = bind_rows(map(fitted_mcmc[same_dates], "nb_size")),
+      rw_sd = bind_rows(map(fitted_mcmc[same_dates], "rw_sd")),
+      diagnostics = bind_rows(map(fitted_mcmc[same_dates], "diagnostics"))
     )
   },
-  pattern = map(cross(obs_model, map(time_horizons, df_total)), fitted_mcmc)
-  ),
+  pattern = map(time_horizons, df_total),
+  iteration = "list"),
+  # Create plots for each rolling window. For the MCMC procedure we plot:
+  # - the nowcast,
+  # - posterior density of the delay probability,
+  # - posterior density of the dispersion parameter on a scale, where 0 means
+  #   the Poisson model and higher values indicate more dispersion,
+  # - the scatter plot of the dispersion parameter against the standard
+  #   deviation of the random walk.
+  tar_target(rolling_plots_mcmc, {
+    plot_per_window(
+      grouped_results_mcmc$nowcast,
+      grouped_results_mcmc$delay_prob,
+      grouped_results_mcmc$nb_size,
+      grouped_results_mcmc$rw_sd,
+      df_total,
+      obs_model$model_name,
+      time_horizons$nowcast_date,
+      fitting_method = "mcmc"
+    )
+  },
+  pattern = map(grouped_results_mcmc, time_horizons, df_total),
+  iteration = "list"),
+  # Create plots of aggregated results from the MCMC method. We plot:
+  # - the coverage of nowcasts,
+  # - the crps decomposition.
+  tar_target(aggreg_plots_mcmc, {
+    plot_aggregated(
+      bind_rows(map(grouped_results_mcmc, "nowcast")),
+      obs_model$model_name,
+      fitting_method = "mcmc"
+    )
+  }),
+  # Plot the diagnostic summaries for the MCMC models
+  tar_target(plot_diagnostics, {
+    plot_mcmc_diagnostics(
+      bind_rows(map(grouped_results_mcmc, "diagnostics")),
+      obs_model$model_name
+    )
+  }),
   # Select the names of models we want to fit with the GLM method to branch over
   # it.
   tar_target(obs_model_glm, c("Poisson", "NegBinX", "NegBin2D", "NegBin1D")),
   # Fit the gamlss models
   tar_target(fitted_glm, {
-    fit_glm_model(stan_data = stan_data, model_name = obs_model_glm)
-  },
-  pattern = cross(stan_data, obs_model_glm),
-  iteration = "list"
-  ),
-  tar_target(df_summarized_nowcast_glm, {
-    summarize_nowcast(
-      fitted_glm$nowcast,
-      df_total,
-      time_horizons$nowcast_date
-    )
-  },
-  pattern = map(fitted_glm, cross(map(time_horizons, df_total), obs_model_glm))
-  ),
-  # Collect the diagnostic summaries for the MCMC models
-  tar_target(diagnostic_summaries, {
-    fitted_mcmc$diagnostics |>
-      mutate(
-        date_of_the_nowcast = time_horizons$nowcast_date
+    fit_glm_model(
+      stan_data = stan_data,
+      date_of_the_nowcast = time_horizons$nowcast_date,
+      model_name = obs_model_glm
       )
   },
-  pattern = map(cross(obs_model, time_horizons), fitted_mcmc)
+  pattern = cross(map(stan_data, time_horizons), obs_model_glm),
+  iteration = "list"
   ),
-  # Plot the diagnostics of the MCMC procedure
-  tar_target(plot_diagnostics, {
-    plot_mcmc_diagnostics(diagnostic_summaries, model_colors)
-  }),
-  # Plot the nowcasts from the STAN model for each estimation window
-  tar_target(nowcast_plot_mcmc, {
-    plot_nowcast(
-      df_summarized_nowcast_mcmc,
-      df_total,
-      model_codes = setNames(obs_model$model_name, obs_model$model_number),
-      model_colors = model_colors,
-      date_of_the_nowcast = time_horizons$nowcast_date,
-      fitting_method = "mcmc"
+  # Put together the GLM results from the same estimation windows to make
+  # plotting easier.
+  tar_target(grouped_results_glm, {
+    same_dates <- unlist(
+      lapply(
+        fitted_glm,
+        function (x) x$nowcast$nowcast_date[1] == time_horizons$nowcast_date
+      )
+    )
+    list(
+      nowcast = summarize_nowcast(
+        bind_rows(map(fitted_glm[same_dates], "nowcast")),
+        df_total = df_total
+      ),
+      delay_prob = bind_rows(map(fitted_glm[same_dates], "delay_prob")),
+      nb_size = bind_rows(map(fitted_glm[same_dates], "nb_size"))
     )
   },
-  pattern = map(df_total, time_horizons),
+  pattern = map(time_horizons, df_total),
   iteration = "list"),
-  # Plot the nowcasts from the GLM model for each estimation window
-  tar_target(nowcast_plot_glm, {
-    plot_nowcast(
-      df_summarized_nowcast_glm,
+  # Create plots for each rolling window. For the GLM procedure we plot:
+  # - the nowcast,
+  # - posterior density of the delay probability,
+  # - posterior density of the dispersion parameter on a scale, where 0 means
+  #   the Poisson model and higher values indicate more dispersion.
+  tar_target(rolling_plots_glm, {
+    plot_per_window(
+      grouped_results_glm$nowcast,
+      grouped_results_glm$delay_prob,
+      grouped_results_glm$nb_size,
+      NULL,  # We don't have the random walk parameters
       df_total,
-      # Select only the codes and colors of the first 4 models (that is
-      # excluding NegBin2M and NegBin1M)
-      model_codes = setNames(
-        obs_model_glm,
-        obs_model$model_number[obs_model$model_name %in% obs_model_glm]
-      ),
-      model_colors = model_colors[obs_model_glm],
-      date_of_the_nowcast = time_horizons$nowcast_date,
+      obs_model$model_name,
+      time_horizons$nowcast_date,
       fitting_method = "glm"
     )
   },
-  pattern = map(df_total, time_horizons),
+  pattern = map(grouped_results_glm, time_horizons, df_total),
   iteration = "list"),
-  # Plot the overall coverage of the models
-  tar_target(coverage_plot_mcmc, {
-    plot_coverage(
-      df_summarized_nowcast_mcmc,
-      model_codes = setNames(obs_model$model_name, obs_model$model_number),
-      model_colors = model_colors,
-      fitting_method = "mcmc"
-    )
-  }),
-  tar_target(coverage_plot_glm, {
-    plot_coverage(
-      df_summarized_nowcast_glm,
-      model_codes = setNames(
-        obs_model_glm,
-        obs_model$model_number[obs_model$model_name %in% obs_model_glm]
-      ),
-      model_colors = model_colors[obs_model_glm],
-      fitting_method = "glm"
-    )
-  }),
-  # Plot the distribution of the CRPS
-  tar_target(crps_plot_mcmc, {
-    plot_crps(
-      df_summarized_nowcast_mcmc,
-      model_colors = model_colors,
-      fitting_method = "mcmc"
-    )
-  }),
-  tar_target(crps_plot_glm, {
-    plot_crps(
-      df_summarized_nowcast_glm,
-      model_colors = model_colors[obs_model_glm],
+  # Create plots of aggregated results from the GLM method. We plot:
+  # - the coverage of nowcasts,
+  # - the crps decomposition.
+  tar_target(aggreg_plots_glm, {
+    plot_aggregated(
+      bind_rows(map(grouped_results_glm, "nowcast")),
+      obs_model_glm,
       fitting_method = "glm"
     )
   }),
