@@ -816,7 +816,6 @@ fit_all_glm_models <- function(
     lambda = bind_rows(purrr::map(fits, "lambda")),
     delay_prob = bind_rows(purrr::map(fits, "delay_prob")),
     nb_size = bind_rows(purrr::map(fits, "nb_size")),
-    log_disp_coeff = bind_rows(purrr::map(fits, "log_disp_coeff")),
     iter = unlist(purrr::map(fits, "iter"))
   )
   ret_list
