@@ -53,6 +53,9 @@ prior_delay_param <- c(5, 1.5, 0.5, 0.25, 0.25)
 
 # Define the pipeline ==========================================================
 list(
+  # Select the names of models we want to fit with the GLM method to branch over
+  # it.
+  tar_target(obs_model_glm, c("Poisson", "NegBinX", "NegBin2D", "NegBin1D")),
   # Compile the STAN model
   tar_target(compiled_model, {
     cmdstanr::cmdstan_model(here::here("inst", "stan", "nowcast.stan"))
@@ -79,6 +82,29 @@ list(
       skip_dates = skip_dates
     )
   }),
+  # Create grouped data frames to group targets by date. As a result, the models
+  # will be stored and subsequently loaded in bundles  of 4 (for GLM), or 6
+  # (for MCMC)
+  tar_group_by(branches_mcmc, {
+    time_horizons |>
+      mutate(
+        nested_col = list(
+          tibble(model_name = get_model_names(), model_code = 0:5)
+        )
+      ) |>
+      unnest(nested_col)
+  },
+  train_data_begin,
+  nowcast_date
+  ),
+  tar_group_by(branches_glm, {
+    time_horizons |>
+      mutate(model_obs = list(obs_model_glm)) |>
+      unnest(model_obs)
+  },
+  train_data_begin,
+  nowcast_date
+  ),
   # Load the preprocessed data with no stratification, restricted to the time
   # period of interest
   tar_target(full_data, {
@@ -128,46 +154,30 @@ list(
   },
   pattern = map(time_horizons, train_data),
   iteration = "list"),
-  # A data frame encoding the observation model
-  tar_target(obs_model, {
-    data.frame(model_name = get_model_names(), model_number = 0:5)
-  }),
-  # Fitting of all models using dynamic branching over 6 observational models
-  # defined in `obs_model` and rolling windows defined in `time_horizons`.
+  # Select the names of models we want to fit with the MCMC method. This is all
+  # 6 observation models
+  tar_target(obs_model, get_model_names()),
+  # Fitting of all models using dynamic branching over the rolling windows
+  # which are defined as groups of `branches_mcmc`
   tar_target(fitted_mcmc, {
-    fit_stan_model(
+    fit_all_stan_models(
       compiled_model$sample,
       stan_data = stan_data,
-      model_obs = obs_model$model_number,
-      date_of_the_nowcast = time_horizons$nowcast_date,
+      model_obs = branches_mcmc$model_code,
+      date_of_the_nowcast = branches_mcmc$nowcast_date,
       stan_settings = stan_settings
     )
   },
-  pattern = cross(obs_model, map(time_horizons, stan_data)),
+  pattern = map(branches_mcmc, stan_data),
   iteration = "list"
   ),
-  # Put together the MCMC results from the same estimation windows to make
-  # plotting easier.
-  tar_target(grouped_results_mcmc, {
-    same_dates <- unlist(
-      lapply(
-        fitted_mcmc,
-        function (x) x$nowcast$nowcast_date[1] == time_horizons$nowcast_date
-      )
-    )
-    list(
-      nowcast = summarize_nowcast(
-        bind_rows(map(fitted_mcmc[same_dates], "nowcast")),
-        df_total = df_total
-      ),
-      delay_prob = bind_rows(map(fitted_mcmc[same_dates], "delay_prob")),
-      nb_size = bind_rows(map(fitted_mcmc[same_dates], "nb_size")),
-      rw_sd = bind_rows(map(fitted_mcmc[same_dates], "rw_sd")),
-      diagnostics = bind_rows(map(fitted_mcmc[same_dates], "diagnostics"))
-    )
+  # Calculate the quantiles and CRPS of the nowcasts obtained by the MCMC method
+  tar_target(summarized_nowcast_mcmc, {
+    summarize_nowcast(fitted_mcmc$nowcast, df_total = df_total)
   },
-  pattern = map(time_horizons, df_total),
-  iteration = "list"),
+  pattern = map(fitted_mcmc, df_total),
+  iteration = "list"
+  ),
   # Create plots for each rolling window. For the MCMC procedure we plot:
   # - the nowcast,
   # - posterior density of the delay probability,
@@ -177,69 +187,58 @@ list(
   #   deviation of the random walk.
   tar_target(rolling_plots_mcmc, {
     plot_per_window(
-      grouped_results_mcmc$nowcast,
-      grouped_results_mcmc$delay_prob,
-      grouped_results_mcmc$nb_size,
-      grouped_results_mcmc$rw_sd,
+      summarized_nowcast_mcmc,
+      fitted_mcmc$delay_prob,
+      fitted_mcmc$nb_size,
+      fitted_mcmc$rw_sd,
       df_total,
-      obs_model$model_name,
+      obs_model,
       time_horizons$nowcast_date,
       fitting_method = "mcmc"
     )
   },
-  pattern = map(grouped_results_mcmc, time_horizons, df_total),
+  pattern = map(
+    fitted_mcmc,
+    time_horizons,
+    df_total,
+    summarized_nowcast_mcmc
+  ),
   iteration = "list"),
   # Create plots of aggregated results from the MCMC method. We plot:
   # - the coverage of nowcasts,
   # - the crps decomposition.
   tar_target(aggreg_plots_mcmc, {
     plot_aggregated(
-      bind_rows(map(grouped_results_mcmc, "nowcast")),
-      obs_model$model_name,
+      bind_rows(summarized_nowcast_mcmc),
+      obs_model,
       fitting_method = "mcmc"
     )
   }),
   # Plot the diagnostic summaries for the MCMC models
   tar_target(plot_diagnostics, {
     plot_mcmc_diagnostics(
-      bind_rows(map(grouped_results_mcmc, "diagnostics")),
-      obs_model$model_name
+      bind_rows(map(fitted_mcmc, "diagnostics")),
+      obs_model
     )
   }),
-  # Select the names of models we want to fit with the GLM method to branch over
-  # it.
-  tar_target(obs_model_glm, c("Poisson", "NegBinX", "NegBin2D", "NegBin1D")),
   # Fit the gamlss models
   tar_target(fitted_glm, {
-    fit_glm_model(
+    fit_all_glm_models(
       stan_data = stan_data,
-      date_of_the_nowcast = time_horizons$nowcast_date,
-      model_name = obs_model_glm
+      date_of_the_nowcast = branches_glm$nowcast_date,
+      model_name = branches_glm$model_obs
       )
   },
-  pattern = cross(map(stan_data, time_horizons), obs_model_glm),
+  pattern = map(branches_glm, stan_data),
   iteration = "list"
   ),
-  # Put together the GLM results from the same estimation windows to make
-  # plotting easier.
-  tar_target(grouped_results_glm, {
-    same_dates <- unlist(
-      lapply(
-        fitted_glm,
-        function (x) x$nowcast$nowcast_date[1] == time_horizons$nowcast_date
-      )
-    )
-    list(
-      nowcast = summarize_nowcast(
-        bind_rows(map(fitted_glm[same_dates], "nowcast")),
-        df_total = df_total
-      ),
-      delay_prob = bind_rows(map(fitted_glm[same_dates], "delay_prob")),
-      nb_size = bind_rows(map(fitted_glm[same_dates], "nb_size"))
-    )
+  # Calculate the quantiles and CRPS of the nowcasts obtained by the GLM method
+  tar_target(summarized_nowcast_glm, {
+    summarize_nowcast(fitted_glm$nowcast, df_total = df_total)
   },
-  pattern = map(time_horizons, df_total),
-  iteration = "list"),
+  pattern = map(fitted_glm, df_total),
+  iteration = "list"
+  ),
   # Create plots for each rolling window. For the GLM procedure we plot:
   # - the nowcast,
   # - posterior density of the delay probability,
@@ -247,24 +246,24 @@ list(
   #   the Poisson model and higher values indicate more dispersion.
   tar_target(rolling_plots_glm, {
     plot_per_window(
-      grouped_results_glm$nowcast,
-      grouped_results_glm$delay_prob,
-      grouped_results_glm$nb_size,
+      summarized_nowcast_glm,
+      fitted_glm$delay_prob,
+      fitted_glm$nb_size,
       NULL,  # We don't have the random walk parameters
       df_total,
-      obs_model$model_name,
+      obs_model_glm,
       time_horizons$nowcast_date,
       fitting_method = "glm"
     )
   },
-  pattern = map(grouped_results_glm, time_horizons, df_total),
+  pattern = map(fitted_glm, time_horizons, df_total, summarized_nowcast_glm),
   iteration = "list"),
   # Create plots of aggregated results from the GLM method. We plot:
   # - the coverage of nowcasts,
   # - the crps decomposition.
   tar_target(aggreg_plots_glm, {
     plot_aggregated(
-      bind_rows(map(grouped_results_glm, "nowcast")),
+      bind_rows(summarized_nowcast_glm),
       obs_model_glm,
       fitting_method = "glm"
     )

@@ -1,3 +1,66 @@
+#' Fit multiple MCMC nowcasting models
+#'
+#' @description This is a wrapper around `fit_stan_model()` that allows fitting
+#' for multiple observation models and also possibly multiple time points. The
+#' purpose of this function is to return the fits from different observation
+#' models for one date in a single bundle to simplify grouping structures in the
+#' targets pipeline.
+#'
+#' @param compiled_model a compiled STAN model.
+#' @param stan_data a list of data and parameters accepted by the STAN model
+#' returned by the `get_stan_data()` function
+#' @param date_of_the_nowcast a vector of dates, when the nowcast is made
+#' @param model_name a character vector indicating observation models to be
+#' fit. Must be of the same length as `date_of_the_nowcast`
+#' @param model_obs an integer vector indicating the observation model. Must be
+#' of the same length as `date_of_the_nowcast`0 - Poisson,
+#' 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.
+#' @param stan_settings a list of STAN settings
+#'
+#' @return list of the data frames with the MCMC draws of different quantities:
+#' \describe{
+#'   \item{\code{nowcast}}{samples from the nowcasting distribution,}
+#'   \item{\code{lambda}}{samples of the mean incidence trajectory,}
+#'   \item{\code{delay_prob}}{samples of the delay probability vector,}
+#'   \item{\code{diagnostics}}{a diagnostic summary of the Markov chains,}
+#'   \item{\code{nb_size}}{The draws of the size parameter of the negative
+#'   binomial distribution. Not applicable for the Poisson model.}
+#'  }
+#'
+#' @import dplyr
+#' @importFrom tidybayes gather_draws
+#'
+#' @export
+fit_all_stan_models <- function(
+    compiled_model,
+    stan_data,
+    model_obs,
+    date_of_the_nowcast,
+    stan_settings
+) {
+  fits <- vector("list", length(model_obs))
+  for (k in seq_along(model_obs)) {
+    fits[[k]] <- fit_stan_model(
+      compiled_model,
+      stan_data,
+      model_obs[k],
+      # The grouping structure ensures that date is identical for all
+      # observation models, so we could also pass just `date_of_the_nowcast[1]`
+      # each time
+      date_of_the_nowcast[k],
+      stan_settings
+    )
+  }
+  ret_list <- list(
+    nowcast = bind_rows(map(fits, "nowcast")),
+    lambda = bind_rows(map(fits, "lambda")),
+    delay_prob = bind_rows(map(fits, "delay_prob")),
+    rw_sd = bind_rows(map(fits, "rw_sd")),
+    diagnostics = bind_rows(map(fits, "diagnostics")),
+    nb_size = bind_rows(map(fits, "nb_size"))
+  )
+}
+
 #' Fit the nowcasting model in STAN
 #'
 #' @description Fit the compiled STAN model and return the draws of selected
