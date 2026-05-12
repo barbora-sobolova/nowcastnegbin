@@ -32,6 +32,7 @@ list of the data frames with the MCMC draws of different quantities:
 \item{\code{nowcast}}{samples from the nowcasting distribution,}
 \item{\code{lambda}}{samples of the mean incidence trajectory,}
 \item{\code{delay_prob}}{samples of the delay probability vector,}
+\item{\code{rw_sd}}{samples of the standard deviation of the random walk,}
 \item{\code{diagnostics}}{a diagnostic summary of the Markov chains,}
 \item{\code{nb_size}}{The draws of the size parameter of the negative
 binomial distribution. Not applicable for the Poisson model.}
