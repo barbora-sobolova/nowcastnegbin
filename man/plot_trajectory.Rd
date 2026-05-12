@@ -30,7 +30,7 @@ lag as the second and so on.}
 \code{ggplot2::ggsave()}}
 }
 \value{
-a ggplot object
+a ggplot object, or NULL if \code{save_plot = TRUE}
 }
 \description{
 This function plots and possibly saves the incidence trajectory

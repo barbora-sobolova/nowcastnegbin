@@ -60,7 +60,13 @@ test_that("Model output from the MCMC method is stable and plausible", {
     )
 
     # Run sampling with fixed seed
-    fit <- fit_stan_model(mod$sample, data_list, model_obs, stan_settings)
+    fit <- fit_stan_model(
+      mod$sample,
+      data_list,
+      model_obs,
+      date_of_the_nowcast = as.Date("2024-12-09"),  # Arbitrary date
+      stan_settings
+    )
 
     # Extract the quantiles
     probs_sampled <- fit$delay_prob |>
@@ -133,6 +139,7 @@ test_that("Model output from the GLM method is stable and plausible", {
     # Fit the model
     fit <- fit_glm_model(
       stan_data = get_stan_data(obs_full$reports, skip_rows = params$skip_rows),
+      date_of_the_nowcast = as.Date("2024-12-09"),  # Arbitrary date
       model_name = model_names[model_obs + 1]
     )
 

@@ -6,6 +6,7 @@
 \usage{
 fit_glm_model(
   stan_data,
+  date_of_the_nowcast,
   model_name = c("Poisson", "NegBinX", "NegBin2D", "NegBin1D"),
   n_samples = 4000
 )
@@ -14,6 +15,9 @@ fit_glm_model(
 \item{stan_data}{a list of data and parameters accepted by the STAN model
 returned by the \code{get_stan_data()} function. This list is reused here to
 create a data frame for the regression model.}
+
+\item{date_of_the_nowcast}{a date, when the nowcast is made to add as a
+column to the data frame with results}
 
 \item{model_name}{a string indicating the observation model. One of
 "Poisson", "NegBinX", "NegBin2D" and "NegBin1D".}

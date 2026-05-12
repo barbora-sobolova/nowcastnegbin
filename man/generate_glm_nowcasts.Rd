@@ -11,6 +11,7 @@ generate_glm_nowcasts(
   t_len,
   max_lag,
   model_name,
+  date_of_the_nowcast,
   n_samples = 4000
 )
 }
@@ -34,6 +35,9 @@ zeroth delay.}
 
 \item{model_name}{model_name a string indicating the observation model. One
 of "Poisson", "NegBinX", "NegBin2D" and "NegBin1D".}
+
+\item{date_of_the_nowcast}{a date, when the nowcast is made to add as a
+column to the data frame with results}
 
 \item{n_samples}{how many samples from the nowcasting distribution we draw}
 }
