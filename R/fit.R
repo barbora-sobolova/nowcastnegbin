@@ -58,6 +58,7 @@ fit_all_stan_models <- function(
     diagnostics = bind_rows(purrr::map(fits, "diagnostics")),
     nb_size = bind_rows(purrr::map(fits, "nb_size"))
   )
+  ret_list
 }
 
 #' Fit the nowcasting model in STAN
