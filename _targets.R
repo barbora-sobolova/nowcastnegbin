@@ -99,8 +99,8 @@ list(
   ),
   tar_group_by(branches_glm, {
     time_horizons |>
-      mutate(model_obs = list(obs_model_glm)) |>
-      unnest(model_obs)
+      mutate(model_name = list(obs_model_glm)) |>
+      unnest(model_name)
   },
   train_data_begin,
   nowcast_date
@@ -226,7 +226,7 @@ list(
     fit_all_glm_models(
       stan_data = stan_data,
       date_of_the_nowcast = branches_glm$nowcast_date,
-      model_name = branches_glm$model_obs
+      model_name = branches_glm$model_name
       )
   },
   pattern = map(branches_glm, stan_data),
