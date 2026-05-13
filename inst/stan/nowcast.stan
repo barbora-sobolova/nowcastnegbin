@@ -26,6 +26,7 @@ data {
 }
 
 transformed data{
+  real log_init_total = log(sum(obs[1:d]));
   array[n] int P = to_int(cumulative_sum(p));
   array[n] int D = to_int(cumulative_sum(rep_array(d, n)));
 }
@@ -65,9 +66,9 @@ transformed parameters {
 
 model {
   // Prior
-  init_onsets ~ normal(10, 2) T[0, ];
+  init_onsets ~ normal(log_init_total + 1, 1);
   rw_noise ~ std_normal();
-  rw_sd ~ normal(0, 0.15) T[0, ];
+  rw_sd ~ normal(0, 1) T[0, ];
   reporting_delay ~ dirichlet(prior_delay_param);
   nb_size ~ normal(1, 3) T[0, ];
   // Random effect for the NegBin1M and NegBin2M models
