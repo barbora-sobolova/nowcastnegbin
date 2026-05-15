@@ -70,22 +70,6 @@ test_that("Model output from the MCMC method is stable and plausible", {
       stan_settings
     )
 
-    df <- data.frame(
-      phi = seq(0, 10, length = 200),
-      dens = dlnorm(seq(0, 10, length = 200), meanlog = 0, sdlog = 2)
-    )
-
-    ggplot() +
-      geom_line(
-        data = df,
-        mapping = aes(x = phi, y = dens),
-        linetype = "dotted"
-      ) +
-      geom_density(
-        data = fit$nb_size,
-        mapping = aes(x = 1 / .value)
-      )
-
     # Extract the quantiles
     probs_sampled <- fit$delay_prob |>
       group_by(delay) |>
