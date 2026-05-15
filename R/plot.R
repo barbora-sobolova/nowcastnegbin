@@ -802,6 +802,8 @@ plot_aggregated <- function(
 #' @param max_lag maximum reporting delay represented by the number of columns
 #' of the reporting table. In this way, the 0-th lag counts as the first, 1-st
 #' lag as the second and so on.
+#' @param aux_study_start a date (indeed in the date format), where the
+#' auxiliary case study period used for determining the priors starts.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -816,12 +818,15 @@ plot_trajectory <- function(
   start_date,
   length_of_train_data,
   max_lag,
+  aux_study_start,
   save_plot = TRUE
 ) {
+  # The auxiliary analysis ends exactly one week before the main analysis
+  aux_study_end <- start_date - 7
   # Arrange the whole trajectory into a data frame for plotting
   totals <- full_data |>
     dplyr::select(paste0("value_", 1:max_lag - 1, "w")) |>
-    create_totals_data_frame(start_date) |>
+    create_totals_data_frame(aux_study_start) |>
     # `create_totals_data_frame()` returns a long data frame containing the
     # final and the preliminary state of the data. For plotting the whole
     # trajectory we are interested only in the final values.
@@ -831,7 +836,7 @@ plot_trajectory <- function(
   # The estimation windows will be highlighted by braces drawn by
   # `ggpubr::geom_bracket()`.
   first_window_end <- start_date + (length_of_train_data - 1) * 7
-  last_window_beg <- start_date + (nrow(totals) - length_of_train_data - 1) * 7
+  last_window_beg <- aux_study_start + (nrow(totals) - length_of_train_data - 1) * 7
   # We need to find the maximum number of cases in the first and last estimation
   # window in order to place the brace correctly above them.
   first_window_max_cases <- totals |>
@@ -848,12 +853,20 @@ plot_trajectory <- function(
   bracket_offset <- first_window_max_cases * 0.05
   trajectory_plot <- ggplot(totals, aes(x = .data$date, y = .data$counts)) +
     geom_line() +
+    # Highlight the period used for determining the priors
+    ggpubr::geom_bracket(
+      xmin = aux_study_start,
+      xmax = aux_study_end,
+      y.position = first_window_max_cases + bracket_offset,
+      label = "Data used to determine\nthe priors",
+      label.size = 3
+    ) +
     # Highlight the first window of training data excluding the nowcasting part
     ggpubr::geom_bracket(
       xmin = start_date,
       xmax = first_window_end - (max_lag - 2) * 7 - 1,
       y.position = first_window_max_cases + bracket_offset,
-      label = "First chunk of\ntraining data",
+      label = "First\ntraining\ndata",
       label.size = 3
     ) +
     # Highlight the first nowcasting target
@@ -869,7 +882,7 @@ plot_trajectory <- function(
       xmin = last_window_beg,
       xmax = last_window_beg + (length_of_train_data - max_lag + 2) * 7 - 1,
       y.position = last_window_max_cases + bracket_offset,
-      label = "Last chunk of\ntraining data",
+      label = "Last\ntraining\ndata",
       label.size = 3
     ) +
     # Highlight the last nowcasting target
@@ -887,7 +900,7 @@ plot_trajectory <- function(
     save_figure(
       trajectory_plot,
       "inst/figure/SARI_trajectory",
-      width = 9,
+      width = 11,
       height = 7
     )
     ret <- NULL

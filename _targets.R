@@ -380,10 +380,11 @@ list(
   # estimation windows
   tar_target(whole_trajectory_plot, {
     plot_trajectory(
-      full_data,
+      bind_rows(full_data_prev_year, full_data),
       analysis_start_date,
       length_of_train_data,
-      max_lag
+      max_lag,
+      aux_analysis_start_date
     )
   })
 )
