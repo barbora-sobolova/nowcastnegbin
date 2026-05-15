@@ -65,8 +65,26 @@ test_that("Model output from the MCMC method is stable and plausible", {
       data_list,
       model_obs,
       date_of_the_nowcast = as.Date("2024-12-09"),  # Arbitrary date
+      mean_log = 0,
+      sd_log = 1.5,
       stan_settings
     )
+
+    df <- data.frame(
+      phi = seq(0, 10, length = 200),
+      dens = dlnorm(seq(0, 10, length = 200), meanlog = 0, sdlog = 2)
+    )
+
+    ggplot() +
+      geom_line(
+        data = df,
+        mapping = aes(x = phi, y = dens),
+        linetype = "dotted"
+      ) +
+      geom_density(
+        data = fit$nb_size,
+        mapping = aes(x = 1 / .value)
+      )
 
     # Extract the quantiles
     probs_sampled <- fit$delay_prob |>
