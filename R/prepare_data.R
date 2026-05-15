@@ -283,3 +283,36 @@ get_stan_data <- function(
   }
   stan_data
 }
+
+calc_disp_par_prior <- function(log_disp_par) {
+  prior_pars_from_glm <- log_disp_par |>
+    group_by(.data$Distribution) |>
+    summarize(
+      mean_log = mean(.data$log_disp_hat),
+      # Loosely inspired by Rubin's rules. The scale factor 3 is there to make
+      # prior distribution even wider and can be subjected to a sensitivity
+      # analysis.
+      sd_log = 3 * (sqrt(mean(.data$log_disp_se^2) + var(.data$log_disp_hat)))
+    ) |>
+    # Put placeholder values for the Poisson model
+    replace_na(list(mean_log = -1, sd_log = -1))
+
+  # For the NegBin2M we will use the same prior as for NegBinX, as these have
+  # identical marginals. For NegBin1M, we will take the parameters of NegBin1D.
+  prior_pars_assigned <- bind_rows(
+    mutate(
+      filter(prior_pars_from_glm, .data$Distribution == "NegBinX"),
+      Distribution = "NegBin2M"
+    ),
+    mutate(
+      filter(prior_pars_from_glm, .data$Distribution == "NegBin1D"),
+      Distribution = "NegBin1M"
+    )
+  )
+  bind_rows(
+    prior_pars_from_glm,
+    prior_pars_assigned
+  ) |> rename(
+    "model_name" = "Distribution"
+  )
+}

@@ -35,6 +35,8 @@ fit_all_stan_models <- function(
   stan_data,
   model_obs,
   date_of_the_nowcast,
+  mean_log,
+  sd_log,
   stan_settings
 ) {
   fits <- vector("list", length(model_obs))
@@ -47,6 +49,8 @@ fit_all_stan_models <- function(
       # observation models, so we could also pass just `date_of_the_nowcast[1]`
       # each time
       date_of_the_nowcast[k],
+      mean_log[k],
+      sd_log[k],
       stan_settings
     )
   }
@@ -95,6 +99,8 @@ fit_stan_model <- function(
   stan_data,
   model_obs,
   date_of_the_nowcast,
+  mean_log,
+  sd_log,
   stan_settings
 ) {
   # A helper function that adds the model names and date of the nowcast into
@@ -108,9 +114,16 @@ fit_stan_model <- function(
     )
   }
   # Fit the model
+  complete_stan_data <- list(
+    c(
+      stan_data,
+      model_obs = model_obs,
+      disp_prior_pars = list(c(mean_log, sd_log))
+    )
+  )
   fitted_model <- do.call(
     compiled_model,
-    c(data = list(c(stan_data, model_obs = model_obs)), stan_settings)
+    c(data = complete_stan_data, stan_settings)
   )
   # Extract the diagnostic summary
   diagnostics <- fitted_model$diagnostic_summary() |>
@@ -130,7 +143,7 @@ fit_stan_model <- function(
     stan_settings$seed <- stan_settings$seed + 1
     refitted_model <- do.call(
       compiled_model,
-      c(data = list(c(stan_data, model_obs = model_obs)), stan_settings)
+      c(data = complete_stan_data, stan_settings)
     )
     diagnostics_refit <- refitted_model$diagnostic_summary() |>
       suppressMessages() |>
@@ -282,9 +295,14 @@ select_gamlss_model <- function(
 #'   \item{\code{delay_prob}}{samples of the delay probability vector,}
 #'   \item{\code{nb_size}}{The draws of the size parameter of the negative
 #'   binomial distribution. Not applicable for the Poisson model.}
+#'   \item{\code{log_disp_coeff}}{a named vector of length 2 containing the
+#'   point estimate of the dispersion parameter on the log scale and its
+#'   standard deviation (also on the log scale). The dispersion is the
+#'   reciprocal of the negative binomial size here, i.e. 0 loosely means Poisson
+#'   model, while higher values indicate higher dispersion,}
+#'   \item{\code{iter}}{a scalar, the number of iterations necessary for fitting
+#'   the gamlss model.}
 #'  }
-#' Additionally, the number of iterations \code{iter} necessary for fitting the
-#' model is returned in the list.
 #'
 #' @references
 #' van de Kassteele J (2019).
@@ -324,271 +342,346 @@ generate_glm_nowcasts <- function(
   # Smooth term
   vcov_smooth <- fitted_gamlss_obj$fitted.specials$mu$`s(week)`$vcov
   coeffs_smooth <- fitted_gamlss_obj$fitted.specials$mu$`s(week)`$coefficients
-  sampled_pars_smooth <- MASS::mvrnorm(
-    n_samples,
-    mu = coeffs_smooth,
-    Sigma = vcov_smooth
+  sampled_pars_smooth <- try(
+    MASS::mvrnorm(
+      n_samples,
+      mu = coeffs_smooth,
+      Sigma = vcov_smooth
+    )
   )
 
   # Delays and also the overdispersion parameter in the case of a negbin model
   vcov_fixed <- vcov(fitted_gamlss_obj)
   coeffs_fixed <- unlist(fitted_gamlss_obj$coefficients)
-  sampled_pars_fixed <- MASS::mvrnorm(
-    n_samples,
-    mu = coeffs_fixed,
-    Sigma = vcov_fixed
-  )
-  # Create indices for selecting the columns corresponding to the mean value
-  # and to the scale parameter
-  mu_ind <- grep("mu", colnames(sampled_pars_fixed))
-  sigma_ind <- grep("sigma", colnames(sampled_pars_fixed))
-
-  # We fit the model with an intercept, so we have to calculate the linear
-  # predictor using the right "contrasts". The first factor level is the
-  # reference, so the linear predictor for the fixed part is constructed in the
-  # standard way, that is, the effect for the first level is beta_0, for the
-  # second level, it's beta_0 + beta_1 and so on.
-  contrasts_mu <- diag(max_lag)
-  contrasts_mu[1, ] <- 1
-
-  # To do the prediction, we need to calculate the mean of each reporting
-  # triangle cell. We expand the time with the delay first and then do an inner
-  # join with the corresponding values (there will be `n_samples` of them). This
-  # way we ensure that the smooth and fixed terms are assigned to the correct
-  # time and delay. We could include only the last part of the reporting table,
-  # where we want to do the prediction, but will calculate everything to be able
-  # to return the whole mean process (lambda_t).
-  df_skeleton_grid <- tidyr::expand_grid(
-    week = seq_len(t_len),
-    delay = seq_len(max_lag)
+  sampled_pars_fixed <- try(
+    MASS::mvrnorm(
+      n_samples,
+      mu = coeffs_fixed,
+      Sigma = vcov_fixed
+    )
   )
 
-  # Calculate the smooth curve using the sampled parameters. This will not
-  # equal the estimate of the mean process, which we call lambda_t, since there
-  # is still a multiplicative constant absorbed by the fixed terms.
-  df_smooth_sampled <- data.frame(
-    # The resulting matrix has dimensions n_samples x t_len. Concatenation
-    # is done by column, therefore the `week` column is defined using the `each`
-    # parameter of rep().
-    smooth_lpred = c(sampled_pars_smooth %*% t(spline_basis)),
-    week = rep(seq_len(t_len), each = n_samples),
-    # What sample/draw number this is. We use the ".draw" name to match the
-    # column names of the output from the `fit_stan_model()` function.
-    .draw = rep(seq_len(n_samples), times = t_len)
-  )
+  # Sometimes, the variance-covariance matrix is not positive definite due to
+  # numerical instabilities causing errors in `MASS::mvnorm()`. In this case, we
+  # return NULL.
+  if (class(sampled_pars_fixed)[1] == "try-error" ||
+        class(sampled_pars_smooth)[1] == "try-error") {
+    warning(paste0(model_name, " model can't produce estimates, likely due to numerical issues during the variance-covariance matrix calculation."))  # nolint
+    ret_list <- NULL
+  } else {
+    # Create indices for selecting the columns corresponding to the mean value
+    # and to the scale parameter
+    mu_ind <- grep("mu", colnames(sampled_pars_fixed))
+    sigma_ind <- grep("sigma", colnames(sampled_pars_fixed))
 
-  # Calculate the fixed terms using the sampled parameters.
-  df_fixed_sampled <- data.frame(
-    # The resulting matrix has dimensions n_samples x max_lag. Concatenation
-    # is done by column, therefore the `delay` column is defined using the
-    # `each` parameter of rep().
-    fixed_lpred = c(sampled_pars_fixed[, mu_ind] %*% contrasts_mu),
-    delay = rep(seq_len(max_lag), each = n_samples),
-    # What sample/draw number this is.
-    .draw = rep(seq_len(n_samples), times = max_lag)
-  ) |>
-    # Extract the probabilities from the sampled fixed parameters by
-    # exponentiating and standardizing
-    group_by(.data$.draw) |>
-    mutate(
-      probs_sampled = exp(.data$fixed_lpred) / sum(exp(.data$fixed_lpred))
-    ) |>
-    ungroup()
+    # We fit the model with an intercept, so we have to calculate the linear
+    # predictor using the right "contrasts". The first factor level is the
+    # reference, so the linear predictor for the fixed part is constructed in
+    # the standard way, that is, the effect for the first level is beta_0, for
+    # the second level, it's beta_0 + beta_1 and so on.
+    contrasts_mu <- diag(max_lag)
+    contrasts_mu[1, ] <- 1
 
-  # Join the fixed and smooth terms together to calculate the mean of each cell
-  # of the reporting triangle
-  df_mu_sampled <- dplyr::inner_join(
-    df_skeleton_grid,
-    df_smooth_sampled,
-    by = "week",
-    # `df_all_samped` has `t_len` x `max_lag` rows. `df_smooth_sampled` has
-    # `t_len` x `n_samples` rows and the joint data frame is supposed to have
-    # `t_len` x `max_lag` x `n_samples` rows.
-    relationship = "many-to-many"
-  ) |>
-    inner_join(
-      df_fixed_sampled,
-      by = c("delay", ".draw"),
-      # `df_fixed_sampled` has `max_lag` x `n_samples` and the joint data frame
-      # is supposed to have `t_len` x `max_lag` x `n_samples` rows.
-    ) |>
-    mutate(
-      # Calculate the mean of the counts in each cell of the reporting triangle.
-      mu = exp(.data$smooth_lpred + .data$fixed_lpred),
-      # Add the code of the model to match the `fit_stan_model()` output
-      Distribution = model_name
-    ) |>
-    # Calculate the value of lambda for each time point. We need to multiply the
-    # sum of `mu` across delays by a constant, that got absorbed by the factor
-    # terms
-    group_by(.data$.draw, .data$week) |>
-    mutate(
-      lambda_sampled = exp(.data$smooth_lpred) * sum(exp(.data$fixed_lpred))
-    ) |>
-    ungroup()
+    # To do the prediction, we need to calculate the mean of each reporting
+    # triangle cell. We expand the time with the delay first and then do an
+    # inner join with the corresponding values (there will be `n_samples` of
+    # them). This way we ensure that the smooth and fixed terms are assigned to
+    # the correct time and delay. We could include only the last part of the
+    # reporting table, where we want to do the prediction, but will calculate
+    # everything to be able to return the whole mean process (lambda_t).
+    df_skeleton_grid <- tidyr::expand_grid(
+      week = seq_len(t_len),
+      delay = seq_len(max_lag)
+    )
 
-  # Calculate the overdispersion parameter for different models. We calculate
-  # two different values. Firstly, we calculate the sampled value of the size
-  # parameter which is used in the theoretical parametrization of the negative
-  # binomial distribution. This value does not depend on time or the delay.
-  # Secondly, we prepare the value, which is used in `rnbinom()` to sample the
-  # counts. Here we need to adjust it accordingly based on time and delay and
-  # it will not be a part of returned results.
-  if (model_name %in% c("NegBinX", "NegBin1D")) {
-    df_nb_size <- data.frame(
-      Distribution = model_name,
-      nowcast_date = date_of_the_nowcast,
-      # The theoretical overdispersion parameter is identical for all times and
-      # delays.
-      nb_size = rep(
-        exp(-sampled_pars_fixed[, sigma_ind]),
-        times = t_len * max_lag
-      ),
-      # Construct the rest of the columns so that the data frame has the same
-      # amount of rows as `df_mu_sampled`.
-      week = rep(seq_len(t_len), each = max_lag * n_samples),
-      delay = rep(rep(seq_len(max_lag), each = n_samples), times = t_len),
-      .draw = rep(seq_len(n_samples), times = max_lag * t_len)
+    # Calculate the smooth curve using the sampled parameters. This will not
+    # equal the estimate of the mean process, which we call lambda_t, since
+    # there is still a multiplicative constant absorbed by the fixed terms.
+    df_smooth_sampled <- data.frame(
+      # The resulting matrix has dimensions n_samples x t_len. Concatenation
+      # is done by column, therefore the `week` column is defined using the
+      # `each` parameter of rep().
+      smooth_lpred = c(sampled_pars_smooth %*% t(spline_basis)),
+      week = rep(seq_len(t_len), each = n_samples),
+      # What sample/draw number this is. We use the ".draw" name to match the
+      # column names of the output from the `fit_stan_model()` function.
+      .draw = rep(seq_len(n_samples), times = t_len)
+    )
+
+    # Calculate the fixed terms using the sampled parameters.
+    df_fixed_sampled <- data.frame(
+      # The resulting matrix has dimensions n_samples x max_lag. Concatenation
+      # is done by column, therefore the `delay` column is defined using the
+      # `each` parameter of rep().
+      fixed_lpred = c(sampled_pars_fixed[, mu_ind] %*% contrasts_mu),
+      delay = rep(seq_len(max_lag), each = n_samples),
+      # What sample/draw number this is.
+      .draw = rep(seq_len(n_samples), times = max_lag)
     ) |>
+      # Extract the probabilities from the sampled fixed parameters by
+      # exponentiating and standardizing
+      group_by(.data$.draw) |>
       mutate(
-        # The overdispersion parameter to pass to `rnbinom()`. For NegBin1D we
-        # will have to multiply it by the mean value later.
-        nb_size_internal = .data$nb_size
-      )
-  } else if (model_name == "NegBin2D") {
-    # For NegBin2D, we have multiple columns of the sampled parameters for the
-    # scale parameter. The model with intercept is constructed in the same way
-    # as the fixed terms for the mean value, so we can use the same contrasts.
-    df_nb_size <- data.frame(
-      Distribution = model_name,
-      nowcast_date = date_of_the_nowcast,
-      # Matrix of size `n_samples` x `max_delay`
-      nb_size_internal = rep(
-        c(exp(-sampled_pars_fixed[, sigma_ind] %*% contrasts_mu)),
-        times = t_len
-      ),
-      # Construct the rest of the columns so that the data frame has the same
-      # amount of rows as `df_mu_sampled`.
-      week = rep(seq_len(t_len), each =  max_lag * n_samples),
-      delay = rep(rep(seq_len(max_lag), each = n_samples), times = t_len),
-      .draw = rep(seq_len(n_samples), times = max_lag * t_len)
-    ) |>
-      group_by(.data$week, .data$.draw) |>
-      mutate(
-        nb_size = sum(.data$nb_size_internal)
+        probs_sampled = exp(.data$fixed_lpred) / sum(exp(.data$fixed_lpred))
       ) |>
       ungroup()
-  }
 
-  # How many count samples we generate. This is the number of parameter samples
-  # times the number of missing cells of the reporting triangle.
-  n_cells_to_predict <-  n_samples * sum(seq_len(max_lag - 1))
-  # Sample from the count distribution. For Poisson, we need only the mean and
-  # can we sample directly from the Poisson distribution. For the negative
-  # binomial counts, we have to join the mean part and the size part.
-  if (model_name == "Poisson") {
-    df_predicted <- df_mu_sampled |>
-      filter(.data$week + .data$delay > t_len + 1) |>
-      mutate(counts = rpois(n_cells_to_predict, .data$mu))
-    # Create the return list, which is empty for Poisson at this point.
-    ret_list <- list()
-  } else {
-    # Join the mu part and the scale part.
-    df_predicted <- inner_join(
-      df_mu_sampled,
-      df_nb_size,
-      by = c("week", "delay", ".draw", "Distribution"),
-      relationship = "one-to-one"
+    # Join the fixed and smooth terms together to calculate the mean of each
+    # cell of the reporting triangle
+    df_mu_sampled <- dplyr::inner_join(
+      df_skeleton_grid,
+      df_smooth_sampled,
+      by = "week",
+      # `df_all_samped` has `t_len` x `max_lag` rows. `df_smooth_sampled` has
+      # `t_len` x `n_samples` rows and the joint data frame is supposed to have
+      # `t_len` x `max_lag` x `n_samples` rows.
+      relationship = "many-to-many"
     ) |>
-      # For NegBin1D, we have to multiply the size parameter by the expectation
-      # before we pass it to `rnbinom()`.
-      mutate(
-        nb_size_internal = if (model_name == "NegBin1D") {
-          .data$nb_size_internal * .data$mu
-        } else {
-          .data$nb_size_internal
-        }
+      inner_join(
+        df_fixed_sampled,
+        by = c("delay", ".draw"),
+        # `df_fixed_sampled` has `max_lag` x `n_samples` and the joint data
+        # frame is supposed to have `t_len` x `max_lag` x `n_samples` rows.
       ) |>
-      # Sample the counts only for the days we are predicting. We predict for
-      # all days, where week + delay > last week + 1, since the delay
-      filter(.data$week + .data$delay > t_len + 1) |>
       mutate(
-        counts = rnbinom(
-          n_cells_to_predict,
-          mu = .data$mu,
-          size = .data$nb_size_internal
+        # Calculate the mean of the counts in each cell of the reporting
+        # triangle.
+        mu = exp(.data$smooth_lpred + .data$fixed_lpred),
+        # Add the code of the model to match the `fit_stan_model()` output
+        Distribution = model_name
+      ) |>
+      # Calculate the value of lambda for each time point. We need to multiply
+      # the sum of `mu` across delays by a constant, that got absorbed by the
+      # factor terms
+      group_by(.data$.draw, .data$week) |>
+      mutate(
+        lambda_sampled = exp(.data$smooth_lpred) * sum(exp(.data$fixed_lpred))
+      ) |>
+      ungroup()
+
+    # Calculate the overdispersion parameter for different models. We calculate
+    # two different values. Firstly, we calculate the sampled value of the size
+    # parameter which is used in the theoretical parametrization of the negative
+    # binomial distribution. This value does not depend on time or the delay.
+    # Secondly, we prepare the value, which is used in `rnbinom()` to sample the
+    # counts. Here we need to adjust it accordingly based on time and delay and
+    # it will not be a part of returned results.
+    if (model_name %in% c("NegBinX", "NegBin1D")) {
+      df_nb_size <- data.frame(
+        Distribution = model_name,
+        nowcast_date = date_of_the_nowcast,
+        # The theoretical overdispersion parameter is identical for all times
+        # and delays.
+        nb_size = rep(
+          exp(-sampled_pars_fixed[, sigma_ind]),
+          times = t_len * max_lag
+        ),
+        # Construct the rest of the columns so that the data frame has the same
+        # amount of rows as `df_mu_sampled`.
+        week = rep(seq_len(t_len), each = max_lag * n_samples),
+        delay = rep(rep(seq_len(max_lag), each = n_samples), times = t_len),
+        .draw = rep(seq_len(n_samples), times = max_lag * t_len)
+      ) |>
+        mutate(
+          # The overdispersion parameter to pass to `rnbinom()`. For NegBin1D we
+          # will have to multiply it by the mean value later.
+          nb_size_internal = .data$nb_size
+        )
+      # Grab the parameters of the asymptotic normal distribution of the
+      # log of the dispersion parameter.
+      theta_hat <- unname(coeffs_fixed[sigma_ind])
+      theta_se <- sqrt(vcov_fixed[sigma_ind, sigma_ind])
+    } else if (model_name == "NegBin2D") {
+      # For NegBin2D, we have multiple columns of the sampled parameters for the
+      # scale parameter. The model with intercept is constructed in the same way
+      # as the fixed terms for the mean value, so we can use the same contrasts.
+      df_nb_size <- data.frame(
+        Distribution = model_name,
+        nowcast_date = date_of_the_nowcast,
+        # Matrix of size `n_samples` x `max_delay`
+        nb_size_internal = rep(
+          c(exp(-sampled_pars_fixed[, sigma_ind] %*% contrasts_mu)),
+          times = t_len
+        ),
+        # Construct the rest of the columns so that the data frame has the same
+        # amount of rows as `df_mu_sampled`.
+        week = rep(seq_len(t_len), each =  max_lag * n_samples),
+        delay = rep(rep(seq_len(max_lag), each = n_samples), times = t_len),
+        .draw = rep(seq_len(n_samples), times = max_lag * t_len)
+      ) |>
+        group_by(.data$week, .data$.draw) |>
+        mutate(
+          nb_size = sum(.data$nb_size_internal)
+        ) |>
+        ungroup()
+
+      # Calculate the parameters of the asymptotic normal distribution of the
+      # log of the dispersion parameter.
+      coeffs_sigma <- coeffs_fixed[sigma_ind]
+      probs_times_nb_size <- exp(-t(coeffs_sigma) %*% contrasts_mu)
+      # Adding `probs_times_nb_size` gives the value of the size parameter. The
+      # reciprocal of it is the dispersion parameter, where 0 means the Poisson
+      # model.
+      sigma_hat <- 1 / sum(probs_times_nb_size)
+      # To be consistent with the rest of the models, we want the dispersion
+      # parameter on the log-scale
+      theta_hat <- log(sigma_hat)
+      # Delta method to get the standard error of `theta_hat`
+      delta <- c(1, sigma_hat * probs_times_nb_size[-1])
+      theta_se <- sqrt(t(delta) %*% vcov_fixed[sigma_ind, sigma_ind] %*% delta)
+    }
+    # Calculate the point estimates of the delay probabilities and their
+    # standard errors from the regression coefficients.
+    probs_times_mu <- exp(t(coeffs_fixed[mu_ind]) %*% contrasts_mu)
+    probs_hat <- probs_times_mu / sum(probs_times_mu)
+    # Derivatives of the probabilities with respect to the regression
+    # coefficients are mostly in the form of -prob / common denominator,
+    # except for the first column and the diagonal.
+    denom <- sum(probs_times_mu)
+    delta_probs <- matrix(
+      rep(-probs_hat / denom, times = max_lag),
+      nrow = max_lag,
+      ncol = max_lag,
+      byrow = TRUE
+    )
+    diag(delta_probs) <- probs_hat - probs_hat^2
+    delta_probs[, 1] <- 0
+    probs_se <- sqrt(
+      diag(
+        delta_probs %*% vcov_fixed[mu_ind, mu_ind] %*% t(delta_probs)
+      )
+    )
+    delay_prob_glm_est <- data.frame(
+      probs_hat = probs_hat,
+      probs_se = probs_se,
+      Distribution = model_name
+    )
+
+    # How many count samples we generate. This is the number of parameter
+    # samples times the number of missing cells of the reporting triangle.
+    n_cells_to_predict <-  n_samples * sum(seq_len(max_lag - 1))
+    # Sample from the count distribution. For Poisson, we need only the mean and
+    # can we sample directly from the Poisson distribution. For the negative
+    # binomial counts, we have to join the mean part and the size part.
+    if (model_name == "Poisson") {
+      df_predicted <- df_mu_sampled |>
+        filter(.data$week + .data$delay > t_len + 1) |>
+        mutate(counts = rpois(n_cells_to_predict, .data$mu))
+      # Create the return list, which for Poisson contains NAs and NULLs, where
+      # the estimates of the dispersion parameter are in the negbin models.
+      ret_list <- list(
+        nb_size = NULL,
+        log_disp_coeff = data.frame(
+          log_disp_hat = NA,
+          log_disp_se = NA,
+          Distribution = model_name
         )
       )
-    # Create the return list, which contains the data frame with the samples of
-    # the size of the negative binomial distribution
-    ret_list <- list(
-      nb_size = df_nb_size |>
-        select("nb_size", ".draw", "Distribution") |>
-        # Remove the duplicated values of the overdispersion parameter
-        unique() |>
-        rename(".value" = "nb_size") |>
-        mutate(".variable" = "nb_size", nowcast_date = date_of_the_nowcast)
+    } else {
+      # Join the mu part and the scale part.
+      df_predicted <- inner_join(
+        df_mu_sampled,
+        df_nb_size,
+        by = c("week", "delay", ".draw", "Distribution"),
+        relationship = "one-to-one"
+      ) |>
+        # For NegBin1D, we have to multiply the size parameter by the
+        # expectation before we pass it to `rnbinom()`.
+        mutate(
+          nb_size_internal = if (model_name == "NegBin1D") {
+            .data$nb_size_internal * .data$mu
+          } else {
+            .data$nb_size_internal
+          }
+        ) |>
+        # Sample the counts only for the days we are predicting. We predict for
+        # all days, where week + delay > last week + 1, since the delay
+        filter(.data$week + .data$delay > t_len + 1) |>
+        mutate(
+          counts = rnbinom(
+            n_cells_to_predict,
+            mu = .data$mu,
+            size = .data$nb_size_internal
+          )
+        )
+      # Create the return list, which contains the data frame with the samples
+      # of the size of the negative binomial distribution
+      ret_list <- list(
+        nb_size = df_nb_size |>
+          select("nb_size", ".draw", "Distribution") |>
+          # Remove the duplicated values of the overdispersion parameter
+          unique() |>
+          rename(".value" = "nb_size") |>
+          mutate(".variable" = "nb_size", nowcast_date = date_of_the_nowcast),
+        # Store the point estimates of the coefficients returned by `gamlss2()`
+        log_disp_coeff = data.frame(
+          log_disp_hat = theta_hat,
+          log_disp_se = theta_se,
+          Distribution = model_name
+        )
+      )
+    }
+
+    # Aggregate the counts by delay for both the predicted counts and the
+    # observed counts. The observed counts have to contain the observations that
+    # were skipped due to the reporting anomaly around Christmas, in order to
+    # include them in the nowcast.
+    df_obs <- glm_data_all |>
+      group_by(.data$week) |>
+      summarize(
+        obs_counts = sum(.data$obs)
+      ) |>
+      # Keep only the time points, where we do the nowcasting
+      tail(max_lag - 1)
+    df_nowcast <- df_predicted |>
+      group_by(.data$week, .data$.draw, .data$Distribution) |>
+      summarize(
+        predicted_counts = sum(.data$counts),
+        .groups = "drop"
+      ) |>
+      # Join with the observed counts
+      inner_join(
+        df_obs,
+        by = "week",
+        relationship = "many-to-one"
+      ) |>
+      mutate(
+        # Make the column names match those produced by the STAN
+        # procedure in `fit_stan_model()`
+        .value = .data$obs_counts + .data$predicted_counts,
+        .variable = "nowcast",
+        nowcast_date = date_of_the_nowcast
+      ) |>
+      # Drop redundant columns
+      select(-c("obs_counts", "predicted_counts"))
+
+    # Arrange all sampled parameters into the return list
+    ret_list <- c(
+      ret_list,
+      list(
+        nowcast = df_nowcast,
+        lambda = df_mu_sampled |>
+          select("week", "lambda_sampled", ".draw", "Distribution") |>
+          # Remove duplicate lambda samples
+          unique() |>
+          rename(".value" = "lambda_sampled") |>
+          mutate(".variable" = "lambda", nowcast_date = date_of_the_nowcast),
+        delay_prob = df_mu_sampled |>
+          select("delay", "probs_sampled", ".draw", "Distribution") |>
+          # Remove duplicate samples of the delay probabilities
+          unique() |>
+          rename(".value" = "probs_sampled") |>
+          mutate(
+            ".variable" = "reporting_delay",
+            nowcast_date = date_of_the_nowcast
+          ),
+        delay_prob_glm_est = delay_prob_glm_est,
+        # Store the information about the number of iterations of the
+        # `gamlss2()` optimizing function.
+        iter = fitted_gamlss_obj$iterations
+      )
     )
   }
-
-  # Aggregate the counts by delay for both the predicted counts and the
-  # observed counts. The observed counts have to contain the observations that
-  # were skipped due to the reporting anomaly around Christmas, in order to
-  # include them in the nowcast.
-  df_obs <- glm_data_all |>
-    group_by(.data$week) |>
-    summarize(
-      obs_counts = sum(.data$obs)
-    ) |>
-    # Keep only the time points, where we do the nowcasting
-    tail(max_lag - 1)
-  df_nowcast <- df_predicted |>
-    group_by(.data$week, .data$.draw, .data$Distribution) |>
-    summarize(
-      predicted_counts = sum(.data$counts),
-      .groups = "drop"
-    ) |>
-    # Join with the observed counts
-    inner_join(
-      df_obs,
-      by = "week",
-      relationship = "many-to-one"
-    ) |>
-    mutate(
-      # Make the column names match those produced by the STAN
-      # procedure in `fit_stan_model()`
-      .value = .data$obs_counts + .data$predicted_counts,
-      .variable = "nowcast",
-      nowcast_date = date_of_the_nowcast
-    ) |>
-    # Drop redundant columns
-    select(-c("obs_counts", "predicted_counts"))
-
-  # Arrange all sampled parameters into the return list
-  ret_list <- c(
-    ret_list,
-    list(
-      nowcast = df_nowcast,
-      lambda = df_mu_sampled |>
-        select("week", "lambda_sampled", ".draw", "Distribution") |>
-        # Remove duplicate lambda samples
-        unique() |>
-        rename(".value" = "lambda_sampled") |>
-        mutate(".variable" = "lambda", nowcast_date = date_of_the_nowcast),
-      delay_prob = df_mu_sampled |>
-        select("delay", "probs_sampled", ".draw", "Distribution") |>
-        # Remove duplicate samples of the delay probabilities
-        unique() |>
-        rename(".value" = "probs_sampled") |>
-        mutate(
-          ".variable" = "reporting_delay",
-          nowcast_date = date_of_the_nowcast
-        ),
-      # Store the information about the number of iterations of the `gamlss2()`
-      # optimizing function.
-      iter = fitted_gamlss_obj$iterations
-    )
-  )
   ret_list
 }
 
@@ -638,13 +731,21 @@ generate_glm_nowcasts <- function(
 #' \eqn{\beta} and \eqn{\gamma} parameters can't be enforced to be identical.
 #' However, this is an acceptable approximation of the model.
 #'
-#' @return List of the data frames with the draws of different model parameters:
+#' @return List of the data frames with the draws of different model parameters
+#' and additional quantities:
 #' \describe{
 #'   \item{\code{nowcast}}{samples from the nowcasting distribution,}
 #'   \item{\code{lambda}}{samples of the mean incidence trajectory,}
 #'   \item{\code{delay_prob}}{samples of the delay probability vector,}
 #'   \item{\code{nb_size}}{The draws of the size parameter of the negative
 #'   binomial distribution. Not applicable for the Poisson model.}
+#'   \item{\code{log_disp_coeff}}{a named vector containing the point estimate
+#'   of the dispersion parameter on the log scale and its standard deviation
+#'   (also on the log scale). The dispersion is the reciprocal of the negative
+#'   binomial size here, i.e. 0 loosely means Poisson model, while higher values
+#'   indicate higher dispersion,}
+#'   \item{\code{iter}}{a scalar, the number of iterations necessary for fitting
+#'   the gamlss model.}
 #'  }
 #' Additionally, the number of iterations \code{iter} necessary for fitting the
 #' model is returned in the list. The columns of the data frames are a subset of
@@ -715,43 +816,48 @@ fit_glm_model <- function(
       trace = FALSE
     ),
     list(n_basis = n_basis_functions)
-  ) |> eval()
+  ) |>
+    eval() |>
+    try()
+  if (class(fit) == "try-error") {
+    ret_list <- NULL
+  } else {
+    # Fit the Poisson model using the gam() function from the mgcv package. This
+    # is necessary to extract the spline basis, which is not returned by the
+    # gamlss2() function. Since gamlss2() uses mgcv under the hood, the bases
+    # are identical and we can use it to reconstruct the spline curve.
+    mod_mgcv <- gam(
+      obs ~ s(week, k = n_basis_functions) + delay,
+      data = glm_data,
+      family = poisson
+    )
+    smooth_coeffs_inds <- grep(pattern = "s()", names(mod_mgcv$coefficients))
+    # Extract the basis using `predict.gam(type = "lpmatrix", ...)`. Often,
+    # we can just extract the design matrix as is, but when we skip certain
+    # observations, some weeks might not be represented in the data. For these
+    # cases, we need to create a data frame with no gaps.
+    basis <- mgcv::predict.gam(
+      mod_mgcv,
+      newdata = data.frame(
+        week = seq_len(max((glm_data$week))),
+        delay = 1
+      ),
+      type = "lpmatrix"
+    )[, smooth_coeffs_inds]
 
-  # Fit the Poisson model using the gam() function from the mgcv package. This
-  # is necessary to extract the spline basis, which is not returned by the
-  # gamlss2() function. Since gamlss2() uses mgcv under the hood, the bases
-  # are identical and we can use it to reconstruct the spline curve.
-  mod_mgcv <- gam(
-    obs ~ s(week, k = n_basis_functions) + delay,
-    data = glm_data,
-    family = poisson
-  )
-  smooth_coeffs_inds <- grep(pattern = "s()", names(mod_mgcv$coefficients))
-  # Extract the basis using `predict.gam(type = "lpmatrix", ...)`. Often,
-  # we can just extract the design matrix as is, but when we skip certain
-  # observations, some weeks might not be represented in the data. For these
-  # cases, we need to create a data frame with no gaps.
-  basis <- mgcv::predict.gam(
-    mod_mgcv,
-    newdata = data.frame(
-      week = seq_len(max((glm_data$week))),
-      delay = 1
-    ),
-    type = "lpmatrix"
-  )[, smooth_coeffs_inds]
-
-  # Generate nowcasts by the van de Kasstelee 2019 method, using sampling from
-  # the multivariate normal distribution for the parameters.
-  ret_list <- generate_glm_nowcasts(
-    fit,
-    basis,
-    glm_data_all,
-    stan_data$n,
-    stan_data$d,
-    model_name,
-    date_of_the_nowcast,
-    n_samples
-  )
+    # Generate nowcasts by the van de Kasstelee 2019 method, using sampling from
+    # the multivariate normal distribution for the parameters.
+    ret_list <- generate_glm_nowcasts(
+      fit,
+      basis,
+      glm_data_all,
+      stan_data$n,
+      stan_data$d,
+      model_name,
+      date_of_the_nowcast,
+      n_samples
+    )
+  }
   ret_list
 }
 
@@ -779,6 +885,12 @@ fit_glm_model <- function(
 #'   \item{\code{delay_prob}}{samples of the delay probability vector,}
 #'   \item{\code{nb_size}}{The draws of the size parameter of the negative
 #'   binomial distribution. Not applicable for the Poisson model,}
+#'   \item{\code{log_disp_coeff}}{a vector with two elements, or a data frame
+#'   with two columns: `log_disp_hat` containing the point estimate of the
+#'   dispersion parameter on the log scale and `log_disp_se` its standard
+#'   deviation (also on the log scale). The dispersion is the reciprocal of the
+#'   negative binomial size here, i.e. 0 loosely means Poisson model, while
+#'   higher values indicate higher dispersion,}
 #'   \item{\code{iter}}{a vector, the number of iterations necessary for fitting
 #'   the gamlss model.}
 #'  }
@@ -816,6 +928,7 @@ fit_all_glm_models <- function(
     lambda = bind_rows(purrr::map(fits, "lambda")),
     delay_prob = bind_rows(purrr::map(fits, "delay_prob")),
     nb_size = bind_rows(purrr::map(fits, "nb_size")),
+    log_disp_coeff = bind_rows(purrr::map(fits, "log_disp_coeff")),
     iter = unlist(purrr::map(fits, "iter"))
   )
   ret_list

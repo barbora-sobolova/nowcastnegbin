@@ -33,11 +33,14 @@ ggplot2::theme_set(ggplot2::theme_bw())
 
 max_lag <- 5
 
-# Where is the beginning of the data used for the case study
+# Where the beginning of the data used for the case study is
 analysis_start_date <- as.Date("2024-07-28")
 # How many weeks we want to include as "training" data.
 # This includes the last `max_lag - 1` weeks for which we calculate the nowcast.
 length_of_train_data <- 20
+# We run an auxiliary case study one year before the actual one to determine
+# the prior distributions.
+aux_analysis_start_date <- analysis_start_date - (52 + length_of_train_data) * 7
 # For how many dates we want to do the fitting. For each time step, we shift the
 # window of the train data to include a new week of observations mimicking a
 # real-time analysis.
@@ -48,8 +51,6 @@ timesteps_to_fit <- 55
 #  2. The diagonal of the reporting triangle corresponding to these dates and
 #     most of the one directly following will be dropped from the likelihood.
 skip_dates <- as.Date(c("2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28"))
-# Parameters of the prior reporting delay distribution.
-prior_delay_param <- c(5, 1.5, 0.5, 0.25, 0.25)
 
 # Define the pipeline ==========================================================
 list(
@@ -72,6 +73,105 @@ list(
       seed = 12345
     )
   }),
+
+  # Fit the GLM models to the previous year to obtain the priors ---------------
+
+  # Load the preprocessed data with no stratification. This data spans the
+  # year directly preceding the case study and it ends one week before the
+  # training data for the case study begins
+  tar_target(full_data_prev_year, {
+    load_preprocessed_data(
+      here::here(
+        "inst",
+        "extdata",
+        "reporting_triangle-icosari-sari-preprocessed.csv"
+      ),
+      # We shift the beginning of this auxiliary analysis one year before the
+      # start of the main analysis. For this reason we use the constant 52,
+      # representing 52 weeks.
+      start_date = aux_analysis_start_date,
+      num_of_weeks = 52 + length_of_train_data
+    )
+  }),
+  # Data frame storing the beginning and end points of the training data for the
+  # auxiliary analysis to keep track of the rolling windows
+  tar_target(time_horizons_prev_year, {
+    get_time_horizons(
+      aux_analysis_start_date,
+      52,
+      length_of_train_data,
+      skip_dates = as.Date("2023-12-24")
+    )
+  }),
+  # Create a matrix containing the training data for each date in the auxiliary
+  # analysis. This matrix contains all observations. To obtain the triangular
+  # form, latest observations will be masked by the `get_stan_data()` function
+  # further downstream.
+  tar_target(
+    train_data_prev_year,
+    filter_train_period(
+      full_data_prev_year,
+      start_date = time_horizons_prev_year$train_data_begin,
+      end_date = time_horizons_prev_year$nowcast_date,
+      max_lag = max_lag,
+      skip_dates = as.Date("2023-12-24")
+    ),
+    pattern = map(time_horizons_prev_year),
+    iteration = "list"
+  ),
+  # Create the list of data and parameters to pass to the STAN model for the
+  # auxiliary analysis
+  tar_target(
+    stan_data_prev_year,
+    get_stan_data(
+      train_data_prev_year$train_data,
+      prior_delay_param,
+      train_data_prev_year$skip_rows
+    ),
+    pattern = map(time_horizons_prev_year, train_data_prev_year),
+    iteration = "list"
+  ),
+  # Fit the GLM models to the auxiliary data.
+  tar_target(fitted_glm_prev_year, {
+    fit_glm_model(
+      stan_data = stan_data_prev_year,
+      date_of_the_nowcast = time_horizons_prev_year$nowcast_date,
+      model_name = obs_model_glm
+    )
+  },
+  pattern = cross(
+    map(stan_data_prev_year, time_horizons_prev_year),
+    obs_model_glm
+  ),
+  iteration = "list"
+  ),
+  # Extract the dispersion parameter estimates from the fit
+  tar_target(
+    glm_log_disp_par_prev_year,
+    fitted_glm_prev_year$log_disp_coeff,
+    pattern = map(fitted_glm_prev_year)
+  ),
+  # Calculate the prior parameters based on the estimates of the dispersion
+  # parameter
+  tar_target(
+    disp_par_prior,
+    calc_disp_par_prior(glm_log_disp_par_prev_year),
+  ),
+  # Calculate the parameters of the Dirichlet prior from the auxiliary data
+  # only, without looking at the GLM estimates.
+  tar_target(prior_delay_param, {
+    full_data_prev_year |>
+      select(starts_with("value_")) |>
+      as.matrix() |>
+      apply(1, function (x) x / sum(x)) |>
+      t() |>
+      # The factor of 4 is selected to control the "flatness" of the prior
+      # distribution. May be varied as a part of a sensitivity analysis.
+      apply(2, mean) * 4
+  }),
+
+  # Case study -----------------------------------------------------------------
+
   # Data frame storing the beginning and end points of the training data to
   # keep track of the rolling windows
   tar_target(time_horizons, {
@@ -92,7 +192,8 @@ list(
           tibble(model_name = get_model_names(), model_code = 0:5)
         )
       ) |>
-      unnest(nested_col)
+      unnest(nested_col) |>
+      inner_join(disp_par_prior, relationship = "many-to-one")
   },
   train_data_begin,
   nowcast_date
@@ -118,8 +219,10 @@ list(
       num_of_weeks = timesteps_to_fit + length_of_train_data - 1
     )
   }),
-  # Create a matrix containing the training data for each date. This one has all
-  # observations there, so it's not in the triangular form yet.
+  # Create a matrix containing the training data for each date. This matrix
+  # contains all observations. To obtain the triangular form, latest
+  # observations will be masked by the `get_stan_data()` function further
+  # downstream.
   tar_target(
     train_data,
     filter_train_period(
@@ -165,6 +268,8 @@ list(
       stan_data = stan_data,
       model_obs = branches_mcmc$model_code,
       date_of_the_nowcast = branches_mcmc$nowcast_date,
+      mean_log = branches_mcmc$mean_log,
+      sd_log = branches_mcmc$sd_log,
       stan_settings = stan_settings
     )
   },

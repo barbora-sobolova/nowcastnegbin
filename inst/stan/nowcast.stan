@@ -19,6 +19,7 @@ data {
   int d;                // number of reporting delays
   vector[d] prior_delay_param;  // reporting delay distribution prior params
   int model_obs;        // observation model numbers
+  array[2] real disp_prior_pars;  // params of the dispersion parameter prior
   // Indices of included observations. Most of the time, this will be just
   // a sequence of numbers from 1 to m.
   int n_idx_include;
@@ -32,7 +33,7 @@ transformed data{
 }
 
 parameters {
-  vector<lower=0>[model_obs == 0 ? 0 : 1] nb_size; // For the NegBin models only
+  vector<lower=0>[model_obs == 0 ? 0 : 1] inv_nb_size; // For the NegBin models only
   real<lower=0> init_onsets;
   array[n-1] real rw_noise;
   real<lower=0> rw_sd;
@@ -42,6 +43,8 @@ parameters {
 }
 
 transformed parameters {
+  // We sample the negbin size on the inverted scale
+  vector<lower=0>[model_obs == 0 ? 0 : 1] nb_size = 1 / inv_nb_size;
   // Mean value of the total count without the random effect
   array[n] real lambda = geometric_random_walk(init_onsets, rw_noise, rw_sd);
   // Parameters of the random effect distribution
@@ -70,13 +73,15 @@ model {
   rw_noise ~ std_normal();
   rw_sd ~ normal(0, 1) T[0, ];
   reporting_delay ~ dirichlet(prior_delay_param);
-  nb_size ~ normal(1, 3) T[0, ];
+  if (model_obs != 0) {
+    inv_nb_size ~ lognormal(disp_prior_pars[1], disp_prior_pars[2]);
+  }
   // Random effect for the NegBin1M and NegBin2M models
   if (model_obs == 4 || model_obs == 5) {
     random_effect ~ gamma(re_params, 1);
   }
   // Likelihood
-  obs ~ obs(exp_obs, nb_size_expanded, idx_include, model_obs, P, p);
+  obs ~ obs(exp_obs, nb_size_expanded, idx_include, model_obs);
 }
 
 generated quantities {
