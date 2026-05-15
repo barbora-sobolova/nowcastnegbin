@@ -30,8 +30,10 @@ saved file correctly}
 
 \item{disp_prior_pars}{a data frame with columns \code{model_name}, \code{mean_log} and
 \code{sd_log}, which contain the parameters for the prior log-normal distribution
-of the dispersion parametr. The data frame should have 6 rows, one for each
-model}
+of the dispersion parameter. The data frame should have 6 rows, one for each
+model, although only the NegBinX, NegBin2D and NegBin1D rows will be used.
+NegBin2M shares the prior with NegBinX and NegBin1M has the same prior as
+NegBin1D.}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}

@@ -320,8 +320,10 @@ plot_crps_decomp <- function(
 #' "mcmc", or "glm"
 #' @param disp_prior_pars a data frame with columns `model_name`, `mean_log` and
 #' `sd_log`, which contain the parameters for the prior log-normal distribution
-#' of the dispersion parametr. The data frame should have 6 rows, one for each
-#' model
+#' of the dispersion parameter. The data frame should have 6 rows, one for each
+#' model, although only the NegBinX, NegBin2D and NegBin1D rows will be used.
+#' NegBin2M shares the prior with NegBinX and NegBin1M has the same prior as
+#' NegBin1D.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -386,6 +388,8 @@ plot_disp_par <- function(
       model_name = disp_prior_pars$model_name,
       phi = seq(0, x_max, length = 500)
     ) |>
+      # Only 3 models have distinct priors. NegBin2M shares the prior with
+      # NegBinX and NegBin1M has the same prior as NegBin1D.
       filter(.data$model_name %in% c("NegBinX", "NegBin2D", "NegBin1D")) |>
       inner_join(
         disp_prior_pars,
