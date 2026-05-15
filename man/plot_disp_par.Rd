@@ -9,6 +9,7 @@ plot_disp_par(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
+  disp_prior_pars = NULL,
   save_plot = TRUE
 )
 }
@@ -26,6 +27,11 @@ saved file correctly}
 
 \item{fitting_method}{a method used for fitting the nowcasting model, either
 "mcmc", or "glm"}
+
+\item{disp_prior_pars}{a data frame with columns \code{model_name}, \code{mean_log} and
+\code{sd_log}, which contain the parameters for the prior log-normal distribution
+of the dispersion parametr. The data frame should have 6 rows, one for each
+model}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}

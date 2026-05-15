@@ -10,6 +10,10 @@
 #' @param stan_data a list of data and parameters accepted by the STAN model
 #' returned by the `get_stan_data()` function
 #' @param date_of_the_nowcast a vector of dates, when the nowcast is made
+#' @param mean_log a vector of the location parameters of the log-normal prior for
+#' the dispersion parameter
+#' @param sd_log a vectorof the scale parameter of the log-normal prior for
+#' the dispersion parameter
 #' @param model_obs an integer vector indicating the observation model. Must be
 #' of the same length as `date_of_the_nowcast`. 0 - Poisson,
 #' 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.
@@ -77,6 +81,10 @@ fit_all_stan_models <- function(
 #' 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.
 #' @param date_of_the_nowcast a date, when the nowcast is made to add as a
 #' column to the data frame with results
+#' @param mean_log a scalar, the location parameter of the log-normal prior for
+#' the dispersion parameter
+#' @param sd_log a scalar, the scale parameter of the log-normal prior for
+#' the dispersion parameter
 #' @param stan_settings a list of STAN settings
 #'
 #' @return list of the data frames with the MCMC draws of different quantities:

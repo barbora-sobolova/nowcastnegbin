@@ -9,6 +9,8 @@ fit_all_stan_models(
   stan_data,
   model_obs,
   date_of_the_nowcast,
+  mean_log,
+  sd_log,
   stan_settings
 )
 }
@@ -23,6 +25,12 @@ of the same length as \code{date_of_the_nowcast}. 0 - Poisson,
 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.}
 
 \item{date_of_the_nowcast}{a vector of dates, when the nowcast is made}
+
+\item{mean_log}{a vector of the location parameters of the log-normal prior for
+the dispersion parameter}
+
+\item{sd_log}{a vectorof the scale parameter of the log-normal prior for
+the dispersion parameter}
 
 \item{stan_settings}{a list of STAN settings}
 }
