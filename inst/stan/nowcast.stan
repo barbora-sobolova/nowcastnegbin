@@ -27,7 +27,7 @@ data {
 }
 
 transformed data{
-  real log_init_total = log(sum(obs[1:d]));
+  real log_init_total = log(sum(obs[1:d]) + 1);
   array[n] int P = to_int(cumulative_sum(p));
   array[n] int D = to_int(cumulative_sum(rep_array(d, n)));
 }
@@ -69,7 +69,7 @@ transformed parameters {
 
 model {
   // Prior
-  init_onsets ~ normal(log_init_total + 1, 1);
+  init_onsets ~ normal(log_init_total, 1);
   rw_noise ~ std_normal();
   rw_sd ~ normal(0, 1) T[0, ];
   reporting_delay ~ dirichlet(prior_delay_param);
