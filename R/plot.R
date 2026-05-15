@@ -502,9 +502,9 @@ plot_delay_prob <- function(
       # Therefore we will plot for each delay only those regions of the
       # parameter space, where the posterior lives.
       filter(
-        .data$delay == 1 & .data$p > 0.2 &
-          .data$delay == 2 & .data$p < 0.7 &
-          .data$delay == 3 & .data$p < 0.2 &
+        .data$delay == 1 & .data$p > 0.2 |
+          .data$delay == 2 & .data$p < 0.7 |
+          .data$delay == 3 & .data$p < 0.2 |
           .data$delay >= 4 & .data$p < 0.15
       ) |>
       # The prior distribution is Dirichlet, so each marginal is beta
