@@ -299,14 +299,17 @@ list(
       df_total,
       obs_model,
       time_horizons$nowcast_date,
-      fitting_method = "mcmc"
+      fitting_method = "mcmc",
+      prior_delay_param,
+      disp_par_prior
     )
   },
   pattern = map(
     fitted_mcmc,
     time_horizons,
     df_total,
-    summarized_nowcast_mcmc
+    summarized_nowcast_mcmc,
+    branches_mcmc
   ),
   iteration = "list"),
   # Create plots of aggregated results from the MCMC method. We plot:

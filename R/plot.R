@@ -318,6 +318,10 @@ plot_crps_decomp <- function(
 #' saved file correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
+#' @param disp_prior_pars a data frame with columns `model_name`, `mean_log` and
+#' `sd_log`, which contain the parameters for the prior log-normal distribution
+#' of the dispersion parametr. The data frame should have 6 rows, one for each
+#' model
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -332,6 +336,7 @@ plot_disp_par <- function(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
+  disp_prior_pars = NULL,
   save_plot = TRUE
 ) {
   df_nb_size <- df_nb_size |>
@@ -341,62 +346,73 @@ plot_disp_par <- function(
       # limit.
       phi = 1 / .data$.value
     )
+  # The right limit of the x-axis to allow us to zoom-in to the more interesting
+  # part of the plot
+  x_max <- quantile(df_nb_size$phi, 0.98)
 
   disp_par_plot <- ggplot() +
     # Plot the density of the dispersion parameter estimates
     geom_line(
       df_nb_size,
-      mapping = aes(x = .data$phi, color = .data$Distribution),
+      mapping = aes(
+        x = .data$phi,
+        color = .data$Distribution,
+        linetype = "Posterior"
+      ),
       stat = "density",
       alpha = 0.7
+    ) +
+    geom_segment(
+      aes(x = 0, y = -0.05, xend = 150, yend = -0.05),
+      arrow = arrow()
+    ) +
+    geom_text(aes(x = 75, y = -0.1, label = "more dispersion")) +
+    scale_color_manual(values = get_model_colors()[model_names]) +
+    labs(
+      x = "dispersion parameter",
+      y = "density"
+    ) +
+    coord_cartesian(
+      ylim = c(-0.15, 0.5),
+      xlim = c(0, x_max)
     )
   if (fitting_method == "mcmc") {
-    # Draw a line representing the prior distribution. This must be checked
-    # manually to correspond to the prior we are using in STAN.
-
-    # Currently we use the inverse gamma distribution with parameters 0.41 and
-    # 0.29. Since we plot on the inverted scale, we will plot the density of the
-    # gamma distribution with the same parameters.
-    df_prior <- data.frame(
-      phi = seq(0, max(df_nb_size$phi), length = 500)
+    # Draw a line representing the prior distribution.
+    df_prior <- expand_grid(
+      model_name = disp_prior_pars$model_name,
+      phi = seq(0, x_max, length = 500)
     ) |>
+      filter(.data$model_name %in% c("NegBinX", "NegBin2D", "NegBin1D")) |>
+      inner_join(
+        disp_prior_pars,
+        by = "model_name",
+        relationship = "many-to-one"
+      ) |>
+      rename("Distribution" = "model_name") |>
       mutate(
-        dens = dgamma(.data$phi, 0.41, 0.29)
+        dens = dlnorm(.data$phi, meanlog = .data$mean_log, sdlog = .data$sd_log)
       )
 
     disp_par_plot <- disp_par_plot +
       geom_line(
         data = df_prior,
-        aes(x = .data$phi, y = .data$dens, color = "Prior")
+        aes(
+          x = .data$phi,
+          y = .data$dens,
+          color = .data$Distribution,
+          linetype = "Prior"
+        )
       ) +
-      geom_segment(
-        aes(x = 0, y = -0.2, xend = 54, yend = -0.2),
-        arrow = arrow()
+      scale_linetype_manual(
+        values = c("Prior" = "dotted", "Posterior" = "solid")
       ) +
-      geom_text(aes(x = 27, y = -0.3, label = "more dispersion")) +
-      scale_color_manual(
-        values = c(get_model_colors()[model_names], "Prior" = "black")
-      ) +
-      labs(
-        x = "dispersion parameter",
-        title = "Dispersion parameter posterior"
-      ) +
-      coord_cartesian(ylim = c(-0.4, 2))
+      labs(title = "Dispersion parameter posterior")
   } else {
+    # For the GLM method, remove the linetype aesthetics distinguishing between
+    # the prior and posterior distribution from the legend
     disp_par_plot <- disp_par_plot +
-      geom_segment(
-        aes(x = 0, y = -0.05, xend = 130, yend = -0.05),
-        arrow = arrow()
-      ) +
-      geom_text(aes(x = 65, y = -0.1, label = "more dispersion")) +
-      scale_color_manual(
-        values = c(get_model_colors()[model_names], "Prior" = "black")
-      ) +
-      labs(
-        x = "dispersion parameter",
-        title = "Posterior of the dispersion parameter"
-      ) +
-      coord_cartesian(ylim = c(-0.15, 0.5))
+      scale_linetype(guide = "none") +
+      labs(title = "Dispersion parameter asymptotic distribution")
   }
 
   # Save the plot if required, the width, height and path are hard-coded here.
@@ -435,6 +451,8 @@ plot_disp_par <- function(
 #' saved file correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
+#' @param prob_prior_pars a vector of the prior parameters of the Dirichlet
+#' delay probability distribution
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -449,25 +467,71 @@ plot_delay_prob <- function(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
+  prob_prior_pars = NULL,
   save_plot = TRUE
 ) {
   df_delay_prob <- df_delay_prob |>
     # Turn the delay into a factor to allow for easier faceting
     mutate(delay = factor(.data$delay))
 
-  delay_prob_plot <- ggplot(
-    df_delay_prob,
-    aes(x = .data$.value, color = .data$Distribution)
-  ) +
+  delay_prob_plot <- ggplot() +
     # Plot the density of the dispersion parameter estimates
-    geom_line(stat = "density", alpha = 0.6, bounds = c(0, 1)) +
-    scale_color_manual(values = get_model_colors()[model_names]) +
-    labs(
-      x = "delay probability",
-      title = "Posterior of the delay probability"
+    geom_line(
+      data = df_delay_prob,
+      mapping = aes(
+        x = .data$.value,
+        color = .data$Distribution,
+        linetype = "Posterior"
+      ),
+      stat = "density", alpha = 0.6, bounds = c(0, 1)
     ) +
+    scale_color_manual(values = get_model_colors()[model_names]) +
+    labs(x = "delay probability", y = "density") +
     coord_cartesian(ylim = c(0, 80)) +
-    facet_wrap(~delay, scales = "free")
+    facet_wrap(~delay, scales = "free_x")
+
+  if (fitting_method == "mcmc") {
+    # Draw a line representing the prior distribution.
+    max_lag <- length(unique(df_delay_prob$delay))
+    df_prior <- expand.grid(
+      p = seq(0, 1, length = 200),
+      delay = seq_len(max_lag)
+    ) |>
+      # We know empirically that most of the cases are reported in the first
+      # round, then the cases drop and only little gets reported later.
+      # Therefore we will plot for each delay only those regions of the
+      # parameter space, where the posterior lives.
+      filter(
+        .data$delay == 1 & .data$p > 0.2 &
+          .data$delay == 2 & .data$p < 0.7 &
+          .data$delay == 3 & .data$p < 0.2 &
+          .data$delay >= 4 & .data$p < 0.15
+      ) |>
+      # The prior distribution is Dirichlet, so each marginal is beta
+      # distributed
+      mutate(
+        beta_par1 = prob_prior_pars[.data$delay],
+        beta_par2 = sum(prob_prior_pars) - prob_prior_pars[.data$delay],
+        dens = dbeta(.data$p, .data$beta_par1, .data$beta_par2)
+      )
+
+    delay_prob_plot <- delay_prob_plot +
+      geom_line(
+        data = df_prior,
+        mapping = aes(x = .data$p, y = .data$dens, linetype = "Prior")
+      ) +
+      scale_linetype_manual(
+        values = c("Prior" = "dotted", "Posterior" = "solid")
+      ) +
+      labs(title = "Posterior of the delay probability")
+  } else {
+    # For the GLM method, remove the linetype aesthetics distinguishing between
+    # the prior and posterior distribution from the legend
+    delay_prob_plot <- delay_prob_plot +
+      scale_linetype(guide = "none") +
+      labs(title = "Delay probability asymptotic distribution")
+  }
+
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
@@ -605,6 +669,12 @@ plot_rw_sd <- function(
 #' files correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
+#' @param prob_prior_pars a vector of the prior parameters of the Dirichlet
+#' delay probability distribution
+#' @param disp_prior_pars a data frame with columns `model_name`, `mean_log` and
+#' `sd_log`, which contain the parameters for the prior log-normal distribution
+#' of the dispersion parametr. The data frame should have 6 rows, one for each
+#' model
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -622,6 +692,8 @@ plot_per_window <- function(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
+  prob_prior_pars = NULL,
+  disp_prior_pars = NULL,
   save_plot = TRUE
 ) {
   p_nowcast <- plot_nowcast(
@@ -637,6 +709,7 @@ plot_per_window <- function(
     model_names,
     date_of_the_nowcast,
     fitting_method,
+    disp_prior_pars,
     save_plot
   )
   p_prob <- plot_delay_prob(
@@ -644,6 +717,7 @@ plot_per_window <- function(
     model_names,
     date_of_the_nowcast,
     fitting_method,
+    prob_prior_pars,
     save_plot
   )
   ret_list <- list(nowcast = p_nowcast, delay_prob = p_prob, disp = p_disp)
