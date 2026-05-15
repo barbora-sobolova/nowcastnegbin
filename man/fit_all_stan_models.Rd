@@ -26,8 +26,8 @@ of the same length as \code{date_of_the_nowcast}. 0 - Poisson,
 
 \item{date_of_the_nowcast}{a vector of dates, when the nowcast is made}
 
-\item{mean_log}{a vector of the location parameters of the log-normal prior for
-the dispersion parameter}
+\item{mean_log}{a vector of the location parameters of the log-normal prior
+for the dispersion parameter}
 
 \item{sd_log}{a vectorof the scale parameter of the log-normal prior for
 the dispersion parameter}
