@@ -836,7 +836,8 @@ plot_trajectory <- function(
   # The estimation windows will be highlighted by braces drawn by
   # `ggpubr::geom_bracket()`.
   first_window_end <- start_date + (length_of_train_data - 1) * 7
-  last_window_beg <- aux_study_start + (nrow(totals) - length_of_train_data - 1) * 7
+  last_window_beg <- aux_study_start +
+    (nrow(totals) - length_of_train_data - 1) * 7
   # We need to find the maximum number of cases in the first and last estimation
   # window in order to place the brace correctly above them.
   first_window_max_cases <- totals |>
