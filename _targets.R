@@ -34,7 +34,7 @@ ggplot2::theme_set(ggplot2::theme_bw())
 max_lag <- 5
 
 # Where the beginning of the data used for the case study is
-analysis_start_date <- as.Date("2024-07-28")
+analysis_start_date <- as.Date("2024-06-23")
 # How many weeks we want to include as "training" data.
 # This includes the last `max_lag - 1` weeks for which we calculate the nowcast.
 length_of_train_data <- 20
@@ -44,7 +44,7 @@ aux_analysis_start_date <- analysis_start_date - (52 + length_of_train_data) * 7
 # For how many dates we want to do the fitting. For each time step, we shift the
 # window of the train data to include a new week of observations mimicking a
 # real-time analysis.
-timesteps_to_fit <- 55
+timesteps_to_fit <- 75
 # What dates shall be skipped due to the Christmas break. These dates indicate
 # two things:
 #  1. No nowcast will be produced on these days
