@@ -184,6 +184,8 @@ mock_unobserved <- function(obs_counts) {
 #'   shall be included.}
 #' }
 #'
+#' @importFrom tidyr replace_na
+#'
 #' @export
 get_stan_data <- function(
   train_data,
@@ -295,7 +297,7 @@ calc_disp_par_prior <- function(log_disp_par) {
       sd_log = 3 * (sqrt(mean(.data$log_disp_se^2) + var(.data$log_disp_hat)))
     ) |>
     # Put placeholder values for the Poisson model
-    replace_na(list(mean_log = -1, sd_log = -1))
+    tidyr::replace_na(list(mean_log = -1, sd_log = -1))
 
   # For the NegBin2M we will use the same prior as for NegBinX, as these have
   # identical marginals. For NegBin1M, we will take the parameters of NegBin1D.

@@ -329,6 +329,7 @@ plot_crps_decomp <- function(
 #' parameter estimates, or NULL if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
+#' @importFrom tidyr expand_grid
 #'
 #' @export
 plot_disp_par <- function(
@@ -381,7 +382,7 @@ plot_disp_par <- function(
       stop("`disp_prior_pars` must be provided when fitting_method = 'mcmc'.")
     }
     # Draw a line representing the prior distribution.
-    df_prior <- expand_grid(
+    df_prior <- tidyr::expand_grid(
       model_name = disp_prior_pars$model_name,
       phi = seq(0, x_max, length = 500)
     ) |>
