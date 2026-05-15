@@ -372,8 +372,8 @@ generate_glm_nowcasts <- function(
   # Sometimes, the variance-covariance matrix is not positive definite due to
   # numerical instabilities causing errors in `MASS::mvnorm()`. In this case, we
   # return NULL.
-  if (class(sampled_pars_fixed)[1] == "try-error" ||
-        class(sampled_pars_smooth)[1] == "try-error") {
+  if (inherits(sampled_pars_fixed, "try-error") ||
+        inherits(sampled_pars_smooth, "try-error")) {
     warning(paste0(model_name, " model can't produce estimates, likely due to numerical issues during the variance-covariance matrix calculation."))  # nolint
     ret_list <- NULL
   } else {
@@ -811,7 +811,7 @@ fit_glm_model <- function(
   n_basis_functions <- round(stan_data$n / 5) + 1
 
   # Fit the GAMLSS model
-  fit <- substitute(
+  fit_call <- substitute(
     gamlss2(
       # We need to include the intercept, otherwise the design matrix will be
       # inconsistent between the Poisson and NegBin models.
@@ -824,10 +824,9 @@ fit_glm_model <- function(
       trace = FALSE
     ),
     list(n_basis = n_basis_functions)
-  ) |>
-    eval() |>
-    try()
-  if (class(fit) == "try-error") {
+  )
+  fit <- try(eval(fit_call))
+  if (inherits(fit, "try-error")) {
     ret_list <- NULL
   } else {
     # Fit the Poisson model using the gam() function from the mgcv package. This
