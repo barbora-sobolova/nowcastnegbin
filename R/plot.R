@@ -377,6 +377,9 @@ plot_disp_par <- function(
       xlim = c(0, x_max)
     )
   if (fitting_method == "mcmc") {
+    if (is.null(disp_prior_pars) || nrow(disp_prior_pars) == 0) {
+      stop("`disp_prior_pars` must be provided when fitting_method = 'mcmc'.")
+    }
     # Draw a line representing the prior distribution.
     df_prior <- expand_grid(
       model_name = disp_prior_pars$model_name,
@@ -491,6 +494,9 @@ plot_delay_prob <- function(
     facet_wrap(~delay, scales = "free_x")
 
   if (fitting_method == "mcmc") {
+    if (is.null(prob_prior_pars) || length(prob_prior_pars) == 0) {
+      stop("`prob_prior_pars` must be provided when fitting_method = 'mcmc'.")
+    }
     # Draw a line representing the prior distribution.
     max_lag <- length(unique(df_delay_prob$delay))
     df_prior <- expand.grid(
