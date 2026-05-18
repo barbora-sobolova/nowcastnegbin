@@ -286,6 +286,21 @@ get_stan_data <- function(
   stan_data
 }
 
+#' Find the prior for the dispersion parameter
+#'
+#' @description This function takes the estimates of the dispersion parameter
+#' from the auxiliary analysis and calculates the parameters of the log-normal
+#' prior distribution that is used for the dispersion parameter in the main
+#' analysis.
+#'
+#' @param log_disp_par a data frame with columns `log_disp_hat` (the point
+#' estimate from the GLM method), `log_disp_se` (the standard error from the GLM
+#' method), `Distribution` (the name of the observation model)
+#' @return a data frame with columns `mean_log` (location parameter of the
+#' log-normal distribution),`sd_log` (scale parameter of the log-normal
+#' distribution) and `model_name`. The data frame has 6 rows, one for each
+#' observation model. For Poisson model, we use placeholder values -1, for the
+#' NegBin2M and NegBin1M models, we reuse the prior of other models.
 calc_disp_par_prior <- function(log_disp_par) {
   prior_pars_from_glm <- log_disp_par |>
     group_by(.data$Distribution) |>
