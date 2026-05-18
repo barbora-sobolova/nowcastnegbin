@@ -63,8 +63,6 @@ ma_degree <- 3
 sim_timesteps_to_fit <- 512
 # Delay probabilities used in the simulation.
 sim_delay_prob <- c(0.5, 0.3, 0.2, 0.1)
-# Prior parameters of the delay probabilities
-sim_prior_delay_param <- c(3, 1.5, 0.5, 0.25)
 # Size of the negative binomial distribution used in the simulation.
 sim_nb_size <- 0.5
 # Selected models for the simulation study
