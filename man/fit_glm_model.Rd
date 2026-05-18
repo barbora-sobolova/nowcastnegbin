@@ -6,6 +6,7 @@
 \usage{
 fit_glm_model(
   stan_data,
+  date_of_the_nowcast,
   model_name = c("Poisson", "NegBinX", "NegBin2D", "NegBin1D"),
   n_samples = 4000
 )
@@ -15,19 +16,30 @@ fit_glm_model(
 returned by the \code{get_stan_data()} function. This list is reused here to
 create a data frame for the regression model.}
 
+\item{date_of_the_nowcast}{a date, when the nowcast is made to add as a
+column to the data frame with results}
+
 \item{model_name}{a string indicating the observation model. One of
 "Poisson", "NegBinX", "NegBin2D" and "NegBin1D".}
 
 \item{n_samples}{how many samples from the nowcasting distribution we draw}
 }
 \value{
-List of the data frames with the draws of different model parameters:
+List of the data frames with the draws of different model parameters
+and additional quantities:
 \describe{
 \item{\code{nowcast}}{samples from the nowcasting distribution,}
 \item{\code{lambda}}{samples of the mean incidence trajectory,}
 \item{\code{delay_prob}}{samples of the delay probability vector,}
 \item{\code{nb_size}}{The draws of the size parameter of the negative
 binomial distribution. Not applicable for the Poisson model.}
+\item{\code{log_disp_coeff}}{a named vector containing the point estimate
+of the dispersion parameter on the log scale and its standard deviation
+(also on the log scale). The dispersion is the reciprocal of the negative
+binomial size here, i.e. 0 loosely means Poisson model, while higher values
+indicate higher dispersion,}
+\item{\code{iter}}{a scalar, the number of iterations necessary for fitting
+the gamlss model.}
 }
 Additionally, the number of iterations \code{iter} necessary for fitting the
 model is returned in the list. The columns of the data frames are a subset of

@@ -4,7 +4,15 @@
 \alias{fit_stan_model}
 \title{Fit the nowcasting model in STAN}
 \usage{
-fit_stan_model(compiled_model, stan_data, model_obs, stan_settings)
+fit_stan_model(
+  compiled_model,
+  stan_data,
+  model_obs,
+  date_of_the_nowcast,
+  mean_log,
+  sd_log,
+  stan_settings
+)
 }
 \arguments{
 \item{compiled_model}{a compiled STAN model.}
@@ -15,6 +23,15 @@ returned by the \code{get_stan_data()} function}
 \item{model_obs}{an integer indicating the observation model. 0 - Poisson,
 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.}
 
+\item{date_of_the_nowcast}{a date, when the nowcast is made to add as a
+column to the data frame with results}
+
+\item{mean_log}{a scalar, the location parameter of the log-normal prior for
+the dispersion parameter}
+
+\item{sd_log}{a scalar, the scale parameter of the log-normal prior for
+the dispersion parameter}
+
 \item{stan_settings}{a list of STAN settings}
 }
 \value{
@@ -23,6 +40,7 @@ list of the data frames with the MCMC draws of different quantities:
 \item{\code{nowcast}}{samples from the nowcasting distribution,}
 \item{\code{lambda}}{samples of the mean incidence trajectory,}
 \item{\code{delay_prob}}{samples of the delay probability vector,}
+\item{\code{rw_sd}}{samples of the standard deviation of the random walk,}
 \item{\code{diagnostics}}{a diagnostic summary of the Markov chains,}
 \item{\code{nb_size}}{The draws of the size parameter of the negative
 binomial distribution. Not applicable for the Poisson model.}

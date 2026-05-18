@@ -6,8 +6,7 @@
 \usage{
 plot_coverage(
   df_summarized_nowcast,
-  model_codes,
-  model_colors,
+  model_names,
   fitting_method = c("mcmc", "glm"),
   save_plot = TRUE
 )
@@ -19,13 +18,8 @@ plot_coverage(
 intervals), \code{delay} (the nowcasting horizon) and the true value of the
 prediction target \code{true_val}}
 
-\item{model_codes}{a vector of observation model names. Must be in the
-correct order to label the models correctly. The order in case all models are
-used is: "Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M",
-"NegBin1M".}
-
-\item{model_colors}{a named vector of the model colors corresponding to each
-observation model}
+\item{model_names}{a vector of names of the observation models, we wish to
+plot.}
 
 \item{fitting_method}{a method used for fitting the nowcasting model, either
 "mcmc", or "glm"}
@@ -34,7 +28,8 @@ observation model}
 \code{ggsave()}}
 }
 \value{
-a ggplot object with one facet per nowcasting horizon
+a ggplot object with one facet per nowcasting horizon, or NULL if
+\code{save_plot = TRUE}
 }
 \description{
 This function plots and possibly saves the chart of empirical

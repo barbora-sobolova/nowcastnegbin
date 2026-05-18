@@ -258,6 +258,8 @@ mock_unobserved <- function(obs_counts) {
 #'   shall be included.}
 #' }
 #'
+#' @importFrom tidyr replace_na
+#'
 #' @export
 get_stan_data <- function(
   train_data,
@@ -266,9 +268,15 @@ get_stan_data <- function(
 ) {
   # Grab the maximum lag
   max_lag <- ncol(train_data)
-  #
-  if (!is.null(prior_delay_param) && length(prior_delay_param) != max_lag) {
-    stop("The vector of prior parameters of the reporting delay must have the same length as there are columns in the reporting triangle.")  # nolint
+  # Make sure that the parameters of the prior distribution of the delay
+  # probabilities have a correct length.
+  if (!is.null(prior_delay_param)) {
+    if (length(prior_delay_param) != max_lag) {
+      stop("The vector of prior parameters of the reporting delay must have the same length as there are columns in the reporting triangle.")  # nolint
+    }
+    if (!is.numeric(prior_delay_param) || any(prior_delay_param <= 0)) {
+      stop("`prior_delay_param` must be a numeric vector of strictly positive values.")  # nolint
+    }
   }
   # Replace the known counts by NAs to create the reporting triangle
   obs_mat_truncated <- mock_unobserved(train_data)
@@ -350,4 +358,52 @@ get_stan_data <- function(
     stan_data$n_idx_include <- stan_data$m
   }
   stan_data
+}
+
+#' Find the prior for the dispersion parameter
+#'
+#' @description This function takes the estimates of the dispersion parameter
+#' from the auxiliary analysis and calculates the parameters of the log-normal
+#' prior distribution that is used for the dispersion parameter in the main
+#' analysis.
+#'
+#' @param log_disp_par a data frame with columns `log_disp_hat` (the point
+#' estimate from the GLM method), `log_disp_se` (the standard error from the GLM
+#' method), `Distribution` (the name of the observation model)
+#' @return a data frame with columns `mean_log` (location parameter of the
+#' log-normal distribution),`sd_log` (scale parameter of the log-normal
+#' distribution) and `model_name`. The data frame has 6 rows, one for each
+#' observation model. For Poisson model, we use placeholder values -1, for the
+#' NegBin2M and NegBin1M models, we reuse the prior of other models.
+calc_disp_par_prior <- function(log_disp_par) {
+  prior_pars_from_glm <- log_disp_par |>
+    group_by(.data$Distribution) |>
+    summarize(
+      mean_log = mean(.data$log_disp_hat),
+      # Loosely inspired by Rubin's rules. The scale factor 3 is there to make
+      # prior distribution even wider and can be subjected to a sensitivity
+      # analysis.
+      sd_log = 3 * (sqrt(mean(.data$log_disp_se^2) + var(.data$log_disp_hat)))
+    ) |>
+    # Put placeholder values for the Poisson model
+    tidyr::replace_na(list(mean_log = -1, sd_log = -1))
+
+  # For the NegBin2M we will use the same prior as for NegBinX, as these have
+  # identical marginals. For NegBin1M, we will take the parameters of NegBin1D.
+  prior_pars_assigned <- bind_rows(
+    mutate(
+      filter(prior_pars_from_glm, .data$Distribution == "NegBinX"),
+      Distribution = "NegBin2M"
+    ),
+    mutate(
+      filter(prior_pars_from_glm, .data$Distribution == "NegBin1D"),
+      Distribution = "NegBin1M"
+    )
+  )
+  bind_rows(
+    prior_pars_from_glm,
+    prior_pars_assigned
+  ) |> rename(
+    "model_name" = "Distribution"
+  )
 }
