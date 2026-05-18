@@ -961,7 +961,7 @@ plot_mcmc_diagnostics <- function(
   date_breaks <- seq(
     min(df_diagnostics$nowcast_date),
     max(df_diagnostics$nowcast_date),
-    by = 4 * 7
+    by = 6 * 7
   )
   diag_plot <- ggplot(
     df_diagnostics_long,
