@@ -97,25 +97,31 @@ list(
     )
   }),
 
-  # Fit the GLM models to the previous year to obtain the priors ---------------
+
+  # Load the case study data ---------------------------------------------------
 
   # Load the preprocessed data with no stratification. This data spans the
-  # year directly preceding the case study and it ends one week before the
-  # training data for the case study begins
-  tar_target(full_data_prev_year, {
+  # whole period from the beginning of the auxiliary case study to the end of
+  # the actual case study.
+  tar_target(full_data, {
     load_preprocessed_data(
       here::here(
         "inst",
         "extdata",
         "reporting_triangle-icosari-sari-preprocessed.csv"
       ),
-      # We shift the beginning of this auxiliary analysis one year before the
-      # start of the main analysis. For this reason we use the constant 52,
-      # representing 52 weeks.
       start_date = aux_analysis_start_date,
-      num_of_weeks = 52 + length_of_train_data
+      # How many weeks of data (rows of the reporting triangle) we want to load.
+      # This is the length of the auxiliary case study (52 weeks + train data)
+      # and the length of the actual case study (train data + desired number of
+      # rolling windows). The -1 part is included to get the exact number of
+      # rolling windows, since we count the "zeroth" window as a first one.
+      num_of_weeks = 52 + 2 * length_of_train_data + timesteps_to_fit - 1
     )
   }),
+
+  # Fit the GLM models to the previous year to obtain the priors ---------------
+
   # Data frame storing the beginning and end points of the training data for the
   # auxiliary analysis to keep track of the rolling windows
   tar_target(time_horizons_prev_year, {
@@ -133,7 +139,7 @@ list(
   tar_target(
     train_data_prev_year,
     filter_train_period(
-      full_data_prev_year,
+      full_data,
       start_date = time_horizons_prev_year$train_data_begin,
       end_date = time_horizons_prev_year$nowcast_date,
       max_lag = max_lag,
@@ -183,14 +189,11 @@ list(
   # Calculate the parameters of the Dirichlet prior from the auxiliary data
   # only, without looking at the GLM estimates.
   tar_target(prior_delay_param, {
-    full_data_prev_year |>
-      select(starts_with("value_")) |>
-      as.matrix() |>
-      apply(1, function (x) x / sum(x)) |>
-      t() |>
-      # The factor of 4 is selected to control the "flatness" of the prior
-      # distribution. May be varied as a part of a sensitivity analysis.
-      apply(2, mean) * 4
+    calc_delay_prob_prior(
+      full_data,
+      aux_analysis_start_date,
+      aux_analysis_start_date + (length_of_train_data + 52) * 7
+      )
   }),
 
   # Case study -----------------------------------------------------------------
@@ -230,19 +233,6 @@ list(
   train_data_begin,
   nowcast_date
   ),
-  # Load the preprocessed data with no stratification, restricted to the time
-  # period of interest
-  tar_target(full_data, {
-    load_preprocessed_data(
-      here::here(
-        "inst",
-        "extdata",
-        "reporting_triangle-icosari-sari-preprocessed.csv"
-      ),
-      start_date = analysis_start_date,
-      num_of_weeks = timesteps_to_fit + length_of_train_data - 1
-    )
-  }),
   # Create a matrix containing the training data for each date. This matrix
   # contains all observations. To obtain the triangular form, latest
   # observations will be masked by the `get_stan_data()` function further
@@ -404,7 +394,7 @@ list(
   # estimation windows
   tar_target(whole_trajectory_plot, {
     plot_trajectory(
-      bind_rows(full_data_prev_year, full_data),
+      full_data,
       analysis_start_date,
       length_of_train_data,
       max_lag,

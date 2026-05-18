@@ -407,3 +407,26 @@ calc_disp_par_prior <- function(log_disp_par) {
     "model_name" = "Distribution"
   )
 }
+
+#' Find the prior for the delay probability
+#'
+#' @description This function takes the data from the auxiliary analysis and
+#' calculates the parameters of the Dirichlet prior distribution that is used
+#' for the delay probability in the main analysis.
+#'
+#' @param full_data a data frame with columns `date` and columns
+#' `value_0w`, `value_1w`, etc. until `max_lag - 1`. The value of `max_lag` is
+#' not checked here and is only derived from the columns of \code{full_data}.
+#' @return a vector of length `max_lag` with the parameters of the Dirichlet
+#' distribution.
+calc_delay_prob_prior <- function(full_data, start_date, end_date) {
+  full_data |>
+    filter(date >= start_date & date < end_date) |>
+    select(starts_with("value_")) |>
+    as.matrix() |>
+    apply(1, function (x) x / sum(x)) |>
+    t() |>
+    # The factor of 4 is selected to control the "flatness" of the prior
+    # distribution. May be varied as a part of a sensitivity analysis.
+    apply(2, mean) * 4
+}
