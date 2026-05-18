@@ -155,7 +155,7 @@ list(
   # parameter
   tar_target(
     disp_par_prior,
-    calc_disp_par_prior(glm_log_disp_par_prev_year),
+    calc_disp_par_prior(glm_log_disp_par_prev_year)
   ),
   # Calculate the parameters of the Dirichlet prior from the auxiliary data
   # only, without looking at the GLM estimates.
