@@ -9,6 +9,8 @@ fit_stan_model(
   stan_data,
   model_obs,
   date_of_the_nowcast,
+  mean_log,
+  sd_log,
   stan_settings
 )
 }
@@ -23,6 +25,12 @@ returned by the \code{get_stan_data()} function}
 
 \item{date_of_the_nowcast}{a date, when the nowcast is made to add as a
 column to the data frame with results}
+
+\item{mean_log}{a scalar, the location parameter of the log-normal prior for
+the dispersion parameter}
+
+\item{sd_log}{a scalar, the scale parameter of the log-normal prior for
+the dispersion parameter}
 
 \item{stan_settings}{a list of STAN settings}
 }
