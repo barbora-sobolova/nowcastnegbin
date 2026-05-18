@@ -49,9 +49,14 @@ List of the data frames with the draws of different model parameters:
 \item{\code{delay_prob}}{samples of the delay probability vector,}
 \item{\code{nb_size}}{The draws of the size parameter of the negative
 binomial distribution. Not applicable for the Poisson model.}
+\item{\code{log_disp_coeff}}{a named vector of length 2 containing the
+point estimate of the dispersion parameter on the log scale and its
+standard deviation (also on the log scale). The dispersion is the
+reciprocal of the negative binomial size here, i.e. 0 loosely means Poisson
+model, while higher values indicate higher dispersion,}
+\item{\code{iter}}{a scalar, the number of iterations necessary for fitting
+the gamlss model.}
 }
-Additionally, the number of iterations \code{iter} necessary for fitting the
-model is returned in the list.
 }
 \description{
 This function implements the nowcasting method by

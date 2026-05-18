@@ -34,7 +34,7 @@ and additional quantities:
 binomial distribution. Not applicable for the Poisson model,}
 \item{\code{log_disp_coeff}}{a vector with two elements, or a data frame
 with two columns: \code{log_disp_hat} containing the point estimate of the
-dispersion parameter on the log scale and \code{log_disp_sd} its standard
+dispersion parameter on the log scale and \code{log_disp_se} its standard
 deviation (also on the log scale). The dispersion is the reciprocal of the
 negative binomial size here, i.e. 0 loosely means Poisson model, while
 higher values indicate higher dispersion,}

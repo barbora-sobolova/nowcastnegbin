@@ -65,6 +65,8 @@ test_that("Model output from the MCMC method is stable and plausible", {
       data_list,
       model_obs,
       date_of_the_nowcast = as.Date("2024-12-09"),  # Arbitrary date
+      mean_log = 0,
+      sd_log = 1.5,
       stan_settings
     )
 

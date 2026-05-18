@@ -29,8 +29,7 @@
  * `poisson_lpmf` for the Poisson, NegBin2M and NegBin1M models.
  */
 real obs_lpmf(array[] int obs, array[] real exp_obs, array[] real nb_size,
-                  array[] int idx_include, int model_obs, array[] int P,
-                  array[] int p) {
+                  array[] int idx_include, int model_obs) {
    real tar = 0;
 
    if (model_obs == 0 || model_obs == 4 || model_obs == 5) {

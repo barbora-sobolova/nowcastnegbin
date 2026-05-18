@@ -9,6 +9,7 @@ plot_delay_prob(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
+  prob_prior_pars = NULL,
   save_plot = TRUE
 )
 }
@@ -26,6 +27,9 @@ saved file correctly}
 
 \item{fitting_method}{a method used for fitting the nowcasting model, either
 "mcmc", or "glm"}
+
+\item{prob_prior_pars}{a vector of the prior parameters of the Dirichlet
+delay probability distribution}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}

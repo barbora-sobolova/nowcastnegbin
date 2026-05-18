@@ -9,6 +9,7 @@ plot_trajectory(
   start_date,
   length_of_train_data,
   max_lag,
+  aux_study_start,
   save_plot = TRUE
 )
 }
@@ -25,6 +26,9 @@ start. The starting point will be included.}
 \item{max_lag}{maximum reporting delay represented by the number of columns
 of the reporting table. In this way, the 0-th lag counts as the first, 1-st
 lag as the second and so on.}
+
+\item{aux_study_start}{a date (indeed in the date format), where the
+auxiliary case study period used for determining the priors starts.}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}

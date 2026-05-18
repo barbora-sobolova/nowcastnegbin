@@ -318,6 +318,12 @@ plot_crps_decomp <- function(
 #' saved file correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
+#' @param disp_prior_pars a data frame with columns `model_name`, `mean_log` and
+#' `sd_log`, which contain the parameters for the prior log-normal distribution
+#' of the dispersion parameter. The data frame should have 6 rows, one for each
+#' model, although only the NegBinX, NegBin2D and NegBin1D rows will be used.
+#' NegBin2M shares the prior with NegBinX and NegBin1M has the same prior as
+#' NegBin1D.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -325,6 +331,7 @@ plot_crps_decomp <- function(
 #' parameter estimates, or NULL if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
+#' @importFrom tidyr expand_grid
 #'
 #' @export
 plot_disp_par <- function(
@@ -332,6 +339,7 @@ plot_disp_par <- function(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
+  disp_prior_pars = NULL,
   save_plot = TRUE
 ) {
   df_nb_size <- df_nb_size |>
@@ -341,62 +349,78 @@ plot_disp_par <- function(
       # limit.
       phi = 1 / .data$.value
     )
+  # The right limit of the x-axis to allow us to zoom-in to the more interesting
+  # part of the plot
+  x_max <- quantile(df_nb_size$phi, 0.98)
 
   disp_par_plot <- ggplot() +
     # Plot the density of the dispersion parameter estimates
     geom_line(
       df_nb_size,
-      mapping = aes(x = .data$phi, color = .data$Distribution),
+      mapping = aes(
+        x = .data$phi,
+        color = .data$Distribution,
+        linetype = "Posterior"
+      ),
       stat = "density",
       alpha = 0.7
+    ) +
+    geom_segment(
+      aes(x = 0, y = -0.05, xend = 150, yend = -0.05),
+      arrow = arrow()
+    ) +
+    geom_text(aes(x = 75, y = -0.1, label = "more dispersion")) +
+    scale_color_manual(values = get_model_colors()[model_names]) +
+    labs(
+      x = "dispersion parameter",
+      y = "density"
+    ) +
+    coord_cartesian(
+      ylim = c(-0.15, 0.5),
+      xlim = c(0, x_max)
     )
   if (fitting_method == "mcmc") {
-    # Draw a line representing the prior distribution. This must be checked
-    # manually to correspond to the prior we are using in STAN.
-
-    # Currently we use the inverse gamma distribution with parameters 0.41 and
-    # 0.29. Since we plot on the inverted scale, we will plot the density of the
-    # gamma distribution with the same parameters.
-    df_prior <- data.frame(
-      phi = seq(0, max(df_nb_size$phi), length = 500)
+    if (is.null(disp_prior_pars) || nrow(disp_prior_pars) == 0) {
+      stop("`disp_prior_pars` must be provided when fitting_method = 'mcmc'.")
+    }
+    # Draw a line representing the prior distribution.
+    df_prior <- tidyr::expand_grid(
+      model_name = disp_prior_pars$model_name,
+      phi = seq(0, x_max, length = 500)
     ) |>
+      # Only 3 models have distinct priors. NegBin2M shares the prior with
+      # NegBinX and NegBin1M has the same prior as NegBin1D.
+      filter(.data$model_name %in% c("NegBinX", "NegBin2D", "NegBin1D")) |>
+      inner_join(
+        disp_prior_pars,
+        by = "model_name",
+        relationship = "many-to-one"
+      ) |>
+      rename("Distribution" = "model_name") |>
       mutate(
-        dens = dgamma(.data$phi, 0.41, 0.29)
+        dens = dlnorm(.data$phi, meanlog = .data$mean_log, sdlog = .data$sd_log)
       )
 
     disp_par_plot <- disp_par_plot +
       geom_line(
         data = df_prior,
-        aes(x = .data$phi, y = .data$dens, color = "Prior")
+        aes(
+          x = .data$phi,
+          y = .data$dens,
+          color = .data$Distribution,
+          linetype = "Prior"
+        )
       ) +
-      geom_segment(
-        aes(x = 0, y = -0.2, xend = 54, yend = -0.2),
-        arrow = arrow()
+      scale_linetype_manual(
+        values = c("Prior" = "dotted", "Posterior" = "solid")
       ) +
-      geom_text(aes(x = 27, y = -0.3, label = "more dispersion")) +
-      scale_color_manual(
-        values = c(get_model_colors()[model_names], "Prior" = "black")
-      ) +
-      labs(
-        x = "dispersion parameter",
-        title = "Dispersion parameter posterior"
-      ) +
-      coord_cartesian(ylim = c(-0.4, 2))
+      labs(title = "Dispersion parameter posterior")
   } else {
+    # For the GLM method, remove the linetype aesthetics distinguishing between
+    # the prior and posterior distribution from the legend
     disp_par_plot <- disp_par_plot +
-      geom_segment(
-        aes(x = 0, y = -0.05, xend = 130, yend = -0.05),
-        arrow = arrow()
-      ) +
-      geom_text(aes(x = 65, y = -0.1, label = "more dispersion")) +
-      scale_color_manual(
-        values = c(get_model_colors()[model_names], "Prior" = "black")
-      ) +
-      labs(
-        x = "dispersion parameter",
-        title = "Posterior of the dispersion parameter"
-      ) +
-      coord_cartesian(ylim = c(-0.15, 0.5))
+      scale_linetype(guide = "none") +
+      labs(title = "Dispersion parameter asymptotic distribution")
   }
 
   # Save the plot if required, the width, height and path are hard-coded here.
@@ -435,6 +459,8 @@ plot_disp_par <- function(
 #' saved file correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
+#' @param prob_prior_pars a vector of the prior parameters of the Dirichlet
+#' delay probability distribution
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -449,25 +475,74 @@ plot_delay_prob <- function(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
+  prob_prior_pars = NULL,
   save_plot = TRUE
 ) {
   df_delay_prob <- df_delay_prob |>
     # Turn the delay into a factor to allow for easier faceting
     mutate(delay = factor(.data$delay))
 
-  delay_prob_plot <- ggplot(
-    df_delay_prob,
-    aes(x = .data$.value, color = .data$Distribution)
-  ) +
+  delay_prob_plot <- ggplot() +
     # Plot the density of the dispersion parameter estimates
-    geom_line(stat = "density", alpha = 0.6, bounds = c(0, 1)) +
-    scale_color_manual(values = get_model_colors()[model_names]) +
-    labs(
-      x = "delay probability",
-      title = "Posterior of the delay probability"
+    geom_line(
+      data = df_delay_prob,
+      mapping = aes(
+        x = .data$.value,
+        color = .data$Distribution,
+        linetype = "Posterior"
+      ),
+      stat = "density", alpha = 0.6, bounds = c(0, 1)
     ) +
+    scale_color_manual(values = get_model_colors()[model_names]) +
+    labs(x = "delay probability", y = "density") +
     coord_cartesian(ylim = c(0, 80)) +
-    facet_wrap(~delay, scales = "free")
+    facet_wrap(~delay, scales = "free_x")
+
+  if (fitting_method == "mcmc") {
+    if (is.null(prob_prior_pars) || length(prob_prior_pars) == 0) {
+      stop("`prob_prior_pars` must be provided when fitting_method = 'mcmc'.")
+    }
+    # Draw a line representing the prior distribution.
+    max_lag <- length(unique(df_delay_prob$delay))
+    df_prior <- expand.grid(
+      p = seq(0, 1, length = 200),
+      delay = seq_len(max_lag)
+    ) |>
+      # We know empirically that most of the cases are reported in the first
+      # round, then the cases drop and only little gets reported later.
+      # Therefore we will plot for each delay only those regions of the
+      # parameter space, where the posterior lives.
+      filter(
+        .data$delay == 1 & .data$p > 0.2 |
+          .data$delay == 2 & .data$p < 0.7 |
+          .data$delay == 3 & .data$p < 0.2 |
+          .data$delay >= 4 & .data$p < 0.15
+      ) |>
+      # The prior distribution is Dirichlet, so each marginal is beta
+      # distributed
+      mutate(
+        beta_par1 = prob_prior_pars[.data$delay],
+        beta_par2 = sum(prob_prior_pars) - prob_prior_pars[.data$delay],
+        dens = dbeta(.data$p, .data$beta_par1, .data$beta_par2)
+      )
+
+    delay_prob_plot <- delay_prob_plot +
+      geom_line(
+        data = df_prior,
+        mapping = aes(x = .data$p, y = .data$dens, linetype = "Prior")
+      ) +
+      scale_linetype_manual(
+        values = c("Prior" = "dotted", "Posterior" = "solid")
+      ) +
+      labs(title = "Posterior of the delay probability")
+  } else {
+    # For the GLM method, remove the linetype aesthetics distinguishing between
+    # the prior and posterior distribution from the legend
+    delay_prob_plot <- delay_prob_plot +
+      scale_linetype(guide = "none") +
+      labs(title = "Delay probability asymptotic distribution")
+  }
+
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
@@ -605,6 +680,12 @@ plot_rw_sd <- function(
 #' files correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
+#' @param prob_prior_pars a vector of the prior parameters of the Dirichlet
+#' delay probability distribution
+#' @param disp_prior_pars a data frame with columns `model_name`, `mean_log` and
+#' `sd_log`, which contain the parameters for the prior log-normal distribution
+#' of the dispersion parametr. The data frame should have 6 rows, one for each
+#' model
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -622,6 +703,8 @@ plot_per_window <- function(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
+  prob_prior_pars = NULL,
+  disp_prior_pars = NULL,
   save_plot = TRUE
 ) {
   p_nowcast <- plot_nowcast(
@@ -637,6 +720,7 @@ plot_per_window <- function(
     model_names,
     date_of_the_nowcast,
     fitting_method,
+    disp_prior_pars,
     save_plot
   )
   p_prob <- plot_delay_prob(
@@ -644,6 +728,7 @@ plot_per_window <- function(
     model_names,
     date_of_the_nowcast,
     fitting_method,
+    prob_prior_pars,
     save_plot
   )
   ret_list <- list(nowcast = p_nowcast, delay_prob = p_prob, disp = p_disp)
@@ -721,6 +806,8 @@ plot_aggregated <- function(
 #' @param max_lag maximum reporting delay represented by the number of columns
 #' of the reporting table. In this way, the 0-th lag counts as the first, 1-st
 #' lag as the second and so on.
+#' @param aux_study_start a date (indeed in the date format), where the
+#' auxiliary case study period used for determining the priors starts.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -735,12 +822,15 @@ plot_trajectory <- function(
   start_date,
   length_of_train_data,
   max_lag,
+  aux_study_start,
   save_plot = TRUE
 ) {
+  # The auxiliary analysis ends exactly one week before the main analysis
+  aux_study_end <- start_date - 7
   # Arrange the whole trajectory into a data frame for plotting
   totals <- full_data |>
     dplyr::select(paste0("value_", 1:max_lag - 1, "w")) |>
-    create_totals_data_frame(start_date) |>
+    create_totals_data_frame(aux_study_start) |>
     # `create_totals_data_frame()` returns a long data frame containing the
     # final and the preliminary state of the data. For plotting the whole
     # trajectory we are interested only in the final values.
@@ -750,7 +840,8 @@ plot_trajectory <- function(
   # The estimation windows will be highlighted by braces drawn by
   # `ggpubr::geom_bracket()`.
   first_window_end <- start_date + (length_of_train_data - 1) * 7
-  last_window_beg <- start_date + (nrow(totals) - length_of_train_data - 1) * 7
+  last_window_beg <- aux_study_start +
+    (nrow(totals) - length_of_train_data - 1) * 7
   # We need to find the maximum number of cases in the first and last estimation
   # window in order to place the brace correctly above them.
   first_window_max_cases <- totals |>
@@ -767,12 +858,20 @@ plot_trajectory <- function(
   bracket_offset <- first_window_max_cases * 0.05
   trajectory_plot <- ggplot(totals, aes(x = .data$date, y = .data$counts)) +
     geom_line() +
+    # Highlight the period used for determining the priors
+    ggpubr::geom_bracket(
+      xmin = aux_study_start,
+      xmax = aux_study_end,
+      y.position = first_window_max_cases + bracket_offset,
+      label = "Data used to determine\nthe priors",
+      label.size = 3
+    ) +
     # Highlight the first window of training data excluding the nowcasting part
     ggpubr::geom_bracket(
       xmin = start_date,
       xmax = first_window_end - (max_lag - 2) * 7 - 1,
       y.position = first_window_max_cases + bracket_offset,
-      label = "First chunk of\ntraining data",
+      label = "First\ntraining\ndata",
       label.size = 3
     ) +
     # Highlight the first nowcasting target
@@ -788,7 +887,7 @@ plot_trajectory <- function(
       xmin = last_window_beg,
       xmax = last_window_beg + (length_of_train_data - max_lag + 2) * 7 - 1,
       y.position = last_window_max_cases + bracket_offset,
-      label = "Last chunk of\ntraining data",
+      label = "Last\ntraining\ndata",
       label.size = 3
     ) +
     # Highlight the last nowcasting target
@@ -806,7 +905,7 @@ plot_trajectory <- function(
     save_figure(
       trajectory_plot,
       "inst/figure/SARI_trajectory",
-      width = 9,
+      width = 11,
       height = 7
     )
     ret <- NULL
@@ -862,7 +961,7 @@ plot_mcmc_diagnostics <- function(
   date_breaks <- seq(
     min(df_diagnostics$nowcast_date),
     max(df_diagnostics$nowcast_date),
-    by = 4 * 7
+    by = 6 * 7
   )
   diag_plot <- ggplot(
     df_diagnostics_long,
