@@ -424,9 +424,57 @@ calc_delay_prob_prior <- function(full_data, start_date, end_date) {
     filter(date >= start_date & date < end_date) |>
     select(starts_with("value_")) |>
     as.matrix() |>
-    apply(1, function (x) x / sum(x)) |>
+    apply(1, function(x) x / sum(x)) |>
     t() |>
     # The factor of 4 is selected to control the "flatness" of the prior
     # distribution. May be varied as a part of a sensitivity analysis.
     apply(2, mean) * 4
+}
+
+#' Create a data frame with info about the dynamic branching structure
+#'
+#' @description This function creates a grouped data frame of dates and models
+#' to be used to create a dynamic branching structure. Per one nowcasting date,
+#' a bundle of observation models should be fitted.
+#'
+#' @param time_horizons a data frame with columns `train_data_begin` and
+#' `nowcast_date`
+#' @param disp_par_prior a data frame with columns `mean_log`, `sd_log` and
+#' `model_name`, indicating the prior parameters for the negative binomial
+#' dispersion parameter. Relevant only for \code{fitting_method = "mcmc"},
+#' otherwise NULL
+#' @param obs_model_glm a vector of model names to be fitted using the GLM
+#' method. Only relevant, when \code{fitting_method = "glm"}, otherwise NULL
+#' @param fitting_method a string indicating the model fitting procedure. For
+#' GLM, we don't have the NegBin2M and NegBin1M models
+#' @return a data frame with columns `train_data_begin`, `nowcast_date` (The
+#' data frame will be grouped by these 2 columns in the pipeline.) and
+#' `model_name`. For \code{fitting_method = "mcmc"} we also have columns
+#' `mean_log` and `sd_log`.
+group_branches <- function(
+  time_horizons,
+  disp_par_prior = NULL,
+  obs_model_glm = NULL,
+  fitting_method = c("mcmc", "glm")
+) {
+  fitting_method <- match.arg(fitting_method)
+  if (fitting_method == "mcmc") {
+    ret <- time_horizons |>
+      mutate(
+        # For the MCMC method, we will fit all 6 models and we need to store
+        # their numbers to call the fitting function.
+        nested_col = list(
+          tibble(model_name = get_model_names(), model_code = 0:5)
+        )
+      ) |>
+      unnest("nested_col") |>
+      # Join with the data frame of prior parameters for the negative binomial
+      # dispersion parameter
+      inner_join(disp_par_prior, relationship = "many-to-one")
+  } else {
+    ret <- time_horizons |>
+      mutate(model_name = list(obs_model_glm)) |>
+      unnest("model_name")
+  }
+  ret
 }

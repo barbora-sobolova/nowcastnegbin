@@ -206,30 +206,24 @@ list(
       skip_dates = skip_dates
     )
   }),
-
   # Create grouped data frames to group targets by date. As a result, the models
   # will be stored and subsequently loaded in bundles of 4 (for GLM), or 6
   # (for MCMC)
-  tar_group_by(branches_mcmc, {
-    time_horizons |>
-      mutate(
-        nested_col = list(
-          tibble(model_name = get_model_names(), model_code = 0:5)
-        )
-      ) |>
-      unnest(nested_col) |>
-      inner_join(disp_par_prior, relationship = "many-to-one")
-  },
-  train_data_begin,
-  nowcast_date
+  tar_group_by(
+    branches_mcmc,
+    group_branches(time_horizons, disp_par_prior, fitting_method = "mcmc"),
+    train_data_begin,
+    nowcast_date
   ),
-  tar_group_by(branches_glm, {
-    time_horizons |>
-      mutate(model_name = list(obs_model_glm)) |>
-      unnest(model_name)
-  },
-  train_data_begin,
-  nowcast_date
+  tar_group_by(
+    branches_glm,
+    group_branches(
+      time_horizons,
+      obs_model_glm = obs_model_glm,
+      fitting_method = "glm"
+    ),
+    train_data_begin,
+    nowcast_date
   ),
   # Create a matrix containing the training data for each date. This matrix
   # contains all observations. To obtain the triangular form, latest
