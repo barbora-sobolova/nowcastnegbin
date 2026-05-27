@@ -12,7 +12,7 @@
 #' @param date_of_the_nowcast a vector of dates, when the nowcast is made
 #' @param mean_log a vector of the location parameters of the log-normal prior
 #' for the dispersion parameter
-#' @param sd_log a vectorof the scale parameter of the log-normal prior for
+#' @param sd_log a vector of the scale parameter of the log-normal prior for
 #' the dispersion parameter
 #' @param model_obs an integer vector indicating the observation model. Must be
 #' of the same length as `date_of_the_nowcast`. 0 - Poisson,
