@@ -224,7 +224,7 @@ fit_stan_model <- function(
       tidybayes::gather_draws(nb_size[1]) |> # nolint
       ungroup() |>
       add_meta() |>
-      tidyr::unnest(.data$.value) |>
+      tidyr::unnest(".value") |>
       dplyr::select(-".variable")
   } else {
     df_nb_size <- NULL
