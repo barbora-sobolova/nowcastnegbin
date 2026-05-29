@@ -332,8 +332,7 @@ list(
         stan_settings = stan_settings
       ),
       pattern = map(sim_branches_mcmc, sim_stan_data),
-      iteration = "list",
-      cue = tar_cue("never")
+      iteration = "list"
     ),
     # Calculate the quantiles and CRPS of the nowcasts in the simulation study
     # obtained by the MCMC method
@@ -437,8 +436,7 @@ list(
         model_name = sim_branches_glm$model_name
       ),
       pattern = map(sim_branches_glm, sim_stan_data),
-      iteration = "list",
-      cue = tar_cue("never")
+      iteration = "list"
     ),
     # Calculate the quantiles and CRPS of the nowcasts in the simulation study
     # obtained by the GLM method
