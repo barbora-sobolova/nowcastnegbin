@@ -10,6 +10,8 @@ plot_delay_prob(
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  true_value = NULL,
   save_plot = TRUE
 )
 }
@@ -31,12 +33,19 @@ saved file correctly}
 \item{prob_prior_pars}{a vector of the prior parameters of the Dirichlet
 delay probability distribution}
 
+\item{data_origin}{a string indicating the data generating process of
+simulated data, or whether the data correspond to the case study. Possible
+values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
+
+\item{true_value}{NULL for \code{data_origin = "case_study}, otherwise the
+true value of the delay probability vector used for generating the data}
+
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}
 }
 \value{
 a ggplot object with one facet per delay showing the density of the
-delay probability estimates per delay, or NULL if \code{save_plot = TRUE}
+delay probability estimates, or NULL if \code{save_plot = TRUE}
 }
 \description{
 This function plots and possibly saves the densities of

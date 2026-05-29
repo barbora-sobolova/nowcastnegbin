@@ -8,6 +8,7 @@ plot_aggregated(
   df_nowcast,
   model_names,
   fitting_method = c("mcmc", "glm"),
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 )
 }

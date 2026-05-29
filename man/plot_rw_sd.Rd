@@ -10,6 +10,7 @@ plot_rw_sd(
   df_nb_size,
   model_names,
   date_of_the_nowcast,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 )
 }
@@ -29,6 +30,10 @@ plot.}
 
 \item{date_of_the_nowcast}{a date, when the nowcast is made to name the
 saved file correctly}
+
+\item{data_origin}{a string indicating the data generating process of
+simulated data, or whether the data correspond to the case study. Possible
+values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}

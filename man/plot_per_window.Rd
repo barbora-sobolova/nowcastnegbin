@@ -8,6 +8,7 @@ plot_per_window(
   df_nowcast,
   df_delay_prob,
   df_disp_par,
+  df_lambda,
   df_rw_sd,
   df_total,
   model_names,
@@ -15,6 +16,10 @@ plot_per_window(
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
   disp_prior_pars = NULL,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  prob_true_val = NULL,
+  disp_true_val = NULL,
+  lambda_true_val = NULL,
   save_plot = TRUE
 )
 }
@@ -59,6 +64,10 @@ delay probability distribution}
 \code{sd_log}, which contain the parameters for the prior log-normal distribution
 of the dispersion parametr. The data frame should have 6 rows, one for each
 model}
+
+\item{lambda_true_val}{NULL for \code{data_origin = "case_study}, otherwise
+the vector of true values of the mean of the total counts used for generating
+the data. The length of the vector must be \code{max_lag - 1}}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}
