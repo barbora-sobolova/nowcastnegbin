@@ -78,7 +78,7 @@ test_that("Model output from the MCMC method is stable and plausible", {
         quantile_97.5 = quantile(.value, 0.975)
       )
     lambda_sampled <- fit$lambda |>
-      filter(week >= lgt - 1) |>
+      dplyr::filter(week >= lgt - 1) |>
       group_by(week) |>
       summarise(
         quantile_2.5 = quantile(.value, 0.025),
@@ -130,9 +130,9 @@ test_that("Model output from the GLM method is stable and plausible", {
       generate_reports(
         lgt,
         max_lag,
+        probs,
         log_lambda0,
         rw_sd,
-        probs,
         nb_size,
         model = model_names[model_obs + 1]
       )
@@ -153,7 +153,7 @@ test_that("Model output from the GLM method is stable and plausible", {
         quantile_97.5 = quantile(.data$.value, probs = 0.975)
       )
     lambda_sampled <- fit$lambda |>
-      filter(week > lgt - params$max_lag + 1) |>
+      dplyr::filter(week > lgt - params$max_lag + 1) |>
       group_by(week) |>
       summarize(
         quantile_2.5 = quantile(.data$.value, probs = 0.025),
