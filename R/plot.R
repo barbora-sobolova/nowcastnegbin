@@ -128,7 +128,7 @@ plot_nowcast <- function(
     save_figure(
       nowcasts_plot,
       path = paste(
-        paste0("inst/figure/nowcast_plots/", data_origin, "/nowcast_"),
+        paste0("inst/figure/nowcast_plots/", data_origin, "/nowcast"),
         fitting_method,
         date_of_the_nowcast,
         sep = "_"
