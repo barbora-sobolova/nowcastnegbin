@@ -86,7 +86,6 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
 #'
 #' @return The reporting table as a matrix
 #'
-#' @importFrom stats filter
 #' @importFrom dplyr mutate
 simulate_full_data <- function(
   df_series,
@@ -114,8 +113,8 @@ simulate_full_data <- function(
   # Use tail to skip the initial `ma_degree` - 1 observations that are set to
   # NA.
   mean_proc <- tail(
-    stats::filter(
-      df_series$value, rep(1, ma_degree), "convolution", side = 1
+    rowSums(
+      sapply(seq_len(ma_degree) - 1, dplyr::lag, x = df_series$value)
     ) / ma_degree,
     lgt
   )
