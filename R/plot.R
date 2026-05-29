@@ -551,8 +551,8 @@ plot_delay_prob <- function(
       group_by(.data$delay) |>
       summarize(min_val = min(.data$.value), max_val = max(.data$.value)) |>
       mutate(
-        max_val = ifelse(max_val > 0.5, 1, max_val),
-        min_val = ifelse(min_val < 0.5, 0, min_val)
+        max_val = ifelse(.data$max_val > 0.5, 1, .data$max_val),
+        min_val = ifelse(.data$min_val < 0.5, 0, .data$min_val)
       )
     df_prior <- expand.grid(
       p = seq(0, 1, length = 800),
