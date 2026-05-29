@@ -56,28 +56,42 @@ skip_dates <- as.Date(c("2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28"))
 # simulation study, we take the total SARI counts from several years back,
 # smooth them to obtain a mean process and then simulate the counts according to
 # one of our models.
-sim_start_date <- as.Date("2014-10-05")
+sim_start_date <- as.Date("2016-02-21")
+# Like in the case study, we run an auxiliary simulation study on the first
+# "year" of the simulated data to determine the prior distributions.
+aux_sim_start_date <- sim_start_date - (52 + length_of_train_data) * 7
 # We smooth the data using moving average of degree 3.
 ma_degree <- 3
-# For how many dates we want to do the fitting.
-sim_timesteps_to_fit <- 512
+# For how many rolling windows we want to do the fitting.
+sim_timesteps_to_fit <- 500
 # Delay probabilities used in the simulation.
 sim_delay_prob <- c(0.5, 0.3, 0.2, 0.1)
-# Size of the negative binomial distribution used in the simulation.
-sim_nb_size <- 0.5
+# Dispersion parameter of the negative binomial distribution used in the
+# simulation. No single value can be used, as the dispersion parameters are on a
+# different scale for each model.
+sim_disp_par <- c("NegBinX" = 0.04, "NegBin2D" = 0.01, "NegBin1D" = 100)
 # Selected models for the simulation study
 sim_obs_model <- data.frame(
-  model_name = c("NegBinX", "NegBin2D", "NegBin1D"),
+  model_obs = c("NegBinX", "NegBin2D", "NegBin1D"),
   model_number = c(1, 2, 3)
 )
 # Seed used to simulate the counts
 sim_seed <- 2436
 
-# Define the pipeline ==========================================================
+# Define the pipeline
 list(
-  # Select the names of models we want to fit with the GLM method to branch over
-  # it.
-  tar_target(obs_model_glm, c("Poisson", "NegBinX", "NegBin2D", "NegBin1D")),
+  # Names of GLM models we use in the auxiliary case/simulation study to
+  # determine the priors. NegBin2D can't be fitted exactly using the GLM method,
+  # but we consider it to be close enough to produce plausible estimates for
+  # determining the prior distribution for the negative binomial dispersion
+  # parameter in the MCMC method.
+  tar_target(
+    obs_model_glm_for_auxiliary,
+    c("Poisson", "NegBinX", "NegBin2D", "NegBin1D")
+  ),
+  # Names of GLM models we use in the main case/simulation study. We don't fit
+  # NegBin2D in the main part anymore
+  tar_target(obs_model_glm, c("Poisson", "NegBinX", "NegBin1D")),
   # Compile the STAN model
   tar_target(compiled_model, {
     cmdstanr::cmdstan_model(here::here("inst", "stan", "nowcast.stan"))
@@ -95,6 +109,249 @@ list(
     )
   }),
 
+  # Simulation study ===========================================================
+
+  # Generate data for the simulation study -------------------------------------
+
+  # Load the data in the snapshot format. The historical time series in the
+  # snapshot format is available all the way back to 2014. We smooth the curve
+  # using a MA-process to obtain the mean process of the total counts.
+  tar_target(sim_data_series, {
+    load_preprocessed_data(
+      here::here(
+        "inst",
+        "extdata",
+        "latest_data-SARI-sari.csv"
+      ),
+      start_date = aux_sim_start_date,
+      # How many weeks of data (rows of the reporting triangle) we want to load.
+      # This is the length of the auxiliary simulation study (52 weeks + train
+      # data) and the length of the actual simulation study (train data +
+      # desired number of rolling windows). The -1 part is included to get the
+      # exact number of rolling windows, since we count the "zeroth" window as a
+      # first one. The length of training data is identical here and in the case
+      # study.
+      num_of_weeks = 52 + 2 * length_of_train_data + sim_timesteps_to_fit - 1
+    )
+  }),
+  # Data frame storing the beginning and end points of the training data for the
+  # auxiliary simulation study to keep track of the rolling windows
+  tar_target(sim_time_horizons_prev_year, {
+    get_time_horizons(
+      # We can't start immediately from the first date, since we smooth the data
+      # using a MA-process, therefore the first MA-degree - 1 values are NA.
+      aux_sim_start_date + (1 - ma_degree) * 7,
+      52,
+      length_of_train_data,
+      skip_dates = NULL
+    )
+  }),
+  # Define the rolling windows for the main part of the simulation study
+  tar_target(sim_time_horizons, {
+    get_time_horizons(
+      sim_start_date,
+      sim_timesteps_to_fit,
+      length_of_train_data,
+      skip_dates = NULL
+    )
+  }),
+  # We simulate from 3 observation models: NegBinX, NegBin2D and NegBin1D.
+  # For each model we find priors, do the fitting using MCMC and GLM and plot
+  # the results.
+  tar_map(
+    unlist = TRUE,
+    values = sim_obs_model,
+    names = model_obs,
+    # Simulate the reporting triangle using the smoothed version of the
+    # historical data as the mean process. It is identical for all 3 observation
+    # models.
+    tar_target(sim_full_data, {
+      simulate_full_data(
+        sim_data_series,
+        ma_degree,
+        max_lag = length(sim_delay_prob),
+        probs = sim_delay_prob,
+        nb_size = 1 / sim_disp_par[model_obs],
+        model = model_obs,
+        seed = sim_seed
+      )
+    }),
+
+    # Fit the GLM models to the beginning of the simulated data to obtain the
+    # priors -------------------------------------------------------------------
+
+    # Create a matrix containing the training data for each date in the
+    # auxiliary simulation study.
+    tar_target(
+      sim_train_data_prev_year,
+      filter_train_period(
+        sim_full_data,
+        start_date = sim_time_horizons_prev_year$train_data_begin,
+        end_date = sim_time_horizons_prev_year$nowcast_date,
+        max_lag = length(sim_delay_prob),
+        skip_dates = NULL
+      ),
+      pattern = map(sim_time_horizons_prev_year),
+      iteration = "list"
+    ),
+    # Create the list of data and parameters that we would pass to the STAN
+    # model. In the auxiliary simulation study, the list will be passed to the
+    # GLM model only.
+    tar_target(
+      sim_stan_data_prev_year,
+      get_stan_data(sim_train_data_prev_year$train_data),
+      pattern = map(sim_time_horizons_prev_year, sim_train_data_prev_year),
+      iteration = "list"
+    ),
+    # Fit the GLM model to the first part of the simulated data to determine
+    # the prior parameters of the negative binomial overdispersion parameter
+    tar_target(
+      sim_fitted_glm_prev_year,
+      fit_glm_model(
+        stan_data = sim_stan_data_prev_year,
+        date_of_the_nowcast = sim_time_horizons_prev_year$nowcast_date,
+        model_name = obs_model_glm_for_auxiliary
+      ),
+      pattern = cross(
+        map(sim_stan_data_prev_year, sim_time_horizons_prev_year),
+        obs_model_glm_for_auxiliary
+      ),
+      iteration = "list"
+    ),
+    # Extract the dispersion parameter estimates from the fit
+    tar_target(
+      sim_glm_log_disp_par_prev_year,
+      sim_fitted_glm_prev_year$log_disp_coeff,
+      pattern = map(sim_fitted_glm_prev_year)
+    ),
+    # Calculate the prior parameters based on the GLM estimates of the
+    # dispersion parameter
+    tar_target(
+      sim_disp_par_prior,
+      calc_disp_par_prior(sim_glm_log_disp_par_prev_year)
+    ),
+    # Calculate the parameters of the Dirichlet prior from the auxiliary
+    # simulated data, without looking at the GLM estimates.
+    tar_target(
+      sim_prior_delay_param,
+      calc_delay_prob_prior(
+        sim_full_data,
+        aux_sim_start_date,
+        aux_sim_start_date + (length_of_train_data + 52) * 7
+      )
+    ),
+
+    # Main part of the simulation study ----------------------------------------
+
+    # Create grouped data frames to group targets by date. As a result, the
+    # models will be stored and subsequently loaded in bundles of 4 (for GLM),
+    # or 6 (for MCMC)
+    tar_group_by(
+      sim_branches_mcmc,
+      group_branches(
+        sim_time_horizons,
+        sim_disp_par_prior,
+        fitting_method = "mcmc"
+      ),
+      train_data_begin,
+      nowcast_date
+    ),
+    tar_group_by(
+      sim_branches_glm,
+      group_branches(
+        sim_time_horizons,
+        obs_model_glm = obs_model_glm,
+        fitting_method = "glm"
+      ),
+      train_data_begin,
+      nowcast_date
+    ),
+    # Create a matrix containing the training data for each date of the
+    # simulation study.
+    tar_target(
+      sim_train_data,
+      filter_train_period(
+        sim_full_data,
+        start_date = sim_time_horizons$train_data_begin,
+        end_date = sim_time_horizons$nowcast_date,
+        max_lag = length(sim_delay_prob),
+        skip_dates = NULL
+      ),
+      pattern = map(sim_time_horizons),
+      iteration = "list"
+    ),
+    # Prepare the STAN data for each date of the simulation study.
+    tar_target(
+      sim_stan_data,
+      get_stan_data(
+        sim_train_data$train_data,
+        sim_prior_delay_param
+      ),
+      pattern = map(sim_time_horizons, sim_train_data),
+      iteration = "list"
+    ),
+    # Calculate the reporting table rowsums and partial rowsums of the simulated
+    # dataset for each date. The total sum (final counts) is used for plotting
+    # and evaluating the prediction. The partial sums are used only for
+    # plotting.
+    tar_target(
+      sim_df_total,
+      create_totals_data_frame(
+        sim_train_data$train_data,
+        sim_time_horizons$train_data_begin
+      ),
+      pattern = map(sim_time_horizons, sim_train_data),
+      iteration = "list"
+    ),
+    # Fit each observational model to each rolling window of the simulation
+    # study using the MCMC method.
+    tar_target(
+      sim_fitted_mcmc,
+      fit_all_stan_models(
+        compiled_model$sample,
+        stan_data = sim_stan_data,
+        model_obs = sim_branches_mcmc$model_code,
+        date_of_the_nowcast = sim_branches_mcmc$nowcast_date,
+        mean_log = sim_branches_mcmc$mean_log,
+        sd_log = sim_branches_mcmc$sd_log,
+        stan_settings = stan_settings
+      ),
+      pattern = map(sim_branches_mcmc, sim_stan_data),
+      iteration = "list",
+      cue = tar_cue("never")
+    ),
+    # Calculate the quantiles and CRPS of the nowcasts in the simulation study
+    # obtained by the MCMC method
+    tar_target(
+      sim_summarized_nowcast_mcmc,
+      summarize_nowcast(sim_fitted_mcmc$nowcast, df_total = sim_df_total),
+      pattern = map(sim_fitted_mcmc, sim_df_total),
+      iteration = "list"
+    ),
+    # Fit each observational model to each rolling window of the simulation
+    # study using the GLM method.
+    tar_target(
+      sim_fitted_glm,
+      fit_all_glm_models(
+        stan_data = sim_stan_data,
+        date_of_the_nowcast = sim_branches_glm$nowcast_date,
+        model_name = sim_branches_glm$model_name
+      ),
+      pattern = map(sim_branches_glm, sim_stan_data),
+      iteration = "list",
+      cue = tar_cue("never")
+    ),
+    # Calculate the quantiles and CRPS of the nowcasts in the simulation study
+    # obtained by the GLM method
+    tar_target(
+      sim_summarized_nowcast_glm,
+      summarize_nowcast(sim_fitted_glm$nowcast, df_total = sim_df_total),
+      pattern = map(sim_fitted_glm, sim_df_total),
+      iteration = "list"
+    ),
+  ),
+
+  # Case study =================================================================
 
   # Load the case study data ---------------------------------------------------
 
@@ -163,12 +420,12 @@ list(
     fit_glm_model(
       stan_data = stan_data_prev_year,
       date_of_the_nowcast = time_horizons_prev_year$nowcast_date,
-      model_name = obs_model_glm
+      model_name = obs_model_glm_for_auxiliary
     )
   },
   pattern = cross(
     map(stan_data_prev_year, time_horizons_prev_year),
-    obs_model_glm
+    obs_model_glm_for_auxiliary
   ),
   iteration = "list"
   ),
@@ -194,7 +451,7 @@ list(
       )
   }),
 
-  # Case study -----------------------------------------------------------------
+  # Main part of the case study ------------------------------------------------
 
   # Data frame storing the beginning and end points of the training data to
   # keep track of the rolling windows
