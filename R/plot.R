@@ -17,6 +17,9 @@
 #' saved file correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -32,9 +35,9 @@ plot_nowcast <- function(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
-  fitting_method <- match.arg(fitting_method)
   df_total <- df_total |>
     mutate(data = factor(data, levels = c("Preliminary", "Final")))
   # Plot the nowcasts
@@ -118,14 +121,14 @@ plot_nowcast <- function(
     ) +
     scale_fill_manual(values = get_model_colors()[model_names]) +
     labs(x = "Date", y = "Incidence") +
-    facet_wrap(~Distribution)
+    facet_wrap(~Distribution, nrow = 2)
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       nowcasts_plot,
       path = paste(
-        "inst/figure/nowcast_plots/nowcast",
+        paste0("inst/figure/nowcast_plots/", data_origin, "/nowcast_"),
         fitting_method,
         date_of_the_nowcast,
         sep = "_"
@@ -154,6 +157,9 @@ plot_nowcast <- function(
 #' plot.
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -167,6 +173,7 @@ plot_coverage <- function(
   df_summarized_nowcast,
   model_names,
   fitting_method = c("mcmc", "glm"),
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
   # Calculate the empirical coverage
@@ -209,13 +216,18 @@ plot_coverage <- function(
     ) +
     scale_fill_manual(values = get_model_colors()[model_names]) +
     labs(x = "Empirical coverage", title = "Empirical coverage by horizon") +
-    facet_wrap(~delay)
+    facet_wrap(~delay, nrow = 2)
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       coverage_plot,
-      paste("inst/figure/coverage_plot", fitting_method, sep = "_"),
+      paste(
+        "inst/figure/coverage_plot",
+        data_origin,
+        fitting_method,
+        sep = "_"
+      ),
       width = 9,
       height = 7
     )
@@ -239,6 +251,9 @@ plot_coverage <- function(
 #' plot.
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -252,6 +267,7 @@ plot_crps_decomp <- function(
   df_summarized_nowcast,
   model_names,
   fitting_method = c("mcmc", "glm"),
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
   # Calculate the decomposition of the average CRPS
@@ -286,13 +302,18 @@ plot_crps_decomp <- function(
     ) +
     scale_fill_manual(values = get_model_colors()[model_names]) +
     labs(x = "Mean CRPS", title = "CRPS decomposition by horizon") +
-    facet_wrap(~delay, scales = "free_x")
+    facet_wrap(~delay, scales = "free_x", nrow = 2)
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       crps_decomp_plot,
-      paste("inst/figure/crps_decomposition_plot", fitting_method, sep = "_"),
+      paste(
+        "inst/figure/crps_decomposition_plot",
+        data_origin,
+        fitting_method,
+        sep = "_"
+      ),
       width = 9,
       height = 7
     )
@@ -324,6 +345,11 @@ plot_crps_decomp <- function(
 #' model, although only the NegBinX, NegBin2D and NegBin1D rows will be used.
 #' NegBin2M shares the prior with NegBinX and NegBin1M has the same prior as
 #' NegBin1D.
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param true_value NULL for \code{data_origin = "case_study}, otherwise the
+#' true value of the dispersion parameter used for generating the data
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -340,6 +366,8 @@ plot_disp_par <- function(
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   disp_prior_pars = NULL,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  true_value = NULL,
   save_plot = TRUE
 ) {
   df_nb_size <- df_nb_size |>
@@ -423,13 +451,20 @@ plot_disp_par <- function(
       labs(title = "Dispersion parameter asymptotic distribution")
   }
 
+  # If the data comes from a simulation, we will also plot the true parameter
+  # value
+  if (data_origin != "case_study") {
+    disp_par_plot <- disp_par_plot +
+      geom_vline(aes(xintercept = true_value), linetype = "dashed")
+  }
+
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       disp_par_plot,
       paste(
-        "inst/figure/disp_plots/disp_par_plot",
+        paste0("inst/figure/disp_plots/", data_origin, "/disp_par_plot"),
         fitting_method,
         date_of_the_nowcast,
         sep = "_"
@@ -461,11 +496,16 @@ plot_disp_par <- function(
 #' "mcmc", or "glm"
 #' @param prob_prior_pars a vector of the prior parameters of the Dirichlet
 #' delay probability distribution
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param true_value NULL for \code{data_origin = "case_study}, otherwise the
+#' true value of the delay probability vector used for generating the data
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
 #' @return a ggplot object with one facet per delay showing the density of the
-#' delay probability estimates per delay, or NULL if \code{save_plot = TRUE}
+#' delay probability estimates, or NULL if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #'
@@ -476,6 +516,8 @@ plot_delay_prob <- function(
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  true_value = NULL,
   save_plot = TRUE
 ) {
   df_delay_prob <- df_delay_prob |>
@@ -483,7 +525,7 @@ plot_delay_prob <- function(
     mutate(delay = factor(.data$delay))
 
   delay_prob_plot <- ggplot() +
-    # Plot the density of the dispersion parameter estimates
+    # Plot the density of the delay probability estimates
     geom_line(
       data = df_delay_prob,
       mapping = aes(
@@ -491,33 +533,33 @@ plot_delay_prob <- function(
         color = .data$Distribution,
         linetype = "Posterior"
       ),
-      stat = "density", alpha = 0.6, bounds = c(0, 1)
+      stat = "density", alpha = 0.6
     ) +
     scale_color_manual(values = get_model_colors()[model_names]) +
     labs(x = "delay probability", y = "density") +
     coord_cartesian(ylim = c(0, 80)) +
-    facet_wrap(~delay, scales = "free_x")
-
+    facet_wrap(~delay, scales = "free_x", nrow = 2)
   if (fitting_method == "mcmc") {
     if (is.null(prob_prior_pars) || length(prob_prior_pars) == 0) {
       stop("`prob_prior_pars` must be provided when fitting_method = 'mcmc'.")
     }
     # Draw a line representing the prior distribution.
     max_lag <- length(unique(df_delay_prob$delay))
+    # Plot the prior distribution only within the region, where we have a
+    # non-zero density
+    x_axis_bounds <- df_delay_prob |>
+      group_by(.data$delay) |>
+      summarize(min_val = min(.data$.value), max_val = max(.data$.value)) |>
+      mutate(
+        max_val = ifelse(max_val > 0.5, 1, max_val),
+        min_val = ifelse(min_val < 0.5, 0, min_val)
+      )
     df_prior <- expand.grid(
-      p = seq(0, 1, length = 200),
-      delay = seq_len(max_lag)
+      p = seq(0, 1, length = 800),
+      delay = factor(seq_len(max_lag))
     ) |>
-      # We know empirically that most of the cases are reported in the first
-      # round, then the cases drop and only little gets reported later.
-      # Therefore we will plot for each delay only those regions of the
-      # parameter space, where the posterior lives.
-      filter(
-        .data$delay == 1 & .data$p > 0.2 |
-          .data$delay == 2 & .data$p < 0.7 |
-          .data$delay == 3 & .data$p < 0.2 |
-          .data$delay >= 4 & .data$p < 0.15
-      ) |>
+      inner_join(x_axis_bounds, by = "delay") |>
+      filter(.data$p > .data$min_val, .data$p < .data$max_val) |>
       # The prior distribution is Dirichlet, so each marginal is beta
       # distributed
       mutate(
@@ -543,13 +585,30 @@ plot_delay_prob <- function(
       labs(title = "Delay probability asymptotic distribution")
   }
 
+  if (data_origin != "case_study") {
+    df_true_value <- data.frame(
+      true_value = true_value,
+      delay = factor(seq_along(true_value))
+    )
+    delay_prob_plot <- delay_prob_plot +
+      geom_vline(
+        data = df_true_value,
+        mapping = aes(xintercept = true_value),
+        linetype = "dashed"
+      )
+  }
+
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       delay_prob_plot,
       paste(
-        "inst/figure/delay_prob_plots/delay_prob_plot",
+        paste0(
+          "inst/figure/delay_prob_plots/",
+          data_origin,
+          "/delay_prob_plot"
+        ),
         fitting_method,
         date_of_the_nowcast,
         sep = "_"
@@ -560,6 +619,119 @@ plot_delay_prob <- function(
     ret <- NULL
   } else {
     ret <- delay_prob_plot
+  }
+  ret
+}
+
+#' Plot and save the density plot of the mean process estimates
+#'
+#' @description This function plots and possibly saves the densities of
+#' estimates of the mean value of the total counts for all fitted models.
+#'
+#' @param df_lambda a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `.value` (the empirical
+#' distribution of the delay probability estimates), `nowcast_date` (the
+#' date when the nowcast is calculated) and `week` (the week number from the
+#' beginning of the rolling window)
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
+#' @param date_of_the_nowcast a date, when the nowcast is made to name the
+#' saved file correctly
+#' @param max_lag an integer indicating the number of columns of the reporting
+#' triangle
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param true_value NULL for \code{data_origin = "case_study}, otherwise the
+#' vector of true values of the mean of the total counts used for generating the
+#' data. The length of the vector must be \code{max_lag - 1}
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a ggplot object with one facet per week showing the density of the
+#' estimates of the mean process, or NULL if \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#'
+#' @export
+plot_mean_proc <- function(
+  df_lambda,
+  model_names,
+  date_of_the_nowcast,
+  max_lag,
+  fitting_method = c("mcmc", "glm"),
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  true_value = NULL,
+  save_plot = TRUE
+) {
+  train_data_lgt <- max(df_lambda$week)
+  df_lambda <- df_lambda |>
+    # We plot only the weeks, where we perform nowcasting
+    filter(.data$week > train_data_lgt - max_lag + 1) |>
+    # Turn the delay into a factor to allow for easier faceting
+    mutate(week = factor(.data$week))
+
+  lambda_plot <- ggplot() +
+    # Plot the density of the dispersion parameter estimates
+    geom_line(
+      data = df_lambda,
+      mapping = aes(
+        x = .data$.value,
+        color = .data$Distribution
+      ),
+      stat = "density",
+      alpha = 0.6
+    ) +
+    scale_color_manual(values = get_model_colors()[model_names]) +
+    coord_cartesian(ylim = c(0, 0.001)) +
+    labs(x = expression(lambda), y = "density") +
+    facet_wrap(~week, nrow = 2)
+
+  if (fitting_method == "mcmc") {
+    lambda_plot <- lambda_plot +
+      labs(title = expression(Posterior~of~lambda[t]))  # nolint
+  } else {
+    lambda_plot <- lambda_plot +
+      scale_linetype(guide = "none") +
+      labs(title = expression(Asymptotic~distribution~of~lambda[t]))  # nolint
+  }
+
+  if (data_origin != "case_study") {
+    df_true_value <- data.frame(
+      true_value = true_value,
+      week = factor(seq_along(true_value) + train_data_lgt - max_lag + 1)
+    )
+    lambda_plot <- lambda_plot +
+      geom_vline(
+        data = df_true_value,
+        mapping = aes(xintercept = true_value),
+        linetype = "dashed"
+      )
+  }
+
+  # Save the plot if required, the width, height and path are hard-coded here.
+  # If the plot is saved on the disc, we don't return the ggplot object.
+  if (save_plot) {
+    save_figure(
+      lambda_plot,
+      paste(
+        paste0(
+          "inst/figure/mean_proc_plots/",
+          data_origin,
+          "/mean_proc_plot"
+        ),
+        fitting_method,
+        date_of_the_nowcast,
+        sep = "_"
+      ),
+      width = 7,
+      height = 5.5
+    )
+    ret <- NULL
+  } else {
+    ret <- lambda_plot
   }
   ret
 }
@@ -583,6 +755,9 @@ plot_delay_prob <- function(
 #' plot.
 #' @param date_of_the_nowcast a date, when the nowcast is made to name the
 #' saved file correctly
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -598,6 +773,7 @@ plot_rw_sd <- function(
   df_nb_size,
   model_names,
   date_of_the_nowcast,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
   # Rename the columns with the parameter values to avoid two columns with the
@@ -627,14 +803,14 @@ plot_rw_sd <- function(
       x = "dispersion parameter",
       y = "sd of the random walk increments"
     ) +
-    facet_wrap(~Distribution, scales = "free")
+    facet_wrap(~Distribution, scales = "free", nrow = 2)
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     save_figure(
       rw_sd_scatter,
       paste(
-        "inst/figure/rw_sd_plots/rw_sd_scatter_plot",
+        paste0("inst/figure/rw_sd_plots/", data_origin, "/rw_sd_scatter_plot"),
         date_of_the_nowcast,
         sep = "_"
       ),
@@ -686,6 +862,9 @@ plot_rw_sd <- function(
 #' `sd_log`, which contain the parameters for the prior log-normal distribution
 #' of the dispersion parametr. The data frame should have 6 rows, one for each
 #' model
+#' @param lambda_true_val NULL for \code{data_origin = "case_study}, otherwise
+#' the vector of true values of the mean of the total counts used for generating
+#' the data. The length of the vector must be \code{max_lag - 1}
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -698,6 +877,7 @@ plot_per_window <- function(
   df_nowcast,
   df_delay_prob,
   df_disp_par,
+  df_lambda,
   df_rw_sd,
   df_total,
   model_names,
@@ -705,14 +885,21 @@ plot_per_window <- function(
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
   disp_prior_pars = NULL,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  prob_true_val = NULL,
+  disp_true_val = NULL,
+  lambda_true_val = NULL,
   save_plot = TRUE
 ) {
+  data_origin <- match.arg(data_origin)
+  fitting_method <- match.arg(fitting_method)
   p_nowcast <- plot_nowcast(
     df_nowcast,
     df_total,
     model_names,
     date_of_the_nowcast,
     fitting_method,
+    data_origin,
     save_plot
   )
   p_disp <- plot_disp_par(
@@ -721,6 +908,8 @@ plot_per_window <- function(
     date_of_the_nowcast,
     fitting_method,
     disp_prior_pars,
+    data_origin,
+    disp_true_val,
     save_plot
   )
   p_prob <- plot_delay_prob(
@@ -729,15 +918,34 @@ plot_per_window <- function(
     date_of_the_nowcast,
     fitting_method,
     prob_prior_pars,
+    data_origin,
+    prob_true_val,
     save_plot
   )
-  ret_list <- list(nowcast = p_nowcast, delay_prob = p_prob, disp = p_disp)
+  max_lag <- max(df_delay_prob$delay)
+  p_lambda <- plot_mean_proc(
+    df_lambda,
+    model_names,
+    date_of_the_nowcast,
+    max_lag,
+    fitting_method,
+    data_origin,
+    lambda_true_val,
+    save_plot
+  )
+  ret_list <- list(
+    nowcast = p_nowcast,
+    lambda = p_lambda,
+    delay_prob = p_prob,
+    disp = p_disp
+  )
   if (fitting_method == "mcmc") {
     p_rw_sd <- plot_rw_sd(
       df_rw_sd,
       df_disp_par,
       model_names,
       date_of_the_nowcast,
+      data_origin,
       save_plot
     )
     ret_list <- c(ret_list, rw_sd = p_rw_sd)
@@ -773,18 +981,23 @@ plot_aggregated <- function(
   df_nowcast,
   model_names,
   fitting_method = c("mcmc", "glm"),
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
+  data_origin <- match.arg(data_origin)
+  fitting_method <- match.arg(fitting_method)
   p_coverage <- plot_coverage(
     df_nowcast,
     model_names,
     fitting_method,
+    data_origin,
     save_plot
   )
   p_crps_decomp <- plot_crps_decomp(
     df_nowcast,
     model_names,
     fitting_method,
+    data_origin,
     save_plot
   )
   ret_list <- list(coverage = p_coverage, crps_decomp = p_crps_decomp)
@@ -808,6 +1021,9 @@ plot_aggregated <- function(
 #' lag as the second and so on.
 #' @param aux_study_start a date (indeed in the date format), where the
 #' auxiliary case study period used for determining the priors starts.
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -823,8 +1039,10 @@ plot_trajectory <- function(
   length_of_train_data,
   max_lag,
   aux_study_start,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
+  data_origin <- match.arg(data_origin)
   # The auxiliary analysis ends exactly one week before the main analysis
   aux_study_end <- start_date - 7
   # Arrange the whole trajectory into a data frame for plotting
@@ -863,51 +1081,83 @@ plot_trajectory <- function(
       xmin = aux_study_start,
       xmax = aux_study_end,
       y.position = first_window_max_cases + bracket_offset,
-      label = "Data used to determine\nthe priors",
+      label = "Data used to\ndetermine priors",
       label.size = 3
     ) +
-    # Highlight the first window of training data excluding the nowcasting part
-    ggpubr::geom_bracket(
-      xmin = start_date,
-      xmax = first_window_end - (max_lag - 2) * 7 - 1,
-      y.position = first_window_max_cases + bracket_offset,
-      label = "First\ntraining\ndata",
-      label.size = 3
-    ) +
-    # Highlight the first nowcasting target
-    ggpubr::geom_bracket(
-      xmin = first_window_end - (max_lag - 2) * 7 + 1,
-      xmax = first_window_end,
-      y.position = first_window_max_cases + bracket_offset,
-      label = "First\nnowcasting\ntarget",
-      label.size = 3
-    ) +
-    # Highlight the last window of training data excluding the nowcasting part
-    ggpubr::geom_bracket(
-      xmin = last_window_beg,
-      xmax = last_window_beg + (length_of_train_data - max_lag + 2) * 7 - 1,
-      y.position = last_window_max_cases + bracket_offset,
-      label = "Last\ntraining\ndata",
-      label.size = 3
-    ) +
-    # Highlight the last nowcasting target
-    ggpubr::geom_bracket(
-      xmin = last_window_beg + (length_of_train_data - max_lag + 2) * 7 + 1,
-      xmax = last_window_beg + length_of_train_data * 7,
-      y.position = last_window_max_cases + bracket_offset,
-      label = "Last\nnowcasting\ntarget",
-      label.size = 3
-    ) +
-    labs(title = "SARI incidence", y = "Incidence")
+    ylim(c(0, NA))
+  if (data_origin == "case_study") {
+    figure_path <- "inst/figure/SARI_trajectory"
+    # If we plot the case study data, we will highlight the rolling window and
+    # also divide it into the purely training data and the part, where
+    # nowcasting is being done
+    trajectory_plot <- trajectory_plot +
+      # Highlight the first window of training data excluding the nowcasting
+      # part
+      ggpubr::geom_bracket(
+        xmin = start_date,
+        xmax = first_window_end - (max_lag - 2) * 7 - 1,
+        y.position = first_window_max_cases + bracket_offset,
+        label = "First\ntraining\ndata",
+        label.size = 3
+      ) +
+      # Highlight the first nowcasting target
+      ggpubr::geom_bracket(
+        xmin = first_window_end - (max_lag - 2) * 7 + 1,
+        xmax = first_window_end,
+        y.position = first_window_max_cases + bracket_offset,
+        label = "First\nnowcasting\ntarget",
+        label.size = 3
+      ) +
+      # Highlight the last window of training data excluding the nowcasting part
+      ggpubr::geom_bracket(
+        xmin = last_window_beg,
+        xmax = last_window_beg + (length_of_train_data - max_lag + 2) * 7 - 1,
+        y.position = last_window_max_cases + bracket_offset,
+        label = "Last\ntraining\ndata",
+        label.size = 3
+      ) +
+      # Highlight the last nowcasting target
+      ggpubr::geom_bracket(
+        xmin = last_window_beg + (length_of_train_data - max_lag + 2) * 7 + 1,
+        xmax = last_window_beg + length_of_train_data * 7,
+        y.position = last_window_max_cases + bracket_offset,
+        label = "Last\nnowcasting\ntarget",
+        label.size = 3
+      ) +
+      labs(title = "SARI incidence", y = "Incidence")
+  } else {
+    figure_path <- paste0("inst/figure/", data_origin, "_simulation_trajectory")
+    # If we plot the simulation study data, we will highlight the rolling window
+    # without further differentiation, which part of data is complete and what
+    # the nowcasting target is
+    trajectory_plot <- trajectory_plot +
+      # Highlight the first window of training data including the nowcasting
+      # part
+      ggpubr::geom_bracket(
+        xmin = start_date,
+        xmax = first_window_end,
+        y.position = first_window_max_cases + bracket_offset,
+        label = "First\nwindow",
+        label.size = 3
+      ) +
+      # Highlight the last window of training data including the nowcasting part
+      ggpubr::geom_bracket(
+        xmin = last_window_beg,
+        xmax = last_window_beg + length_of_train_data * 7,
+        y.position = last_window_max_cases + bracket_offset,
+        label = "Last\nwindow",
+        label.size = 3
+      ) +
+      labs(
+        title = paste0(data_origin, " simulation incidence"),
+        y = "Incidence"
+      )
+  }
+
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
-    save_figure(
-      trajectory_plot,
-      "inst/figure/SARI_trajectory",
-      width = 11,
-      height = 7
-    )
+    save_figure(trajectory_plot, figure_path, width = 11, height = 7)
     ret <- NULL
   } else {
     ret <- trajectory_plot
@@ -925,6 +1175,9 @@ plot_trajectory <- function(
 #' `num_max_treedepth`, `ebfmi`, `Distribution`, `nowcast_date`.
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -937,8 +1190,10 @@ plot_trajectory <- function(
 plot_mcmc_diagnostics <- function(
   df_diagnostics,
   model_names,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
+  data_origin <- match.arg(data_origin)
   df_diagnostics_long <- df_diagnostics |>
     group_by(.data$Distribution, .data$nowcast_date) |>
     summarise(
@@ -961,7 +1216,7 @@ plot_mcmc_diagnostics <- function(
   date_breaks <- seq(
     min(df_diagnostics$nowcast_date),
     max(df_diagnostics$nowcast_date),
-    by = 6 * 7
+    length = 13
   )
   diag_plot <- ggplot(
     df_diagnostics_long,
@@ -981,7 +1236,7 @@ plot_mcmc_diagnostics <- function(
   if (save_plot) {
     save_figure(
       diag_plot,
-      "inst/figure/diagnostics_plot",
+      paste("inst/figure/diagnostics_plot", data_origin, sep = "_"),
       width = 9,
       height = 7
     )

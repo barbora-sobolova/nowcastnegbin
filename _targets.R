@@ -176,6 +176,21 @@ list(
         seed = sim_seed
       )
     }),
+    # Extract the last part of the mean process in each rolling window that will
+    # be plotted alongside the estimates
+    tar_target(
+      sim_mean_process_tail, {
+        filter(
+          sim_full_data,
+          date > sim_time_horizons$nowcast_date -
+            (length(sim_delay_prob) - 1) * 7 &
+            date <= sim_time_horizons$nowcast_date
+        ) |>
+          select(c("date", "mean_proc"))
+      },
+      pattern = map(sim_time_horizons),
+      iteration = "list"
+    ),
 
     # Fit the GLM models to the beginning of the simulated data to obtain the
     # priors -------------------------------------------------------------------
@@ -328,6 +343,90 @@ list(
       pattern = map(sim_fitted_mcmc, sim_df_total),
       iteration = "list"
     ),
+    # Create plots for a random sample of the rolling windows from the
+    # simulation study. For the MCMC procedure we plot:
+    # - the nowcast,
+    # - posterior density of the delay probability,
+    # - posterior density of the dispersion parameter on a scale, where 0 means
+    #   the Poisson model and higher values indicate more dispersion,
+    # - posterior density of the mean process for the weeks, where we perform
+    #   nowcasting
+    # - the scatter plot of the dispersion parameter against the standard
+    #   deviation of the random walk.
+    tar_target(
+      sim_rolling_plots_mcmc,
+      plot_per_window(
+        sim_summarized_nowcast_mcmc,
+        sim_fitted_mcmc$delay_prob,
+        sim_fitted_mcmc$nb_size,
+        sim_fitted_mcmc$lambda,
+        sim_fitted_mcmc$rw_sd,
+        sim_df_total,
+        # What observation models we fitted
+        obs_model,
+        sim_time_horizons$nowcast_date,
+        fitting_method = "mcmc",
+        prob_prior_pars = sim_prior_delay_param,
+        disp_prior_pars = sim_disp_par_prior,
+        # From which observation model we simulated the data
+        data_origin = model_obs,
+        # True values of the model parameters used to generate the data
+        prob_true_val = sim_delay_prob,
+        disp_true_val = sim_disp_par[model_obs],
+        lambda_true_val = sim_mean_process_tail$mean_proc
+      ),
+      pattern = sample(
+        map(
+          sim_fitted_mcmc,
+          sim_time_horizons,
+          sim_df_total,
+          sim_summarized_nowcast_mcmc,
+          sim_mean_process_tail
+        ),
+        n = 15
+      ),
+      iteration = "list"
+    ),
+    # Create plots of aggregated results from the simulation study for the MCMC
+    # method. We plot:
+    # - the coverage of nowcasts,
+    # - the crps decomposition.
+    tar_target(sim_aggreg_plots_mcmc, {
+      plot_aggregated(
+        bind_rows(sim_summarized_nowcast_mcmc),
+        # What observation models we fitted
+        obs_model,
+        fitting_method = "mcmc",
+        # From which observation model we simulated the data
+        data_origin = model_obs
+      )
+    }),
+    # Extract the diagnostic summaries for the MCMC models in the simulation
+    # study. We do it per branch to avoid loading all fits at once when we want
+    # to plot the diagnostics into a single plot.
+    tar_target(
+      sim_diagnostics,
+      fitted_mcmc$diagnostics,
+      pattern = map(sim_fitted_mcmc)
+    ),
+    # Plot the diagnostic summaries for the MCMC models in the simulation study
+    tar_target(
+      sim_plot_diagnostics,
+      plot_mcmc_diagnostics(sim_diagnostics, obs_model, data_origin = model_obs)
+    ),
+    # Plot the whole incidence trajectory highlighting the first and the last
+    # estimation windows
+    tar_target(
+      sim_whole_trajectory_plot,
+      plot_trajectory(
+        sim_full_data,
+        sim_start_date,
+        length_of_train_data,
+        length(sim_delay_prob),
+        aux_sim_start_date,
+        data_origin = model_obs
+      )
+    ),
     # Fit each observational model to each rolling window of the simulation
     # study using the GLM method.
     tar_target(
@@ -349,6 +448,58 @@ list(
       pattern = map(sim_fitted_glm, sim_df_total),
       iteration = "list"
     ),
+    # Create plots for each rolling window of the simulation study. For the GLM
+    # procedure we plot:
+    # - density of estimates of the delay probability,
+    # - density of estimates of the mean process for the weeks, where we
+    #   perform nowcasting
+    # - density of estimates of the dispersion parameter on a scale, where 0
+    #   means the Poisson model and higher values indicate more dispersion.
+    tar_target(
+      sim_rolling_plots_glm,
+      plot_per_window(
+        sim_summarized_nowcast_glm,
+        sim_fitted_glm$delay_prob,
+        sim_fitted_glm$nb_size,
+        sim_fitted_glm$lambda,
+        NULL,  # We don't have the random walk parameters
+        sim_df_total,
+        obs_model_glm,
+        sim_time_horizons$nowcast_date,
+        fitting_method = "glm",
+        # From which observation model we simulated the data
+        data_origin = model_obs,
+        # True values of the model parameters used to generate the data
+        prob_true_val = sim_delay_prob,
+        disp_true_val = sim_disp_par[model_obs],
+        lambda_true_val = sim_mean_process_tail$mean_proc
+      ),
+      pattern = sample(
+        map(
+          sim_fitted_glm,
+          sim_time_horizons,
+          sim_df_total,
+          sim_summarized_nowcast_glm,
+          sim_mean_process_tail
+        ),
+        n = 15
+      ),
+      iteration = "list"
+    ),
+    # Create plots of aggregated results from the simulation study for the GLM
+    # method. We plot:
+    # - the coverage of nowcasts,
+    # - the crps decomposition.
+    tar_target(sim_aggreg_plots_glm, {
+      plot_aggregated(
+        bind_rows(sim_summarized_nowcast_glm),
+        # What observation models we fitted
+        obs_model_glm,
+        fitting_method = "glm",
+        # From which observation model we simulated the data
+        data_origin = model_obs
+      )
+    })
   ),
 
   # Case study =================================================================
@@ -403,14 +554,14 @@ list(
     pattern = map(time_horizons_prev_year),
     iteration = "list"
   ),
-  # Create the list of data and parameters to pass to the STAN model for the
-  # auxiliary analysis
+  # Create the list of data and parameters that we would pass to the STAN
+  # model. In the auxiliary analysis, the list will be passed to the GLM model
+  # only.
   tar_target(
     stan_data_prev_year,
     get_stan_data(
       train_data_prev_year$train_data,
-      prior_delay_param,
-      train_data_prev_year$skip_rows
+      skip_rows = train_data_prev_year$skip_rows
     ),
     pattern = map(time_horizons_prev_year, train_data_prev_year),
     iteration = "list"
@@ -551,6 +702,8 @@ list(
   # - posterior density of the delay probability,
   # - posterior density of the dispersion parameter on a scale, where 0 means
   #   the Poisson model and higher values indicate more dispersion,
+  # - posterior density of the mean process for the weeks, where we perform
+  #   nowcasting
   # - the scatter plot of the dispersion parameter against the standard
   #   deviation of the random walk.
   tar_target(rolling_plots_mcmc, {
@@ -558,13 +711,15 @@ list(
       summarized_nowcast_mcmc,
       fitted_mcmc$delay_prob,
       fitted_mcmc$nb_size,
+      fitted_mcmc$lambda,
       fitted_mcmc$rw_sd,
       df_total,
       obs_model,
       time_horizons$nowcast_date,
       fitting_method = "mcmc",
       prior_delay_param,
-      disp_par_prior
+      disp_par_prior,
+      data_origin = "case_study"
     )
   },
   pattern = map(
@@ -582,14 +737,20 @@ list(
     plot_aggregated(
       bind_rows(summarized_nowcast_mcmc),
       obs_model,
-      fitting_method = "mcmc"
+      fitting_method = "mcmc",
+      data_origin = "case_study"
     )
   }),
+  # Extract the diagnostic summaries for the MCMC models. We do it per branch to
+  # avoid loading all fits at once when we want to plot the diagnostics into a
+  # single plot.
+  tar_target(diagnostics, fitted_mcmc$diagnostics, pattern = map(fitted_mcmc)),
   # Plot the diagnostic summaries for the MCMC models
   tar_target(plot_diagnostics, {
     plot_mcmc_diagnostics(
-      bind_rows(map(fitted_mcmc, "diagnostics")),
-      obs_model
+      diagnostics,
+      obs_model,
+      data_origin = "case_study"
     )
   }),
   # Fit the gamlss models
@@ -612,19 +773,23 @@ list(
   ),
   # Create plots for each rolling window. For the GLM procedure we plot:
   # - the nowcast,
-  # - posterior density of the delay probability,
-  # - posterior density of the dispersion parameter on a scale, where 0 means
+  # - density of estimates of the delay probability,
+  # - density of estimates of the mean process for the weeks, where we
+  #   perform nowcasting
+  # - density of estimates of the dispersion parameter on a scale, where 0 means
   #   the Poisson model and higher values indicate more dispersion.
   tar_target(rolling_plots_glm, {
     plot_per_window(
       summarized_nowcast_glm,
       fitted_glm$delay_prob,
       fitted_glm$nb_size,
+      fitted_glm$lambda,
       NULL,  # We don't have the random walk parameters
       df_total,
       obs_model_glm,
       time_horizons$nowcast_date,
-      fitting_method = "glm"
+      fitting_method = "glm",
+      data_origin = "case_study"
     )
   },
   pattern = map(fitted_glm, time_horizons, df_total, summarized_nowcast_glm),
@@ -636,7 +801,8 @@ list(
     plot_aggregated(
       bind_rows(summarized_nowcast_glm),
       obs_model_glm,
-      fitting_method = "glm"
+      fitting_method = "glm",
+      data_origin = "case_study"
     )
   }),
   # Plot the whole incidence trajectory highlighting the first and the last
@@ -647,7 +813,8 @@ list(
       analysis_start_date,
       length_of_train_data,
       max_lag,
-      aux_analysis_start_date
+      aux_analysis_start_date,
+      data_origin = "case_study"
     )
   })
 )

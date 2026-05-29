@@ -129,14 +129,15 @@ simulate_full_data <- function(
     fixed_lambda = mean_proc,
     seed = seed
   )$reports
-  # Coerce the matrix o a data frame and name the columns appropriately
+  # Coerce the matrix to a data frame and name the columns appropriately
   colnames(reporting_table) <- paste0("value_", seq_len(max_lag) - 1, "w")
   reporting_table <- reporting_table |>
     as.data.frame() |>
     dplyr::mutate(
-      date = tail(df_series$date, lgt)
+      date = tail(df_series$date, lgt),
+      mean_proc = mean_proc
     )
-  list(reports = reporting_table, mean_proc = as.vector(mean_proc))
+  reporting_table
 }
 
 #' Extract data from one rolling window
