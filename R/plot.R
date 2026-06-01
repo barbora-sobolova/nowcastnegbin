@@ -348,7 +348,7 @@ plot_crps_decomp <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
-#' @param true_value NULL for \code{data_origin = "case_study}, otherwise the
+#' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
 #' true value of the dispersion parameter used to generate the data
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
@@ -499,7 +499,7 @@ plot_disp_par <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
-#' @param true_value NULL for \code{data_origin = "case_study}, otherwise the
+#' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
 #' true value of the delay probability vector used to generate the data
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
@@ -644,7 +644,7 @@ plot_delay_prob <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
-#' @param true_value NULL for \code{data_origin = "case_study}, otherwise the
+#' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
 #' vector of true values of the mean of the total counts used to generate the
 #' data. The length of the vector must be \code{max_lag - 1}
 #' @param save_plot logical indicator, whether to save the plot using
@@ -870,11 +870,11 @@ plot_rw_sd <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
-#' @param prob_true_val  NULL for \code{data_origin = "case_study}, otherwise
+#' @param prob_true_val  NULL for \code{data_origin = "case_study"}, otherwise
 #' the true value of the delay probability vector used to generate the data
-#' @param disp_true_val NULL for \code{data_origin = "case_study}, otherwise the
+#' @param disp_true_val NULL for \code{data_origin = "case_study"}, otherwise the
 #' true value of the dispersion parameter used to generate the data
-#' @param lambda_true_val NULL for \code{data_origin = "case_study}, otherwise
+#' @param lambda_true_val NULL for \code{data_origin = "case_study"}, otherwise
 #' the vector of true values of the mean of the total counts used to generate
 #' the data. The length of the vector must be \code{max_lag - 1}
 #' @param save_plot logical indicator, whether to save the plot using
