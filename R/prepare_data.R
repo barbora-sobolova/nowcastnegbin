@@ -454,6 +454,12 @@ calc_delay_prob_prior <- function(full_data, start_date, end_date) {
 #' data frame will be grouped by these 2 columns in the pipeline.) and
 #' `model_name`. For \code{fitting_method = "mcmc"} we also have columns
 #' `mean_log` and `sd_log`.
+#'
+#' @import dplyr
+#' @importFrom tibble tibble
+#' @importFrom tibble tibble
+#'
+#' @export
 group_branches <- function(
   time_horizons,
   disp_par_prior = NULL,
@@ -467,17 +473,17 @@ group_branches <- function(
         # For the MCMC method, we will fit all 6 models and we need to store
         # their numbers to call the fitting function.
         nested_col = list(
-          tibble(model_name = get_model_names(), model_code = 0:5)
+          tibble::tibble(model_name = get_model_names(), model_code = 0:5)
         )
       ) |>
-      unnest("nested_col") |>
+      tidyr::unnest("nested_col") |>
       # Join with the data frame of prior parameters for the negative binomial
       # dispersion parameter
       inner_join(disp_par_prior, relationship = "many-to-one")
   } else {
     ret <- time_horizons |>
       mutate(model_name = list(obs_model_glm)) |>
-      unnest("model_name")
+      tidyr::unnest("model_name")
   }
   ret
 }
