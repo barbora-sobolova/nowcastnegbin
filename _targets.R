@@ -56,9 +56,11 @@ skip_dates <- as.Date(c("2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28"))
 # simulation study, we take the total SARI counts from several years back,
 # smooth them to obtain a mean process and then simulate the counts according to
 # one of our models.
-sim_start_date <- as.Date("2016-02-21")
+sim_start_date <- as.Date("2016-03-06")
 # Like in the case study, we run an auxiliary simulation study on the first
 # "year" of the simulated data to determine the prior distributions.
+# This date should fall to 19. October 2014, which is the first date, where
+# simulated data are available.
 aux_sim_start_date <- sim_start_date - (52 + length_of_train_data) * 7
 # We smooth the data using moving average of degree 3.
 ma_degree <- 3
@@ -123,7 +125,9 @@ list(
         "extdata",
         "latest_data-SARI-sari.csv"
       ),
-      start_date = aux_sim_start_date,
+      # We need to load MA-degree - 1 weeks of extra data in order to be able to
+      # smooth the data using a MA-process.
+      start_date = aux_sim_start_date - (ma_degree - 1) * 7,
       # How many weeks of data (rows of the reporting triangle) we want to load.
       # This is the length of the auxiliary simulation study (52 weeks + train
       # data) and the length of the actual simulation study (train data +
@@ -138,9 +142,7 @@ list(
   # auxiliary simulation study to keep track of the rolling windows
   tar_target(sim_time_horizons_prev_year, {
     get_time_horizons(
-      # We can't start immediately from the first date, since we smooth the data
-      # using a MA-process, therefore the first MA-degree - 1 values are NA.
-      aux_sim_start_date + (1 - ma_degree) * 7,
+      aux_sim_start_date,
       52,
       length_of_train_data,
       skip_dates = NULL
