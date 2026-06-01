@@ -4,7 +4,12 @@
 \alias{plot_mcmc_diagnostics}
 \title{Plot the summary of MCMC diagnostics}
 \usage{
-plot_mcmc_diagnostics(df_diagnostics, model_names, save_plot = TRUE)
+plot_mcmc_diagnostics(
+  df_diagnostics,
+  model_names,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  save_plot = TRUE
+)
 }
 \arguments{
 \item{df_diagnostics}{a data frame containing the diagnostic summaries for
@@ -13,6 +18,10 @@ each model and each run (timesteps). It contains columns \code{num_divergent},
 
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}
+
+\item{data_origin}{a string indicating the data generating process of
+simulated data, or whether the data correspond to the case study. Possible
+values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}

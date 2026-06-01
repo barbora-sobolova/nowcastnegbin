@@ -10,6 +10,8 @@ plot_disp_par(
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   disp_prior_pars = NULL,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  true_value = NULL,
   save_plot = TRUE
 )
 }
@@ -34,6 +36,13 @@ of the dispersion parameter. The data frame should have 6 rows, one for each
 model, although only the NegBinX, NegBin2D and NegBin1D rows will be used.
 NegBin2M shares the prior with NegBinX and NegBin1M has the same prior as
 NegBin1D.}
+
+\item{data_origin}{a string indicating the data generating process of
+simulated data, or whether the data correspond to the case study. Possible
+values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
+
+\item{true_value}{NULL for \code{data_origin = "case_study"}, otherwise the
+true value of the dispersion parameter used to generate the data}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}
