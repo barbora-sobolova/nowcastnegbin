@@ -10,6 +10,7 @@ plot_trajectory(
   length_of_train_data,
   max_lag,
   aux_study_start,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 )
 }
@@ -29,6 +30,10 @@ lag as the second and so on.}
 
 \item{aux_study_start}{a date (indeed in the date format), where the
 auxiliary case study period used for determining the priors starts.}
+
+\item{data_origin}{a string indicating the data generating process of
+simulated data, or whether the data correspond to the case study. Possible
+values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}

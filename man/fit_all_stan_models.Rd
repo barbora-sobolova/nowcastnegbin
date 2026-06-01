@@ -29,7 +29,7 @@ of the same length as \code{date_of_the_nowcast}. 0 - Poisson,
 \item{mean_log}{a vector of the location parameters of the log-normal prior
 for the dispersion parameter}
 
-\item{sd_log}{a vectorof the scale parameter of the log-normal prior for
+\item{sd_log}{a vector of the scale parameter of the log-normal prior for
 the dispersion parameter}
 
 \item{stan_settings}{a list of STAN settings}

@@ -27,9 +27,9 @@ test_that("moments as expected", {
     trajectory <- generate_reports(
       lgt,
       length(probs),
-      log_lambda0,
-      rw_noise_sd,
       probs,
+      log_lambda0 = log_lambda0,
+      rw_noise_sd = rw_noise_sd,
       nb_size = r,
       model = models[k]
     )

@@ -8,6 +8,7 @@ plot_aggregated(
   df_nowcast,
   model_names,
   fitting_method = c("mcmc", "glm"),
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 )
 }
@@ -25,6 +26,10 @@ plot.}
 
 \item{fitting_method}{a method used for fitting the nowcasting model, either
 "mcmc", or "glm"}
+
+\item{data_origin}{a string indicating the data generating process of
+simulated data, or whether the data correspond to the case study. Possible
+values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}

@@ -1,7 +1,8 @@
 #' Generate the reporting table of a nowcasting problem
 #'
 #' @description Generate the full reporting table, i.e. with no right censoring.
-#' The mean process follows an exponential random walk.
+#' The mean process follows an exponential random walk, or can be specified by
+#' a sequence of values.
 #'
 #' @param lgt Integer, the length of the simulated table.
 #' @param max_lag Integer, the maximum reporting delay, the width of the table.
@@ -11,6 +12,8 @@
 #' @param nb_size Numeric, a positive real value specifying the size of the
 #' negbin distribution. The lower, the more dispersed
 #' @param model name of the observation model
+#' @param fixed_lambda Numeric vector containing the values of the mean process.
+#' @param seed An integer for seeding the simulation
 #'
 #' @return The reporting table as a matrix
 #'
@@ -24,16 +27,17 @@
 #' generate_reports(100, 3, log_lambda0 = log(12), rw_noise_sd = 0.9,
 #'                  probs = c(0.3, 0.4, 0.3), model = "Poisson")
 #'
-#' # Example: Sample a reporting table from the NegBin2D model for 100 days,
-#' # with the maximum delay 3.
-#' generate_reports(100, 3, log_lambda0 = log(12), rw_noise_sd = 0.9,
+#' # Example: Sample a reporting table from the NegBin2D model for 10 days,
+#' # with the maximum delay 3 and a pre-specified mean process
+#' generate_reports(10, 3,
+#'                  fixed_lambda = c(10.3, 23, 17, 9, 5.1, 2, 4, 7, 11.7, 13),
 #'                  probs = c(0.3, 0.4, 0.3), nb_size = 0.8, model = "NegBin2D")
 generate_reports <- function(
   lgt,
   max_lag,
-  log_lambda0,
-  rw_noise_sd,
   probs,
+  log_lambda0 = NULL,
+  rw_noise_sd = NULL,
   nb_size = NULL,
   model = c(
     "Poisson",
@@ -42,17 +46,33 @@ generate_reports <- function(
     "NegBin1D",
     "NegBin2M",
     "NegBin1M"
-  )
+  ),
+  fixed_lambda = NULL,
+  seed = 123456
 ) {
   model <- match.arg(
     model,
     c("Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M", "NegBin1M")
   )
 
-  # Generate the random walk
-  wn <- rnorm(lgt - 1, 0, 1)
-  log_lambda <- log_lambda0 + cumsum(c(0, wn)) * rw_noise_sd
-  lambda <- exp(log_lambda)
+  # If the mean process lambda is not specified already, we generate a random
+  # walk
+  set.seed(seed)
+  if (is.null(fixed_lambda)) {
+    if (is.null(log_lambda0) || is.null(rw_noise_sd)) {
+      stop(
+        "If no mean process is given, random walk parameters must be specified."
+      )
+    }
+    wn <- rnorm(lgt - 1, 0, 1)
+    log_lambda <- log_lambda0 + cumsum(c(0, wn)) * rw_noise_sd
+    lambda <- exp(log_lambda)
+  } else {
+    if (length(fixed_lambda) != lgt) {
+      stop("'fixed_lambda' must be of length 'lgt'")
+    }
+    lambda <- fixed_lambda
+  }
 
   # The expected counts split by delay
   exp_obs <- lambda %*% t(probs)
