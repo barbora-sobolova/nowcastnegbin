@@ -65,6 +65,78 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
     )
 }
 
+#' Simulate the reporting table of a nowcasting problem based on existing data
+#'
+#' @description Generate the full reporting table, i.e. with no right censoring.
+#' The mean process is based on a real data set, where we smooth the observed
+#' counts using a moving average process.
+#'
+#' @param df_series Data frame with a column `value`, where observed counts are
+#' stored. These are smoothed by a moving average and taken as the mean process
+#' to be passed to \code{generate_reports}.
+#' @param ma_degree Integer, the order of the moving average process.
+#' @param max_lag Integer, the maximum reporting delay, the width of the table.
+#' @param probs Numeric, a numeric vector specifying the delay distribution.
+#' @param nb_size Numeric, a positive real value specifying the size of the
+#' negbin distribution. The lower, the more dispersed
+#' @param model name of the observation model
+#' @param seed An integer for seeding the simulation
+#'
+#' @return The reporting table in a data frame format
+#'
+#' @importFrom dplyr mutate
+simulate_full_data <- function(
+  df_series,
+  ma_degree,
+  max_lag,
+  probs,
+  nb_size = NULL,
+  model = c(
+    "Poisson",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBin2M",
+    "NegBin1M"
+  ),
+  seed = 123456
+) {
+  model <- match.arg(
+    model,
+    c("Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M", "NegBin1M")
+  )
+
+  lgt <- nrow(df_series) - ma_degree + 1
+
+  # Use tail to skip the initial `ma_degree` - 1 observations that are set to
+  # NA.
+  mean_proc <- tail(
+    rowSums(
+      sapply(seq_len(ma_degree) - 1, dplyr::lag, x = df_series$value)
+    ) / ma_degree,
+    lgt
+  )
+  # Generate the reporting table in the format of a matrix
+  reporting_table <- generate_reports(
+    lgt,
+    max_lag,
+    probs,
+    nb_size = nb_size,
+    model = model,
+    fixed_lambda = mean_proc,
+    seed = seed
+  )$reports
+  # Coerce the matrix to a data frame and name the columns appropriately
+  colnames(reporting_table) <- paste0("value_", seq_len(max_lag) - 1, "w")
+  reporting_table <- reporting_table |>
+    as.data.frame() |>
+    dplyr::mutate(
+      date = tail(df_series$date, lgt),
+      mean_proc = mean_proc
+    )
+  reporting_table
+}
+
 #' Extract data from one rolling window
 #'
 #' @description This function extracts the data of a single rolling window.
@@ -332,4 +404,86 @@ calc_disp_par_prior <- function(log_disp_par) {
   ) |> rename(
     "model_name" = "Distribution"
   )
+}
+
+#' Find the prior for the delay probability
+#'
+#' @description This function takes the data from the auxiliary analysis and
+#' calculates the parameters of the Dirichlet prior distribution that is used
+#' for the delay probability in the main analysis.
+#'
+#' @param full_data a data frame with columns `date` and columns
+#' `value_0w`, `value_1w`, etc. until `max_lag - 1`. The value of `max_lag` is
+#' not checked here and is only derived from the columns of \code{full_data}.
+#' @param start_date a date in the date format, the beginning of the auxiliary
+#' analysis
+#' @param end_date a date in the date format, the endpoint of the auxiliary
+#' analysis
+#' @return a vector of length `max_lag` with the parameters of the Dirichlet
+#' distribution.
+calc_delay_prob_prior <- function(full_data, start_date, end_date) {
+  full_data |>
+    filter(date >= start_date & date < end_date) |>
+    select(starts_with("value_")) |>
+    as.matrix() |>
+    apply(1, function(x) x / sum(x)) |>
+    t() |>
+    # The factor of 4 is selected to control the "flatness" of the prior
+    # distribution. May be varied as a part of a sensitivity analysis.
+    apply(2, mean) * 4
+}
+
+#' Create a data frame with info about the dynamic branching structure
+#'
+#' @description This function creates a grouped data frame of dates and models
+#' to be used to create a dynamic branching structure. Per one nowcasting date,
+#' a bundle of observation models should be fitted.
+#'
+#' @param time_horizons a data frame with columns `train_data_begin` and
+#' `nowcast_date`
+#' @param disp_par_prior a data frame with columns `mean_log`, `sd_log` and
+#' `model_name`, indicating the prior parameters for the negative binomial
+#' dispersion parameter. Relevant only for \code{fitting_method = "mcmc"},
+#' otherwise NULL
+#' @param obs_model_glm a vector of model names to be fitted using the GLM
+#' method. Only relevant, when \code{fitting_method = "glm"}, otherwise NULL
+#' @param fitting_method a string indicating the model fitting procedure. For
+#' GLM, we don't have the NegBin2M and NegBin1M models
+#'
+#' @return a data frame with columns `train_data_begin`, `nowcast_date` (The
+#' data frame will be grouped by these 2 columns in the pipeline.) and
+#' `model_name`. For \code{fitting_method = "mcmc"} we also have columns
+#' `mean_log` and `sd_log`.
+#'
+#' @import dplyr
+#' @importFrom tibble tibble
+#' @importFrom tidyr unnest
+#'
+#' @export
+group_branches <- function(
+  time_horizons,
+  disp_par_prior = NULL,
+  obs_model_glm = NULL,
+  fitting_method = c("mcmc", "glm")
+) {
+  fitting_method <- match.arg(fitting_method)
+  if (fitting_method == "mcmc") {
+    ret <- time_horizons |>
+      mutate(
+        # For the MCMC method, we will fit all 6 models and we need to store
+        # their numbers to call the fitting function.
+        nested_col = list(
+          tibble::tibble(model_name = get_model_names(), model_code = 0:5)
+        )
+      ) |>
+      tidyr::unnest("nested_col") |>
+      # Join with the data frame of prior parameters for the negative binomial
+      # dispersion parameter
+      inner_join(disp_par_prior, relationship = "many-to-one")
+  } else {
+    ret <- time_horizons |>
+      mutate(model_name = list(obs_model_glm)) |>
+      tidyr::unnest("model_name")
+  }
+  ret
 }
