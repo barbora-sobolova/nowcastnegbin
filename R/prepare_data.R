@@ -457,7 +457,7 @@ calc_delay_prob_prior <- function(full_data, start_date, end_date) {
 #'
 #' @import dplyr
 #' @importFrom tibble tibble
-#' @importFrom tibble tibble
+#' @importFrom tidyr unnest
 #'
 #' @export
 group_branches <- function(
