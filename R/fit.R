@@ -815,7 +815,7 @@ fit_glm_model <- function(
     gamlss2(
       # We need to include the intercept, otherwise the design matrix will be
       # inconsistent between the Poisson and NegBin models.
-      obs ~ s(week, k = n_basis) + delay,
+      obs ~ s(week, k = n_basis, bs = "bs") + delay,
       sigma.formula = gamlss_specs$sigma_formula,
       family = gamlss_specs$family,
       data = glm_data,
@@ -834,7 +834,7 @@ fit_glm_model <- function(
     # gamlss2() function. Since gamlss2() uses mgcv under the hood, the bases
     # are identical and we can use it to reconstruct the spline curve.
     mod_mgcv <- gam(
-      obs ~ s(week, k = n_basis_functions) + delay,
+      obs ~ s(week, k = n_basis_functions, bs = "bs") + delay,
       data = glm_data,
       family = poisson
     )
