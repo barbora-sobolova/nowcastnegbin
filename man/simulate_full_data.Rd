@@ -31,13 +31,9 @@ negbin distribution. The lower, the more dispersed}
 \item{model}{name of the observation model}
 
 \item{seed}{An integer for seeding the simulation}
-
-\item{lgt}{Integer, the length of the simulated table.}
-
-\item{log_lambda0}{Numeric, the initial value of the random walk.}
 }
 \value{
-The reporting table as a matrix
+The reporting table in a data frame format
 }
 \description{
 Generate the full reporting table, i.e. with no right censoring.

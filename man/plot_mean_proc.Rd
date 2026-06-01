@@ -39,7 +39,7 @@ simulated data, or whether the data correspond to the case study. Possible
 values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{true_value}{NULL for \code{data_origin = "case_study}, otherwise the
-vector of true values of the mean of the total counts used for generating the
+vector of true values of the mean of the total counts used to generate the
 data. The length of the vector must be \code{max_lag - 1}}
 
 \item{save_plot}{logical indicator, whether to save the plot using

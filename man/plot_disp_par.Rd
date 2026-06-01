@@ -42,7 +42,7 @@ simulated data, or whether the data correspond to the case study. Possible
 values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{true_value}{NULL for \code{data_origin = "case_study}, otherwise the
-true value of the dispersion parameter used for generating the data}
+true value of the dispersion parameter used to generate the data}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}

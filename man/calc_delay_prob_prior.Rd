@@ -10,6 +10,12 @@ calc_delay_prob_prior(full_data, start_date, end_date)
 \item{full_data}{a data frame with columns \code{date} and columns
 \code{value_0w}, \code{value_1w}, etc. until \code{max_lag - 1}. The value of \code{max_lag} is
 not checked here and is only derived from the columns of \code{full_data}.}
+
+\item{start_date}{a date in the date format, the beginning of the auxiliary
+analysis}
+
+\item{end_date}{a date in the date format, the endpoint of the auxiliary
+analysis}
 }
 \value{
 a vector of length \code{max_lag} with the parameters of the Dirichlet

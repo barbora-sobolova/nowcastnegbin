@@ -349,7 +349,7 @@ plot_crps_decomp <- function(
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param true_value NULL for \code{data_origin = "case_study}, otherwise the
-#' true value of the dispersion parameter used for generating the data
+#' true value of the dispersion parameter used to generate the data
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -500,7 +500,7 @@ plot_disp_par <- function(
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param true_value NULL for \code{data_origin = "case_study}, otherwise the
-#' true value of the delay probability vector used for generating the data
+#' true value of the delay probability vector used to generate the data
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -645,7 +645,7 @@ plot_delay_prob <- function(
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param true_value NULL for \code{data_origin = "case_study}, otherwise the
-#' vector of true values of the mean of the total counts used for generating the
+#' vector of true values of the mean of the total counts used to generate the
 #' data. The length of the vector must be \code{max_lag - 1}
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
@@ -844,6 +844,11 @@ plot_rw_sd <- function(
 #' (containing the name of the observation model), `.value` (the empirical
 #' distribution of the dispersion parameter estimates) and `nowcast_date` (the
 #' date when the nowcast is calculated)
+#' @param df_lambda a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `.value` (the empirical
+#' distribution of the delay probability estimates), `nowcast_date` (the
+#' date when the nowcast is calculated) and `week` (the week number from the
+#' beginning of the rolling window)
 #' @param df_rw_sd a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `.value` (the empirical
 #' distribution of the estimates of the random walk standard deviation) and
@@ -862,8 +867,15 @@ plot_rw_sd <- function(
 #' `sd_log`, which contain the parameters for the prior log-normal distribution
 #' of the dispersion parametr. The data frame should have 6 rows, one for each
 #' model
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param prob_true_val  NULL for \code{data_origin = "case_study}, otherwise
+#' the true value of the delay probability vector used to generate the data
+#' @param disp_true_val NULL for \code{data_origin = "case_study}, otherwise the
+#' true value of the dispersion parameter used to generate the data
 #' @param lambda_true_val NULL for \code{data_origin = "case_study}, otherwise
-#' the vector of true values of the mean of the total counts used for generating
+#' the vector of true values of the mean of the total counts used to generate
 #' the data. The length of the vector must be \code{max_lag - 1}
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
@@ -969,6 +981,9 @@ plot_per_window <- function(
 #' plot.
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'

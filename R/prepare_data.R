@@ -75,16 +75,14 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
 #' stored. These are smoothed by a moving average and taken as the mean process
 #' to be passed to \code{generate_reports}.
 #' @param ma_degree Integer, the order of the moving average process.
-#' @param lgt Integer, the length of the simulated table.
 #' @param max_lag Integer, the maximum reporting delay, the width of the table.
-#' @param log_lambda0 Numeric, the initial value of the random walk.
 #' @param probs Numeric, a numeric vector specifying the delay distribution.
 #' @param nb_size Numeric, a positive real value specifying the size of the
 #' negbin distribution. The lower, the more dispersed
 #' @param model name of the observation model
 #' @param seed An integer for seeding the simulation
 #'
-#' @return The reporting table as a matrix
+#' @return The reporting table in a data frame format
 #'
 #' @importFrom dplyr mutate
 simulate_full_data <- function(
@@ -417,6 +415,10 @@ calc_disp_par_prior <- function(log_disp_par) {
 #' @param full_data a data frame with columns `date` and columns
 #' `value_0w`, `value_1w`, etc. until `max_lag - 1`. The value of `max_lag` is
 #' not checked here and is only derived from the columns of \code{full_data}.
+#' @param start_date a date in the date format, the beginning of the auxiliary
+#' analysis
+#' @param end_date a date in the date format, the endpoint of the auxiliary
+#' analysis
 #' @return a vector of length `max_lag` with the parameters of the Dirichlet
 #' distribution.
 calc_delay_prob_prior <- function(full_data, start_date, end_date) {
@@ -447,6 +449,7 @@ calc_delay_prob_prior <- function(full_data, start_date, end_date) {
 #' method. Only relevant, when \code{fitting_method = "glm"}, otherwise NULL
 #' @param fitting_method a string indicating the model fitting procedure. For
 #' GLM, we don't have the NegBin2M and NegBin1M models
+#'
 #' @return a data frame with columns `train_data_begin`, `nowcast_date` (The
 #' data frame will be grouped by these 2 columns in the pipeline.) and
 #' `model_name`. For \code{fitting_method = "mcmc"} we also have columns
