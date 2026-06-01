@@ -872,8 +872,8 @@ plot_rw_sd <- function(
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param prob_true_val  NULL for \code{data_origin = "case_study"}, otherwise
 #' the true value of the delay probability vector used to generate the data
-#' @param disp_true_val NULL for \code{data_origin = "case_study"}, otherwise the
-#' true value of the dispersion parameter used to generate the data
+#' @param disp_true_val NULL for \code{data_origin = "case_study"}, otherwise
+#' the true value of the dispersion parameter used to generate the data
 #' @param lambda_true_val NULL for \code{data_origin = "case_study"}, otherwise
 #' the vector of true values of the mean of the total counts used to generate
 #' the data. The length of the vector must be \code{max_lag - 1}
