@@ -405,7 +405,7 @@ list(
     # to plot the diagnostics into a single plot.
     tar_target(
       sim_diagnostics,
-      fitted_mcmc$diagnostics,
+      sim_fitted_mcmc$diagnostics,
       pattern = map(sim_fitted_mcmc)
     ),
     # Plot the diagnostic summaries for the MCMC models in the simulation study
