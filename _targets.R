@@ -38,7 +38,7 @@ analysis_start_date <- as.Date("2023-12-24")
 # How many weeks we want to include as "training" data.
 # This includes the last `max_lag - 1` weeks for which we calculate the nowcast.
 length_of_train_data <- 20
-# We run an auxiliary case study of 30 time windows before the actual one to
+# We run an auxiliary case study of 32 time windows before the actual one to
 # determine the prior distributions.
 aux_timesteps_to_fit <- 32
 aux_analysis_start_date <- analysis_start_date -
@@ -60,7 +60,7 @@ skip_dates <- as.Date(
 # simulation study, we take the total SARI counts from several years back,
 # smooth them to obtain a mean process and then simulate the counts according to
 # one of our models.
-sim_start_date <- as.Date("2016-03-06")
+sim_start_date <- as.Date("2015-10-11")
 # Like in the case study, we run an auxiliary simulation study on the first
 # "year" of the simulated data to determine the prior distributions.
 # This date should fall to 19. October 2014, which is the first date, where
