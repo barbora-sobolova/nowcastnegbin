@@ -733,12 +733,15 @@ list(
       data_origin = "case_study"
     )
   },
-  pattern = map(
-    fitted_mcmc,
-    time_horizons,
-    df_total,
-    summarized_nowcast_mcmc,
-    branches_mcmc
+  pattern = sample(
+    map(
+      fitted_mcmc,
+      time_horizons,
+      df_total,
+      summarized_nowcast_mcmc,
+      branches_mcmc
+    ),
+    n = 15
   ),
   iteration = "list"),
   # Create plots of aggregated results from the MCMC method. We plot:
@@ -803,7 +806,10 @@ list(
       data_origin = "case_study"
     )
   },
-  pattern = map(fitted_glm, time_horizons, df_total, summarized_nowcast_glm),
+  pattern = sample(
+    map(fitted_glm, time_horizons, df_total, summarized_nowcast_glm),
+    n = 15
+  ),
   iteration = "list"),
   # Create plots of aggregated results from the GLM method. We plot:
   # - the coverage of nowcasts,
