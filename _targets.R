@@ -34,23 +34,27 @@ ggplot2::theme_set(ggplot2::theme_bw())
 max_lag <- 5
 
 # Where the beginning of the data used for the case study is
-analysis_start_date <- as.Date("2024-06-23")
+analysis_start_date <- as.Date("2023-12-24")
 # How many weeks we want to include as "training" data.
 # This includes the last `max_lag - 1` weeks for which we calculate the nowcast.
 length_of_train_data <- 20
-# We run an auxiliary case study one year before the actual one to determine
-# the prior distributions.
-aux_analysis_start_date <- analysis_start_date - (52 + length_of_train_data) * 7
+# We run an auxiliary case study of 30 time windows before the actual one to
+# determine the prior distributions.
+aux_timesteps_to_fit <- 32
+aux_analysis_start_date <- analysis_start_date -
+  (aux_timesteps_to_fit + length_of_train_data - 1) * 7
 # For how many dates we want to do the fitting. For each time step, we shift the
 # window of the train data to include a new week of observations mimicking a
 # real-time analysis.
-timesteps_to_fit <- 75
+timesteps_to_fit <- 104
 # What dates shall be skipped due to the Christmas break. These dates indicate
 # two things:
 #  1. No nowcast will be produced on these days
 #  2. The diagonal of the reporting triangle corresponding to these dates and
 #     most of the one directly following will be dropped from the likelihood.
-skip_dates <- as.Date(c("2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28"))
+skip_dates <- as.Date(
+  c("2023-12-24", "2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28")
+)
 
 # Where the beginning of the data used for the simulation study is. For the
 # simulation study, we take the total SARI counts from several years back,
@@ -61,7 +65,8 @@ sim_start_date <- as.Date("2016-03-06")
 # "year" of the simulated data to determine the prior distributions.
 # This date should fall to 19. October 2014, which is the first date, where
 # simulated data are available.
-aux_sim_start_date <- sim_start_date - (52 + length_of_train_data) * 7
+aux_sim_start_date <- sim_start_date -
+  (aux_timesteps_to_fit + length_of_train_data - 1) * 7
 # We smooth the data using moving average of degree 3.
 ma_degree <- 3
 # For how many rolling windows we want to do the fitting.
@@ -129,34 +134,37 @@ list(
       # smooth the data using a MA-process.
       start_date = aux_sim_start_date - (ma_degree - 1) * 7,
       # How many weeks of data (rows of the reporting triangle) we want to load.
-      # This is the length of the auxiliary simulation study (52 weeks + train
-      # data) and the length of the actual simulation study (train data +
-      # desired number of rolling windows). The -1 part is included to get the
-      # exact number of rolling windows, since we count the "zeroth" window as a
-      # first one. The length of training data is identical here and in the case
-      # study.
-      num_of_weeks = 52 + 2 * length_of_train_data + sim_timesteps_to_fit - 1
+      # This is the length of the auxiliary simulation study (auxiliary windows
+      # + train data) and the length of the actual simulation study
+      # (train data + desired number of rolling windows). The -1 part is
+      # included to get the exact number of rolling windows, since we count the
+      # "zeroth" window as the first one. The length of training data is
+      # identical here and in the case study.
+      num_of_weeks = aux_timesteps_to_fit +
+        2 * length_of_train_data + sim_timesteps_to_fit - 1
     )
   }),
   # Data frame storing the beginning and end points of the training data for the
   # auxiliary simulation study to keep track of the rolling windows
-  tar_target(sim_time_horizons_prev_year, {
+  tar_target(
+    sim_time_horizons_prev_year,
     get_time_horizons(
       aux_sim_start_date,
-      52,
+      aux_timesteps_to_fit,
       length_of_train_data,
       skip_dates = NULL
     )
-  }),
+  ),
   # Define the rolling windows for the main part of the simulation study
-  tar_target(sim_time_horizons, {
+  tar_target(
+    sim_time_horizons,
     get_time_horizons(
       sim_start_date,
       sim_timesteps_to_fit,
       length_of_train_data,
       skip_dates = NULL
     )
-  }),
+  ),
   # We simulate from 3 observation models: NegBinX, NegBin2D and NegBin1D.
   # For each model we find priors, do the fitting using MCMC and GLM and plot
   # the results.
@@ -254,7 +262,7 @@ list(
       calc_delay_prob_prior(
         sim_full_data,
         aux_sim_start_date,
-        aux_sim_start_date + (length_of_train_data + 52) * 7
+        aux_sim_start_date + (length_of_train_data + aux_timesteps_to_fit) * 7
       )
     ),
 
@@ -518,11 +526,13 @@ list(
       ),
       start_date = aux_analysis_start_date,
       # How many weeks of data (rows of the reporting triangle) we want to load.
-      # This is the length of the auxiliary case study (52 weeks + train data)
-      # and the length of the actual case study (train data + desired number of
-      # rolling windows). The -1 part is included to get the exact number of
-      # rolling windows, since we count the "zeroth" window as a first one.
-      num_of_weeks = 52 + 2 * length_of_train_data + timesteps_to_fit - 1
+      # This is the length of the auxiliary case study (auxiliary windows +
+      # train data) and the length of the actual case study (train data +
+      # desired number of rolling windows). The -1 part is included to get the
+      # exact number of rolling windows, since we count the "zeroth" window as
+      # the first one.
+      num_of_weeks = aux_timesteps_to_fit +
+        2 * length_of_train_data + timesteps_to_fit - 1
     )
   }),
 
@@ -533,7 +543,7 @@ list(
   tar_target(time_horizons_prev_year, {
     get_time_horizons(
       aux_analysis_start_date,
-      52,
+      aux_timesteps_to_fit,
       length_of_train_data,
       skip_dates = as.Date("2023-12-24")
     )
@@ -598,7 +608,8 @@ list(
     calc_delay_prob_prior(
       full_data,
       aux_analysis_start_date,
-      aux_analysis_start_date + (length_of_train_data + 52) * 7
+      aux_analysis_start_date +
+        (length_of_train_data + aux_timesteps_to_fit) * 7
       )
   }),
 
