@@ -261,21 +261,10 @@ mock_unobserved <- function(obs_counts) {
 #' @export
 get_stan_data <- function(
   train_data,
-  prior_delay_param = NULL,
   skip_rows = NULL
 ) {
   # Grab the maximum lag
   max_lag <- ncol(train_data)
-  # Make sure that the parameters of the prior distribution of the delay
-  # probabilities have a correct length.
-  if (!is.null(prior_delay_param)) {
-    if (length(prior_delay_param) != max_lag) {
-      stop("The vector of prior parameters of the reporting delay must have the same length as there are columns in the reporting triangle.")  # nolint
-    }
-    if (!is.numeric(prior_delay_param) || any(prior_delay_param <= 0)) {
-      stop("`prior_delay_param` must be a numeric vector of strictly positive values.")  # nolint
-    }
-  }
   # Replace the known counts by NAs to create the reporting triangle
   obs_mat_truncated <- mock_unobserved(train_data)
   # Flatten the observation matrix by row
@@ -294,8 +283,6 @@ get_stan_data <- function(
     # Maximum lag with delay zero counting as the first lag. This is the number
     # of columns of the reporting triangle.
     d = max_lag,
-    # Parameters of the prior Dirichlet distribution of the reporting delay
-    prior_delay_param = prior_delay_param,
     # Observations in the flat format with the unobserved entries skipped. Must
     # be defined like this, otherwise the look-up indices in the STAN algorithm
     # won't work.
@@ -373,15 +360,17 @@ get_stan_data <- function(
 #' distribution) and `model_name`. The data frame has 6 rows, one for each
 #' observation model. For Poisson model, we use placeholder values -1, for the
 #' NegBin2M and NegBin1M models, we reuse the prior of other models.
-calc_disp_par_prior <- function(log_disp_par) {
+calc_disp_par_prior <- function(log_disp_par, disp_par_prior_scale_factor = 3) {
   prior_pars_from_glm <- log_disp_par |>
     group_by(.data$Distribution) |>
     summarize(
       mean_log = mean(.data$log_disp_hat),
-      # Loosely inspired by Rubin's rules. The scale factor 3 is there to make
+      # Loosely inspired by Rubin's rules. The scale factor is there to make
       # prior distribution even wider and can be subjected to a sensitivity
       # analysis.
-      sd_log = 3 * (sqrt(mean(.data$log_disp_se^2) + var(.data$log_disp_hat)))
+      sd_log = (sqrt(mean(.data$log_disp_se^2) + var(.data$log_disp_hat))) *
+        disp_par_prior_scale_factor,
+      disp_par_factor = disp_par_prior_scale_factor
     ) |>
     # Put placeholder values for the Poisson model
     tidyr::replace_na(list(mean_log = -1, sd_log = -1))
@@ -421,16 +410,25 @@ calc_disp_par_prior <- function(log_disp_par) {
 #' analysis
 #' @return a vector of length `max_lag` with the parameters of the Dirichlet
 #' distribution.
-calc_delay_prob_prior <- function(full_data, start_date, end_date) {
-  full_data |>
+calc_delay_prob_prior <- function(
+  full_data,
+  start_date,
+  end_date,
+  prior_scale_factor = 4
+) {
+  prob_vec <- full_data |>
     filter(date >= start_date & date < end_date) |>
     select(starts_with("value_")) |>
     as.matrix() |>
     apply(1, function(x) x / sum(x)) |>
     t() |>
-    # The factor of 4 is selected to control the "flatness" of the prior
-    # distribution. May be varied as a part of a sensitivity analysis.
-    apply(2, mean) * 4
+    # The scale factor of controls the "flatness" of the prior distribution. May
+    # be varied as a part of a sensitivity analysis.
+    apply(2, mean)
+  names(prob_vec) <- paste("delay", seq_along(prob_vec) - 1, sep = "_")
+  ret <- as.data.frame(prior_scale_factor %*% t(prob_vec)) |>
+    mutate(delay_prob_factor = prior_scale_factor)
+  ret
 }
 
 #' Create a data frame with info about the dynamic branching structure
@@ -463,11 +461,29 @@ calc_delay_prob_prior <- function(full_data, start_date, end_date) {
 group_branches <- function(
   time_horizons,
   disp_par_prior = NULL,
+  delay_prob_prior = NULL,
   obs_model_glm = NULL,
-  fitting_method = c("mcmc", "glm")
+  fitting_method = c("mcmc", "glm"),
+  sensitivity_scenarios = data.frame(
+    delay_prob_factor = 4,
+    disp_par_factor = 3,
+    scenario_name = ""
+  )
 ) {
   fitting_method <- match.arg(fitting_method)
   if (fitting_method == "mcmc") {
+    prior_pars <- inner_join(
+      disp_par_prior,
+      sensitivity_scenarios,
+      by = "disp_par_factor",
+      relationship = "many-to-many"
+    ) |>
+      unique() |>
+    inner_join(
+      delay_prob_prior,
+      by = "delay_prob_factor",
+      relationship = "many-to-many"
+    )
     ret <- time_horizons |>
       mutate(
         # For the MCMC method, we will fit all 6 models and we need to store
@@ -479,7 +495,11 @@ group_branches <- function(
       tidyr::unnest("nested_col") |>
       # Join with the data frame of prior parameters for the negative binomial
       # dispersion parameter
-      inner_join(disp_par_prior, relationship = "many-to-one")
+      inner_join(
+        prior_pars,
+        by = "model_name",
+        relationship = "many-to-many"
+      )
   } else {
     ret <- time_horizons |>
       mutate(model_name = list(obs_model_glm)) |>

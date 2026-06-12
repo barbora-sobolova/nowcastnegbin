@@ -10,6 +10,11 @@
 #' @param stan_data a list of data and parameters accepted by the STAN model
 #' returned by the `get_stan_data()` function
 #' @param date_of_the_nowcast a vector of dates, when the nowcast is made
+#' @param prior_delay_param a data frame of the Dirichlet distribution
+#' parameters for the delay probability prior. It contains columns
+#' \code{delay_factor} signifying the sum of the parameters (i.e. the scale of
+#' the Dirichlet distribution) and columns named \code{delay_0},
+#' \code{delay_1}... until the maximum delay.
 #' @param mean_log a vector of the location parameters of the log-normal prior
 #' for the dispersion parameter
 #' @param sd_log a vector of the scale parameter of the log-normal prior for
@@ -18,6 +23,9 @@
 #' of the same length as `date_of_the_nowcast`. 0 - Poisson,
 #' 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.
 #' @param stan_settings a list of STAN settings
+#' @param sensitivity_scenario_name a vector of scenario names used in the
+#' sensitivity analysis. A vector of all "" strings corresponds to the main
+#' analysis.
 #'
 #' @return list of the data frames with the MCMC draws of different quantities:
 #' \describe{
@@ -30,8 +38,9 @@
 #'   binomial distribution. Not applicable for the Poisson model.}
 #'  }
 #'
-#' @importFrom dplyr bind_rows
+#' @importFrom dplyr bind_rows select
 #' @importFrom purrr map
+#' @importFrom tidyselect ends_with
 #'
 #' @export
 fit_all_stan_models <- function(
@@ -39,12 +48,28 @@ fit_all_stan_models <- function(
   stan_data,
   model_obs,
   date_of_the_nowcast,
+  prior_delay_param,
   mean_log,
   sd_log,
-  stan_settings
+  stan_settings,
+  sensitivity_scenario_name = rep("", length(model_obs))
 ) {
+  # Check whether the lengths of prior parameter vectors are aligned
+  if (
+    length(model_obs) != length(mean_log) &&
+    length(model_obs) != length(sd_log) &&
+    length(model_obs) != length(sensitivity_scenario_name) &&
+    length(model_obs) != nrow(prior_delay_param)
+  ) {
+    stop("'model_obs', 'sensitivity_scenario_name', 'mean_log' and 'sd_log' must be of an equal length and 'prior_delay_param' must have an equal number of rows")  # nolint
+  }
   fits <- vector("list", length(model_obs))
   for (k in seq_along(model_obs)) {
+    # Extract the parameters of the delay probability prior for the
+    # corresponding scenario.
+    prob_prior_pars <- select(prior_delay_param[k, ], -ends_with("_factor")) |>
+      as.vector() |>
+      unlist()
     fits[[k]] <- fit_stan_model(
       compiled_model,
       stan_data,
@@ -53,9 +78,11 @@ fit_all_stan_models <- function(
       # observation models, so we could also pass just `date_of_the_nowcast[1]`
       # each time
       date_of_the_nowcast[k],
+      prob_prior_pars,
       mean_log[k],
       sd_log[k],
-      stan_settings
+      stan_settings,
+      sensitivity_scenario_name[k]
     )
   }
   ret_list <- list(
@@ -81,11 +108,16 @@ fit_all_stan_models <- function(
 #' 1 - NegBinX, 2 - NegBin2D, 3 - NegBin1D, 4 - NegBin2M, 5 - NegBin1M.
 #' @param date_of_the_nowcast a date, when the nowcast is made to add as a
 #' column to the data frame with results
+#' @param prior_delay_param a vector of the Dirichlet distribution
+#' parameters for the delay probability prior
+#' \code{delay_1}... until the maximum delay.
 #' @param mean_log a scalar, the location parameter of the log-normal prior for
 #' the dispersion parameter
 #' @param sd_log a scalar, the scale parameter of the log-normal prior for
 #' the dispersion parameter
 #' @param stan_settings a list of STAN settings
+#' @param sensitivity_sc a string of a scenario name used in the
+#' sensitivity analysis. The "" strings corresponds to the main analysis.
 #'
 #' @return list of the data frames with the MCMC draws of different quantities:
 #' \describe{
@@ -107,28 +139,34 @@ fit_stan_model <- function(
   stan_data,
   model_obs,
   date_of_the_nowcast,
+  prior_delay_param,
   mean_log,
   sd_log,
-  stan_settings
+  stan_settings,
+  sensitivity_sc = ""
 ) {
-  # A helper function that adds the model names and date of the nowcast into
-  # a data frame with parameter samples
+  # A helper function that adds the model names, date of the nowcast and
+  # a potential name of a sensitivity analysis scenario into a data frame with
+  # parameter samples
   add_meta <- function(df) {
     mutate(
       df,
       # Observation models are numbered from zero
       Distribution = get_model_names()[model_obs + 1],
-      nowcast_date = date_of_the_nowcast
+      nowcast_date = date_of_the_nowcast,
+      sensitivity_sc = sensitivity_sc
     )
   }
-  # Fit the model
+  # Add parameter values that are not contained in `stan_data`
   complete_stan_data <- list(
     c(
       stan_data,
       model_obs = model_obs,
+      prior_delay_param = list(prior_delay_param),
       disp_prior_pars = list(c(mean_log, sd_log))
     )
   )
+  # Fit the model
   fitted_model <- do.call(
     compiled_model,
     c(data = complete_stan_data, stan_settings)
@@ -137,7 +175,11 @@ fit_stan_model <- function(
   diagnostics <- fitted_model$diagnostic_summary() |>
     suppressMessages() |>
     as.data.frame() |>
-    mutate(seed = stan_settings$seed, nowcast_date = date_of_the_nowcast) |>
+    mutate(
+      seed = stan_settings$seed,
+      nowcast_date = date_of_the_nowcast,
+      sensitivity_sc = sensitivity_sc
+      ) |>
     # Add the information about the sampling duration
     cbind(fitted_model$time()$chains)
   # Refit the model, if we get too many divergent transitions, or the ebfmi is
@@ -173,7 +215,11 @@ fit_stan_model <- function(
     if (store_refit) {
       fitted_model <- refitted_model
       diagnostics <- diagnostics_refit |>
-        mutate(seed = stan_settings$seed, nowcast_date = date_of_the_nowcast) |>
+        mutate(
+          seed = stan_settings$seed,
+          nowcast_date = date_of_the_nowcast,
+          sensitivity_sc = sensitivity_sc
+        ) |>
         cbind(fitted_model$time()$chains)
     }
   }

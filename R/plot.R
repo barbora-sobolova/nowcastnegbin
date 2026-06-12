@@ -36,6 +36,7 @@ plot_nowcast <- function(
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
   save_plot = TRUE
 ) {
   df_total <- df_total |>
@@ -127,11 +128,14 @@ plot_nowcast <- function(
   if (save_plot) {
     save_figure(
       nowcasts_plot,
-      path = paste(
-        paste0("inst/figure/nowcast_plots/", data_origin, "/nowcast"),
-        fitting_method,
-        date_of_the_nowcast,
-        sep = "_"
+      path = paste0(
+        paste(
+          paste0("inst/figure/nowcast_plots/", data_origin, "/nowcast"),
+          fitting_method,
+          date_of_the_nowcast,
+          sep = "_"
+        ),
+        sensitivity_sc
       ),
       width = 9,
       height = 7
@@ -174,6 +178,7 @@ plot_coverage <- function(
   model_names,
   fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
   save_plot = TRUE
 ) {
   # Calculate the empirical coverage
@@ -222,11 +227,14 @@ plot_coverage <- function(
   if (save_plot) {
     save_figure(
       coverage_plot,
-      paste(
-        "inst/figure/coverage_plot",
-        data_origin,
-        fitting_method,
-        sep = "_"
+      paste0(
+        paste(
+          "inst/figure/coverage_plot",
+          data_origin,
+          fitting_method,
+          sep = "_"
+        ),
+        sensitivity_sc
       ),
       width = 9,
       height = 7
@@ -268,6 +276,7 @@ plot_crps_decomp <- function(
   model_names,
   fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
   save_plot = TRUE
 ) {
   # Calculate the decomposition of the average CRPS
@@ -308,11 +317,14 @@ plot_crps_decomp <- function(
   if (save_plot) {
     save_figure(
       crps_decomp_plot,
-      paste(
-        "inst/figure/crps_decomposition_plot",
-        data_origin,
-        fitting_method,
-        sep = "_"
+      paste0(
+        paste(
+          "inst/figure/crps_decomposition_plot",
+          data_origin,
+          fitting_method,
+          sep = "_"
+        ),
+        sensitivity_sc
       ),
       width = 9,
       height = 7
@@ -367,6 +379,7 @@ plot_disp_par <- function(
   fitting_method = c("mcmc", "glm"),
   disp_prior_pars = NULL,
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
   true_value = NULL,
   save_plot = TRUE
 ) {
@@ -463,11 +476,14 @@ plot_disp_par <- function(
   if (save_plot) {
     save_figure(
       disp_par_plot,
-      paste(
-        paste0("inst/figure/disp_plots/", data_origin, "/disp_par_plot"),
-        fitting_method,
-        date_of_the_nowcast,
-        sep = "_"
+      paste0(
+        paste(
+          paste0("inst/figure/disp_plots/", data_origin, "/disp_par_plot"),
+          fitting_method,
+          date_of_the_nowcast,
+          sep = "_"
+        ),
+        sensitivity_sc
       ),
       width = 7,
       height = 5.5
@@ -517,6 +533,7 @@ plot_delay_prob <- function(
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
   true_value = NULL,
   save_plot = TRUE
 ) {
@@ -603,15 +620,18 @@ plot_delay_prob <- function(
   if (save_plot) {
     save_figure(
       delay_prob_plot,
-      paste(
-        paste0(
-          "inst/figure/delay_prob_plots/",
-          data_origin,
-          "/delay_prob_plot"
+      paste0(
+        paste(
+          paste0(
+            "inst/figure/delay_prob_plots/",
+            data_origin,
+            "/delay_prob_plot"
+          ),
+          fitting_method,
+          date_of_the_nowcast,
+          sep = "_"
         ),
-        fitting_method,
-        date_of_the_nowcast,
-        sep = "_"
+        sensitivity_sc
       ),
       width = 7,
       height = 5.5
@@ -663,6 +683,7 @@ plot_mean_proc <- function(
   max_lag,
   fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
   true_value = NULL,
   save_plot = TRUE
 ) {
@@ -716,15 +737,18 @@ plot_mean_proc <- function(
   if (save_plot) {
     save_figure(
       lambda_plot,
-      paste(
-        paste0(
-          "inst/figure/mean_proc_plots/",
-          data_origin,
-          "/mean_proc_plot"
+      paste0(
+        paste(
+          paste0(
+            "inst/figure/mean_proc_plots/",
+            data_origin,
+            "/mean_proc_plot"
+          ),
+          fitting_method,
+          date_of_the_nowcast,
+          sep = "_"
         ),
-        fitting_method,
-        date_of_the_nowcast,
-        sep = "_"
+        sensitivity_sc
       ),
       width = 7,
       height = 5.5
@@ -774,6 +798,7 @@ plot_rw_sd <- function(
   model_names,
   date_of_the_nowcast,
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
   save_plot = TRUE
 ) {
   # Rename the columns with the parameter values to avoid two columns with the
@@ -809,10 +834,13 @@ plot_rw_sd <- function(
   if (save_plot) {
     save_figure(
       rw_sd_scatter,
-      paste(
-        paste0("inst/figure/rw_sd_plots/", data_origin, "/rw_sd_scatter_plot"),
-        date_of_the_nowcast,
-        sep = "_"
+      paste0(
+        paste(
+          paste0("inst/figure/rw_sd_plots/", data_origin, "/rw_sd_scatter_plot"),
+          date_of_the_nowcast,
+          sep = "_"
+        ),
+        sensitivity_sc
       ),
       width = 7,
       height = 5.5
@@ -905,62 +933,85 @@ plot_per_window <- function(
 ) {
   data_origin <- match.arg(data_origin)
   fitting_method <- match.arg(fitting_method)
-  p_nowcast <- plot_nowcast(
-    df_nowcast,
-    df_total,
-    model_names,
-    date_of_the_nowcast,
-    fitting_method,
-    data_origin,
-    save_plot
-  )
-  p_disp <- plot_disp_par(
-    df_disp_par,
-    model_names,
-    date_of_the_nowcast,
-    fitting_method,
-    disp_prior_pars,
-    data_origin,
-    disp_true_val,
-    save_plot
-  )
-  p_prob <- plot_delay_prob(
-    df_delay_prob,
-    model_names,
-    date_of_the_nowcast,
-    fitting_method,
-    prob_prior_pars,
-    data_origin,
-    prob_true_val,
-    save_plot
-  )
-  max_lag <- max(df_delay_prob$delay)
-  p_lambda <- plot_mean_proc(
-    df_lambda,
-    model_names,
-    date_of_the_nowcast,
-    max_lag,
-    fitting_method,
-    data_origin,
-    lambda_true_val,
-    save_plot
-  )
-  ret_list <- list(
-    nowcast = p_nowcast,
-    lambda = p_lambda,
-    delay_prob = p_prob,
-    disp = p_disp
-  )
-  if (fitting_method == "mcmc") {
-    p_rw_sd <- plot_rw_sd(
-      df_rw_sd,
-      df_disp_par,
+
+  sensitivity_sc <- unique(df_nowcast$sensitivity_sc)
+  # If we fitted the model using the GLM method, there are no scenarios of the
+  # sensitivity analysis. To make data frame filtering based on these scenarios
+  # work, we add the "" string to the results, which signifies the main
+  # analysis.
+  if (fitting_method == "glm") {
+    df_disp_par <- df_disp_par |> mutate(sensitivity_sc = "")
+    df_delay_prob <- df_delay_prob |> mutate(sensitivity_sc = "")
+    df_lambda <- df_lambda |> mutate(sensitivity_sc = "")
+  }
+
+  ret_list <- vector("list", length(sensitivity_sc))
+  for (k in seq_along(sensitivity_sc)) {
+    p_nowcast <- plot_nowcast(
+      filter(df_nowcast, .data$sensitivity_sc == sensitivity_sc[k]),
+      df_total,
       model_names,
       date_of_the_nowcast,
+      fitting_method,
       data_origin,
+      sensitivity_sc[k],
       save_plot
     )
-    ret_list <- c(ret_list, rw_sd = p_rw_sd)
+    p_disp <- plot_disp_par(
+      filter(df_disp_par, .data$sensitivity_sc == sensitivity_sc[k]),
+      model_names,
+      date_of_the_nowcast,
+      fitting_method,
+      filter(disp_prior_pars, .data$scenario_name == sensitivity_sc[k]),
+      data_origin,
+      sensitivity_sc[k],
+      disp_true_val,
+      save_plot
+    )
+    prior_prob_pars <- prob_prior_pars |>
+      filter(.data$scenario_name == sensitivity_sc[k]) |>
+      select(starts_with("delay"))
+    p_prob <- plot_delay_prob(
+      filter(df_delay_prob, .data$sensitivity_sc == sensitivity_sc[k]),
+      model_names,
+      date_of_the_nowcast,
+      fitting_method,
+      as.numeric(prior_prob_pars[1, ]),
+      data_origin,
+      sensitivity_sc[k],
+      prob_true_val,
+      save_plot
+    )
+    max_lag <- max(df_delay_prob$delay)
+    p_lambda <- plot_mean_proc(
+      filter(df_lambda, .data$sensitivity_sc == sensitivity_sc[k]),
+      model_names,
+      date_of_the_nowcast,
+      max_lag,
+      fitting_method,
+      data_origin,
+      sensitivity_sc[k],
+      lambda_true_val,
+      save_plot
+    )
+    ret_list[[k]] <- list(
+      nowcast = p_nowcast,
+      lambda = p_lambda,
+      delay_prob = p_prob,
+      disp = p_disp
+    )
+    if (fitting_method == "mcmc") {
+      p_rw_sd <- plot_rw_sd(
+        filter(df_rw_sd, .data$sensitivity_sc == sensitivity_sc[k]),
+        filter(df_disp_par, .data$sensitivity_sc == sensitivity_sc[k]),
+        model_names,
+        date_of_the_nowcast,
+        data_origin,
+        sensitivity_sc[k],
+        save_plot
+      )
+      ret_list[[k]] <- c(ret_list, rw_sd = p_rw_sd)
+    }
   }
   ret_list
 }
@@ -997,25 +1048,33 @@ plot_aggregated <- function(
   model_names,
   fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
   fitting_method <- match.arg(fitting_method)
-  p_coverage <- plot_coverage(
-    df_nowcast,
-    model_names,
-    fitting_method,
-    data_origin,
-    save_plot
-  )
-  p_crps_decomp <- plot_crps_decomp(
-    df_nowcast,
-    model_names,
-    fitting_method,
-    data_origin,
-    save_plot
-  )
-  ret_list <- list(coverage = p_coverage, crps_decomp = p_crps_decomp)
+
+  sensitivity_sc <- unique(df_nowcast$sensitivity_sc)
+  ret_list <- vector("list", length(sensitivity_sc))
+  for (k in seq_along(sensitivity_sc)) {
+    p_coverage <- plot_coverage(
+      df_nowcast,
+      model_names,
+      fitting_method,
+      data_origin,
+      sensitivity_sc[k],
+      save_plot
+    )
+    p_crps_decomp <- plot_crps_decomp(
+      df_nowcast,
+      model_names,
+      fitting_method,
+      data_origin,
+      sensitivity_sc[k],
+      save_plot
+    )
+    ret_list[[k]] <- list(coverage = p_coverage, crps_decomp = p_crps_decomp)
+  }
   ret_list
 }
 
@@ -1206,6 +1265,7 @@ plot_mcmc_diagnostics <- function(
   df_diagnostics,
   model_names,
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -1233,31 +1293,39 @@ plot_mcmc_diagnostics <- function(
     max(df_diagnostics$nowcast_date),
     length = 13
   )
-  diag_plot <- ggplot(
-    df_diagnostics_long,
-    aes(
-      x = .data$nowcast_date,
-      y = .data$Value,
-      color = .data$Distribution
-    )
-  ) +
-    geom_line() +
-    labs(y = NULL, x = "Date") +
-    scale_color_manual(values = get_model_colors()[model_names]) +
-    scale_x_date(breaks = date_breaks, date_labels = "%d %b") +
-    facet_wrap(~Quantity, nrow = 3, scales = "free_y")
 
-  # Save the plot if required, the width, height and path are hard-coded here
-  if (save_plot) {
-    save_figure(
-      diag_plot,
-      paste("inst/figure/diagnostics_plot", data_origin, sep = "_"),
-      width = 9,
-      height = 7
-    )
-    ret <- NULL
-  } else {
-    ret <- diag_plot
+  sensitivity_sc <- unique(df_nowcast$sensitivity_sc)
+  ret <- vector("list", length(sensitivity_sc))
+  for (k in seq_along(sensitivity_sc)) {
+    diag_plot <- ggplot(
+      df_diagnostics_long,
+      aes(
+        x = .data$nowcast_date,
+        y = .data$Value,
+        color = .data$Distribution
+      )
+    ) +
+      geom_line() +
+      labs(y = NULL, x = "Date") +
+      scale_color_manual(values = get_model_colors()[model_names]) +
+      scale_x_date(breaks = date_breaks, date_labels = "%d %b") +
+      facet_wrap(~Quantity, nrow = 3, scales = "free_y")
+
+    # Save the plot if required, the width, height and path are hard-coded here
+    if (save_plot) {
+      save_figure(
+        diag_plot,
+        paste0(
+          paste("inst/figure/diagnostics_plot", data_origin, sep = "_"),
+          sensitivity_sc
+        ),
+        width = 9,
+        height = 7
+      )
+      ret <- NULL
+    } else {
+      ret[[k]] <- diag_plot
+    }
   }
   ret
 }
