@@ -938,7 +938,7 @@ plot_per_window <- function(
   data_origin <- match.arg(data_origin)
   fitting_method <- match.arg(fitting_method)
 
-  sensitivity_sc <- unique(df_nowcast$sensitivity_sc)
+  scenario <- unique(df_nowcast$sensitivity_sc)
   # If we fitted the model using the GLM method, there are no scenarios of the
   # sensitivity analysis. To make data frame filtering based on these scenarios
   # work, we add the "" string to the results, which signifies the main
@@ -949,52 +949,64 @@ plot_per_window <- function(
     df_lambda <- df_lambda |> mutate(sensitivity_sc = "")
   }
 
-  ret_list <- vector("list", length(sensitivity_sc))
-  for (k in seq_along(sensitivity_sc)) {
+  # Loop over the sensitivity analysis scenarios. The data frame is always
+  # filtered to contain only values from the corresponding scenario. For the GLM
+  # method, we perform no sensitivity analysis and there will be only a single
+  # loop to be executed.
+  ret_list <- vector("list", length(scenario))
+  for (k in seq_along(scenario)) {
     p_nowcast <- plot_nowcast(
-      filter(df_nowcast, .data$sensitivity_sc == sensitivity_sc[k]),
+      filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
       df_total,
       model_names,
       date_of_the_nowcast,
       fitting_method,
       data_origin,
-      sensitivity_sc[k],
+      scenario[k],
       save_plot
     )
     p_disp <- plot_disp_par(
-      filter(df_disp_par, .data$sensitivity_sc == sensitivity_sc[k]),
+      filter(df_disp_par, .data$sensitivity_sc == scenario[k]),
       model_names,
       date_of_the_nowcast,
       fitting_method,
-      filter(disp_prior_pars, .data$scenario_name == sensitivity_sc[k]),
+      filter(disp_prior_pars, .data$scenario_name == scenario[k]),
       data_origin,
-      sensitivity_sc[k],
+      scenario[k],
       disp_true_val,
       save_plot
     )
+    # Prior parameters for the delay probability are supplied as a data frame.
+    # The parameters are typically different for each sensitivity analysis
+    # scenario, but they are identical for each model, so we can use `slice` to
+    # extract the parameters as a vector from the first data frame row.
     prior_prob_pars <- prob_prior_pars |>
-      filter(.data$scenario_name == sensitivity_sc[k]) |>
-      select(starts_with("delay"))
+      filter(.data$scenario_name == scenario[k]) |>
+      select(starts_with("delay")) |>
+      slice(1) |>
+      c(recursive = TRUE)
     p_prob <- plot_delay_prob(
-      filter(df_delay_prob, .data$sensitivity_sc == sensitivity_sc[k]),
+      filter(df_delay_prob, .data$sensitivity_sc == scenario[k]),
       model_names,
       date_of_the_nowcast,
       fitting_method,
-      as.numeric(prior_prob_pars[1, ]),
+      # Coerce a data frame row to a vector. `prior_prob_pars` has length
+      # number of models x number of scenarios
+      prior_prob_pars,
       data_origin,
-      sensitivity_sc[k],
+      scenario[k],
       prob_true_val,
       save_plot
     )
     max_lag <- max(df_delay_prob$delay)
     p_lambda <- plot_mean_proc(
-      filter(df_lambda, .data$sensitivity_sc == sensitivity_sc[k]),
+      filter(df_lambda, .data$sensitivity_sc == scenario[k]),
       model_names,
       date_of_the_nowcast,
       max_lag,
       fitting_method,
       data_origin,
-      sensitivity_sc[k],
+      scenario[k],
       lambda_true_val,
       save_plot
     )
@@ -1006,12 +1018,12 @@ plot_per_window <- function(
     )
     if (fitting_method == "mcmc") {
       p_rw_sd <- plot_rw_sd(
-        filter(df_rw_sd, .data$sensitivity_sc == sensitivity_sc[k]),
-        filter(df_disp_par, .data$sensitivity_sc == sensitivity_sc[k]),
+        filter(df_rw_sd, .data$sensitivity_sc == scenario[k]),
+        filter(df_disp_par, .data$sensitivity_sc == scenario[k]),
         model_names,
         date_of_the_nowcast,
         data_origin,
-        sensitivity_sc[k],
+        scenario[k],
         save_plot
       )
       ret_list[[k]] <- c(ret_list, rw_sd = p_rw_sd)
@@ -1052,29 +1064,32 @@ plot_aggregated <- function(
   model_names,
   fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
-  sensitivity_sc = "",
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
   fitting_method <- match.arg(fitting_method)
 
-  sensitivity_sc <- unique(df_nowcast$sensitivity_sc)
-  ret_list <- vector("list", length(sensitivity_sc))
-  for (k in seq_along(sensitivity_sc)) {
+  # Loop over the sensitivity analysis scenarios. The data frame is always
+  # filtered to contain only values from the corresponding scenario. For the GLM
+  # method, we perform no sensitivity analysis and there will be only a single
+  # loop to be executed.
+  scenario <- unique(df_nowcast$sensitivity_sc)
+  ret_list <- vector("list", length(scenario))
+  for (k in seq_along(scenario)) {
     p_coverage <- plot_coverage(
-      filter(df_nowcast, .data$sensitivity_sc == sensitivity_sc[k]),
+      filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
       model_names,
       fitting_method,
       data_origin,
-      sensitivity_sc[k],
+      scenario[k],
       save_plot
     )
     p_crps_decomp <- plot_crps_decomp(
-      filter(df_nowcast, .data$sensitivity_sc == sensitivity_sc[k]),
+      filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
       model_names,
       fitting_method,
       data_origin,
-      sensitivity_sc[k],
+      scenario[k],
       save_plot
     )
     ret_list[[k]] <- list(coverage = p_coverage, crps_decomp = p_crps_decomp)
@@ -1269,12 +1284,11 @@ plot_mcmc_diagnostics <- function(
   df_diagnostics,
   model_names,
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
-  sensitivity_sc = "",
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
   df_diagnostics_long <- df_diagnostics |>
-    group_by(.data$Distribution, .data$nowcast_date) |>
+    group_by(.data$sensitivity_sc, .data$Distribution, .data$nowcast_date) |>
     summarise(
       # Sum the numbers of problematic transitions from different chains
       num_max_treedepth = sum(.data$num_max_treedepth),
@@ -1289,20 +1303,24 @@ plot_mcmc_diagnostics <- function(
       cols = c("num_divergent", "num_max_treedepth", "min_ebfmi"),
       names_to = "Quantity",
       values_to = "Value"
-    ) |>
-    group_by(.data$Distribution, .data$nowcast_date, .data$Quantity)
+    )
 
+  # Set the x-axis breaks
   date_breaks <- seq(
     min(df_diagnostics$nowcast_date),
     max(df_diagnostics$nowcast_date),
     length = 13
   )
 
-  sensitivity_sc <- unique(df_nowcast$sensitivity_sc)
-  ret <- vector("list", length(sensitivity_sc))
-  for (k in seq_along(sensitivity_sc)) {
+  # Loop over the sensitivity analysis scenarios. The data frame is always
+  # filtered to contain only values from the corresponding scenario. For the GLM
+  # method, we perform no sensitivity analysis and there will be only a single
+  # loop to be executed.
+  scenario <- unique(df_diagnostics$sensitivity_sc)
+  ret <- vector("list", length(scenario))
+  for (k in seq_along(scenario)) {
     diag_plot <- ggplot(
-      df_diagnostics_long,
+      filter(df_diagnostics_long, .data$sensitivity_sc == scenario[k]),
       aes(
         x = .data$nowcast_date,
         y = .data$Value,
@@ -1321,7 +1339,7 @@ plot_mcmc_diagnostics <- function(
         diag_plot,
         paste0(
           paste("inst/figure/diagnostics_plot", data_origin, sep = "_"),
-          sensitivity_sc
+          scenario[k]
         ),
         width = 9,
         height = 7
