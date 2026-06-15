@@ -1058,7 +1058,7 @@ plot_aggregated <- function(
   ret_list <- vector("list", length(sensitivity_sc))
   for (k in seq_along(sensitivity_sc)) {
     p_coverage <- plot_coverage(
-      df_nowcast,
+      filter(df_nowcast, .data$sensitivity_sc == sensitivity_sc[k]),
       model_names,
       fitting_method,
       data_origin,
@@ -1066,7 +1066,7 @@ plot_aggregated <- function(
       save_plot
     )
     p_crps_decomp <- plot_crps_decomp(
-      df_nowcast,
+      filter(df_nowcast, .data$sensitivity_sc == sensitivity_sc[k]),
       model_names,
       fitting_method,
       data_origin,
