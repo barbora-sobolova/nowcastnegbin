@@ -606,10 +606,10 @@ list(
     data.frame(
       scenario_name = c(
         "",  # Main analysis has no name
-        "disp_low",
-        "disp_high",
-        "prob_low",
-        "prob_high"
+        "disp_low",  # Low multiplicative factor ~ more informative prior
+        "disp_high",  # High multiplicative factor ~ less informative prior
+        "prob_low",  # Low multiplicative factor ~ more informative prior
+        "prob_high"  # High multiplicative factor ~ less informative prior
       ),
       delay_prob_factor = c(4, 4, 4, 1, 16),
       disp_par_factor = c(3, 1, 9, 3, 3)
