@@ -697,7 +697,7 @@ list(
       train_data$train_data,
       train_data$skip_rows
     ),
-    pattern = map(branches_mcmc, train_data),
+    pattern = map(train_data),
     iteration = "list"
   ),
   # Calculate the reporting table rowsums and partial rowsums for each date.
