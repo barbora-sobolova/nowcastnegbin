@@ -350,11 +350,15 @@ get_stan_data <- function(
 #' @description This function takes the estimates of the dispersion parameter
 #' from the auxiliary analysis and calculates the parameters of the log-normal
 #' prior distribution that is used for the dispersion parameter in the main
-#' analysis.
+#' analysis. The scale of the prior distribution is calculated based on the
+#' standard deviation and point estimates from the auxiliary analysis.
 #'
 #' @param log_disp_par a data frame with columns `log_disp_hat` (the point
 #' estimate from the GLM method), `log_disp_se` (the standard error from the GLM
 #' method), `Distribution` (the name of the observation model)
+#' @param disp_par_prior_scale_factor a numeric value controlling the spread of
+#' the prior distribution. The higher the value, the flatter the prior is.
+#' The default value of 3 corresponds to the main scenario.
 #' @return a data frame with columns `mean_log` (location parameter of the
 #' log-normal distribution),`sd_log` (scale parameter of the log-normal
 #' distribution) and `model_name`. The data frame has 6 rows, one for each
@@ -372,7 +376,7 @@ calc_disp_par_prior <- function(log_disp_par, disp_par_prior_scale_factor = 3) {
         disp_par_prior_scale_factor,
       disp_par_factor = disp_par_prior_scale_factor
     ) |>
-    # Put placeholder values for the Poisson model
+    # Set placeholder values for the Poisson model
     tidyr::replace_na(list(mean_log = -1, sd_log = -1))
 
   # For the NegBin2M we will use the same prior as for NegBinX, as these have
@@ -408,6 +412,9 @@ calc_disp_par_prior <- function(log_disp_par, disp_par_prior_scale_factor = 3) {
 #' analysis
 #' @param end_date a date in the date format, the endpoint of the auxiliary
 #' analysis
+#' @param prior_scale_factor a numeric value controlling the spread of
+#' the prior distribution. The higher the value, the flatter the prior is.
+#' The default value of 4 corresponds to the main scenario.
 #' @return a vector of length `max_lag` with the parameters of the Dirichlet
 #' distribution.
 calc_delay_prob_prior <- function(
@@ -443,15 +450,29 @@ calc_delay_prob_prior <- function(
 #' `model_name`, indicating the prior parameters for the negative binomial
 #' dispersion parameter. Relevant only for \code{fitting_method = "mcmc"},
 #' otherwise NULL
+#' @param delay_prob_prior a data frame with columns containing the Dirichlet
+#' prior parameters for the reporting delay probability vector, called
+#' `delay_0`, `delay_1` until the maximum delay, and column `delay_prob_factor`
+#' which indicates the scale of the prior as a sum of the Dirichlet parameters.
+#' Relevant only for \code{fitting_method = "mcmc"}, otherwise NULL
 #' @param obs_model_glm a vector of model names to be fitted using the GLM
 #' method. Only relevant, when \code{fitting_method = "glm"}, otherwise NULL
 #' @param fitting_method a string indicating the model fitting procedure. For
 #' GLM, we don't have the NegBin2M and NegBin1M models
+#' @param sensitivity_scenarios a data frame with 3 columns defining the
+#' sensitivity analysis scenarios for the MCMC procedure. To fit the MCMC
+#' method, we need to specify the scale parameter of the prior distribution for
+#' the dispersion parameter and the delay probability vector. These are
+#' contained in columns `disp_par_factor` and `delay_prob_factor`. The last
+#' column `scenario_name` indicates the name of the sensitivity analysis
+#' scenario. The main scenario is indicated by "". This data frame is ignored
+#' for \code{fitting_method = "glm"}.
 #'
 #' @return a data frame with columns `train_data_begin`, `nowcast_date` (The
-#' data frame will be grouped by these 2 columns in the pipeline.) and
-#' `model_name`. For \code{fitting_method = "mcmc"} we also have columns
-#' `mean_log` and `sd_log`.
+#' data frame will be grouped by these 2 columns in the pipeline.),
+#' `model_name` and `scenario_name`. For \code{fitting_method = "mcmc"} we also
+#' have columns `disp_par_factor`, `mean_log`, `delay_prob_factor`, `sd_log`,
+#' `delay_0`, `delay_1`, etc. until the maximum lag
 #'
 #' @import dplyr
 #' @importFrom tibble tibble

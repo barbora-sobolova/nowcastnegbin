@@ -4,7 +4,7 @@
 \alias{calc_delay_prob_prior}
 \title{Find the prior for the delay probability}
 \usage{
-calc_delay_prob_prior(full_data, start_date, end_date)
+calc_delay_prob_prior(full_data, start_date, end_date, prior_scale_factor = 4)
 }
 \arguments{
 \item{full_data}{a data frame with columns \code{date} and columns
@@ -16,6 +16,10 @@ analysis}
 
 \item{end_date}{a date in the date format, the endpoint of the auxiliary
 analysis}
+
+\item{prior_scale_factor}{a numeric value controlling the spread of
+the prior distribution. The higher the value, the flatter the prior is.
+The default value of 4 corresponds to the main scenario.}
 }
 \value{
 a vector of length \code{max_lag} with the parameters of the Dirichlet

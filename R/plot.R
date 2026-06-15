@@ -20,6 +20,8 @@
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -164,6 +166,8 @@ plot_nowcast <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -262,6 +266,8 @@ plot_coverage <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -360,6 +366,8 @@ plot_crps_decomp <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
 #' true value of the dispersion parameter used to generate the data
 #' @param save_plot logical indicator, whether to save the plot using
@@ -515,6 +523,8 @@ plot_disp_par <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
 #' true value of the delay probability vector used to generate the data
 #' @param save_plot logical indicator, whether to save the plot using
@@ -664,6 +674,8 @@ plot_delay_prob <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
 #' vector of true values of the mean of the total counts used to generate the
 #' data. The length of the vector must be \code{max_lag - 1}
@@ -782,6 +794,8 @@ plot_mean_proc <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -893,8 +907,11 @@ plot_rw_sd <- function(
 #' files correctly
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
-#' @param prob_prior_pars a vector of the prior parameters of the Dirichlet
-#' delay probability distribution
+#' @param prob_prior_pars a data frame of the prior parameters of the Dirichlet
+#' delay probability distribution. The data frame should have columns `delay_0`,
+#' `delay_1` until the maximum delay. The number of rows should be the number of
+#' models time the number of sensitivity analysis scenarios. The values for each
+#' model should be identical within each scenario.
 #' @param disp_prior_pars a data frame with columns `model_name`, `mean_log` and
 #' `sd_log`, which contain the parameters for the prior log-normal distribution
 #' of the dispersion parametr. The data frame should have 6 rows, one for each
