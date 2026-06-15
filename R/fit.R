@@ -110,7 +110,6 @@ fit_all_stan_models <- function(
 #' column to the data frame with results
 #' @param prior_delay_param a vector of the Dirichlet distribution
 #' parameters for the delay probability prior
-#' \code{delay_1}... until the maximum delay.
 #' @param mean_log a scalar, the location parameter of the log-normal prior for
 #' the dispersion parameter
 #' @param sd_log a scalar, the scale parameter of the log-normal prior for

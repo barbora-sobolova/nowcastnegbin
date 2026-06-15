@@ -29,8 +29,7 @@ returned by the \code{get_stan_data()} function}
 column to the data frame with results}
 
 \item{prior_delay_param}{a vector of the Dirichlet distribution
-parameters for the delay probability prior
-\code{delay_1}... until the maximum delay.}
+parameters for the delay probability prior}
 
 \item{mean_log}{a scalar, the location parameter of the log-normal prior for
 the dispersion parameter}
