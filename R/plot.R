@@ -1043,7 +1043,7 @@ plot_per_window <- function(
         scenario[k],
         save_plot
       )
-      ret_list[[k]] <- c(ret_list, rw_sd = p_rw_sd)
+      ret_list[[k]] <- c(ret_list[[k]], rw_sd = p_rw_sd)
     }
   }
   ret_list
