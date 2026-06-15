@@ -339,7 +339,7 @@ list(
         mean_log = sim_branches_mcmc$mean_log,
         sd_log = sim_branches_mcmc$sd_log,
         stan_settings = stan_settings,
-        sensitivity_scenario_name = branches_mcmc$scenario_name
+        sensitivity_scenario_name = sim_branches_mcmc$scenario_name
       ),
       pattern = map(sim_branches_mcmc, sim_stan_data),
       iteration = "list"
