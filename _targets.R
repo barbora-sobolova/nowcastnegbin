@@ -759,11 +759,11 @@ list(
       obs_model,
       time_horizons$nowcast_date,
       fitting_method = "mcmc",
-      select(
+      prob_prior_pars = select(
         branches_mcmc,
         c("model_name", "scenario_name", paste0("delay_", seq_len(max_lag) - 1))
       ),
-      select(
+      disp_prior_pars = select(
         branches_mcmc,
         c("model_name", "mean_log", "sd_log", "scenario_name")
       ),
