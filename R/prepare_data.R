@@ -487,6 +487,12 @@ group_branches <- function(
 ) {
   fitting_method <- match.arg(fitting_method)
   if (fitting_method == "mcmc") {
+    if (is.null(delay_prob_prior)) {
+      stop("'delay_prob_prior' must be provided for fitting_method = 'mcmc'")
+    }
+    if (is.null(disp_par_prior)) {
+      stop("'disp_par_prior' must be provided for fitting_method = 'mcmc'")
+    }
     prior_pars <- inner_join(
       disp_par_prior,
       sensitivity_scenarios,
