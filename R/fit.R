@@ -57,9 +57,9 @@ fit_all_stan_models <- function(
   # Check whether the lengths of prior parameter vectors are aligned
   if (
     length(model_obs) != length(mean_log) &&
-    length(model_obs) != length(sd_log) &&
-    length(model_obs) != length(sensitivity_scenario_name) &&
-    length(model_obs) != nrow(prior_delay_param)
+      length(model_obs) != length(sd_log) &&
+      length(model_obs) != length(sensitivity_scenario_name) &&
+      length(model_obs) != nrow(prior_delay_param)
   ) {
     stop("'model_obs', 'sensitivity_scenario_name', 'mean_log' and 'sd_log' must be of an equal length and 'prior_delay_param' must have an equal number of rows")  # nolint
   }
@@ -179,7 +179,7 @@ fit_stan_model <- function(
       seed = stan_settings$seed,
       nowcast_date = date_of_the_nowcast,
       sensitivity_sc = sensitivity_sc
-      ) |>
+    ) |>
     # Add the information about the sampling duration
     cbind(fitted_model$time()$chains)
   # Refit the model, if we get too many divergent transitions, or the ebfmi is

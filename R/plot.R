@@ -836,7 +836,11 @@ plot_rw_sd <- function(
       rw_sd_scatter,
       paste0(
         paste(
-          paste0("inst/figure/rw_sd_plots/", data_origin, "/rw_sd_scatter_plot"),
+          paste0(
+            "inst/figure/rw_sd_plots/",
+            data_origin,
+            "/rw_sd_scatter_plot"
+          ),
           date_of_the_nowcast,
           sep = "_"
         ),

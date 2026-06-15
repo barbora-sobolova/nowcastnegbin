@@ -479,11 +479,11 @@ group_branches <- function(
       relationship = "many-to-many"
     ) |>
       unique() |>
-    inner_join(
-      delay_prob_prior,
-      by = "delay_prob_factor",
-      relationship = "many-to-many"
-    )
+      inner_join(
+        delay_prob_prior,
+        by = "delay_prob_factor",
+        relationship = "many-to-many"
+      )
     ret <- time_horizons |>
       mutate(
         # For the MCMC method, we will fit all 6 models and we need to store
