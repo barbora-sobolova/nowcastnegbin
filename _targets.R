@@ -11,6 +11,7 @@ tar_option_set(
     "gamlss2",
     "ggplot2",
     "ggpubr",
+    "patchwork",
     "here",
     "purrr",
     "qs2",
@@ -787,6 +788,7 @@ list(
   tar_target(aggreg_plots_mcmc, {
     plot_aggregated(
       bind_rows(summarized_nowcast_mcmc),
+      full_data,
       obs_model,
       fitting_method = "mcmc",
       data_origin = "case_study"
