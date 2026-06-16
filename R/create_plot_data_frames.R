@@ -71,6 +71,14 @@ summarize_nowcast <- function(
   # counts
   start_date <- min(df_total$date)
 
+  # If we fit the GLM model, we don't do the sensitivity analysis, as it
+  # concerns only some priors. To allow for the data frame grouping used below,
+  # we add the "" string as the sensitivity analysis scenario, which indicates
+  # the main analysis when we use the MCMC method.
+  if (is.null(df_nowcast$sensitivity_sc)) {
+    df_nowcast <- df_nowcast |> mutate(sensitivity_sc = "")
+  }
+
   # Reformat the `week` column of the data frame with the nowcasts, so that it's
   # aligned with the actual date
   df_nowcast <- df_nowcast |>
@@ -88,7 +96,12 @@ summarize_nowcast <- function(
     dplyr::filter(data == "Final") |>
     # Join the two data frames to put the predicted and the true values together
     dplyr::inner_join(df_nowcast, by = "date") |>
-    dplyr::group_by(.data$date, .data$nowcast_date, .data$Distribution) |>
+    dplyr::group_by(
+      .data$date,
+      .data$nowcast_date,
+      .data$Distribution,
+      .data$sensitivity_sc
+    ) |>
     dplyr::summarize(
       # Calculate the CRPS from the sample. We pass counts[1] as the true
       # observed value, since this is the same value for each date.

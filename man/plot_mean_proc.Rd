@@ -11,6 +11,7 @@ plot_mean_proc(
   max_lag,
   fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
   true_value = NULL,
   save_plot = TRUE
 )
@@ -37,6 +38,9 @@ triangle}
 \item{data_origin}{a string indicating the data generating process of
 simulated data, or whether the data correspond to the case study. Possible
 values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
+
+\item{sensitivity_sc}{a string indicating the sensitivity analysis scenario
+of the MCMC method. Empty string "" indicates the main analysis.}
 
 \item{true_value}{NULL for \code{data_origin = "case_study"}, otherwise the
 vector of true values of the mean of the total counts used to generate the

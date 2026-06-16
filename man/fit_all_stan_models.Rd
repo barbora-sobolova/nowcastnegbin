@@ -9,9 +9,11 @@ fit_all_stan_models(
   stan_data,
   model_obs,
   date_of_the_nowcast,
+  prior_delay_param,
   mean_log,
   sd_log,
-  stan_settings
+  stan_settings,
+  sensitivity_scenario_name = rep("", length(model_obs))
 )
 }
 \arguments{
@@ -26,6 +28,12 @@ of the same length as \code{date_of_the_nowcast}. 0 - Poisson,
 
 \item{date_of_the_nowcast}{a vector of dates, when the nowcast is made}
 
+\item{prior_delay_param}{a data frame of the Dirichlet distribution
+parameters for the delay probability prior. It contains columns
+\code{delay_factor} signifying the sum of the parameters (i.e. the scale of
+the Dirichlet distribution) and columns named \code{delay_0},
+\code{delay_1}... until the maximum delay.}
+
 \item{mean_log}{a vector of the location parameters of the log-normal prior
 for the dispersion parameter}
 
@@ -33,6 +41,10 @@ for the dispersion parameter}
 the dispersion parameter}
 
 \item{stan_settings}{a list of STAN settings}
+
+\item{sensitivity_scenario_name}{a vector of scenario names used in the
+sensitivity analysis. A vector of all "" strings corresponds to the main
+analysis.}
 }
 \value{
 list of the data frames with the MCMC draws of different quantities:
