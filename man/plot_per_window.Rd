@@ -63,8 +63,11 @@ files correctly}
 \item{fitting_method}{a method used for fitting the nowcasting model, either
 "mcmc", or "glm"}
 
-\item{prob_prior_pars}{a vector of the prior parameters of the Dirichlet
-delay probability distribution}
+\item{prob_prior_pars}{a data frame of the prior parameters of the Dirichlet
+delay probability distribution. The data frame should have columns \code{delay_0},
+\code{delay_1} until the maximum delay. The number of rows should be the number of
+models time the number of sensitivity analysis scenarios. The values for each
+model should be identical within each scenario.}
 
 \item{disp_prior_pars}{a data frame with columns \code{model_name}, \code{mean_log} and
 \code{sd_log}, which contain the parameters for the prior log-normal distribution

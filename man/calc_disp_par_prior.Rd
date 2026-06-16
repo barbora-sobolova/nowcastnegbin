@@ -4,12 +4,16 @@
 \alias{calc_disp_par_prior}
 \title{Find the prior for the dispersion parameter}
 \usage{
-calc_disp_par_prior(log_disp_par)
+calc_disp_par_prior(log_disp_par, disp_par_prior_scale_factor = 3)
 }
 \arguments{
 \item{log_disp_par}{a data frame with columns \code{log_disp_hat} (the point
 estimate from the GLM method), \code{log_disp_se} (the standard error from the GLM
 method), \code{Distribution} (the name of the observation model)}
+
+\item{disp_par_prior_scale_factor}{a numeric value controlling the spread of
+the prior distribution. The higher the value, the flatter the prior is.
+The default value of 3 corresponds to the main scenario.}
 }
 \value{
 a data frame with columns \code{mean_log} (location parameter of the
@@ -22,5 +26,6 @@ NegBin2M and NegBin1M models, we reuse the prior of other models.
 This function takes the estimates of the dispersion parameter
 from the auxiliary analysis and calculates the parameters of the log-normal
 prior distribution that is used for the dispersion parameter in the main
-analysis.
+analysis. The scale of the prior distribution is calculated based on the
+standard deviation and point estimates from the auxiliary analysis.
 }

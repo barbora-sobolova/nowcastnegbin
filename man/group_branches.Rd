@@ -7,8 +7,11 @@
 group_branches(
   time_horizons,
   disp_par_prior = NULL,
+  delay_prob_prior = NULL,
   obs_model_glm = NULL,
-  fitting_method = c("mcmc", "glm")
+  fitting_method = c("mcmc", "glm"),
+  sensitivity_scenarios = data.frame(delay_prob_factor = 4, disp_par_factor = 3,
+    scenario_name = "")
 )
 }
 \arguments{
@@ -20,17 +23,33 @@ group_branches(
 dispersion parameter. Relevant only for \code{fitting_method = "mcmc"},
 otherwise NULL}
 
+\item{delay_prob_prior}{a data frame with columns containing the Dirichlet
+prior parameters for the reporting delay probability vector, called
+\code{delay_0}, \code{delay_1} until the maximum delay, and column \code{delay_prob_factor}
+which indicates the scale of the prior as a sum of the Dirichlet parameters.
+Relevant only for \code{fitting_method = "mcmc"}, otherwise NULL}
+
 \item{obs_model_glm}{a vector of model names to be fitted using the GLM
 method. Only relevant, when \code{fitting_method = "glm"}, otherwise NULL}
 
 \item{fitting_method}{a string indicating the model fitting procedure. For
 GLM, we don't have the NegBin2M and NegBin1M models}
+
+\item{sensitivity_scenarios}{a data frame with 3 columns defining the
+sensitivity analysis scenarios for the MCMC procedure. To fit the MCMC
+method, we need to specify the scale parameter of the prior distribution for
+the dispersion parameter and the delay probability vector. These are
+contained in columns \code{disp_par_factor} and \code{delay_prob_factor}. The last
+column \code{scenario_name} indicates the name of the sensitivity analysis
+scenario. The main scenario is indicated by "". This data frame is ignored
+for \code{fitting_method = "glm"}.}
 }
 \value{
 a data frame with columns \code{train_data_begin}, \code{nowcast_date} (The
-data frame will be grouped by these 2 columns in the pipeline.) and
-\code{model_name}. For \code{fitting_method = "mcmc"} we also have columns
-\code{mean_log} and \code{sd_log}.
+data frame will be grouped by these 2 columns in the pipeline.),
+\code{model_name} and \code{scenario_name}. For \code{fitting_method = "mcmc"} we also
+have columns \code{disp_par_factor}, \code{mean_log}, \code{delay_prob_factor}, \code{sd_log},
+\code{delay_0}, \code{delay_1}, etc. until the maximum lag
 }
 \description{
 This function creates a grouped data frame of dates and models

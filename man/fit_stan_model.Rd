@@ -9,9 +9,11 @@ fit_stan_model(
   stan_data,
   model_obs,
   date_of_the_nowcast,
+  prior_delay_param,
   mean_log,
   sd_log,
-  stan_settings
+  stan_settings,
+  sensitivity_sc = ""
 )
 }
 \arguments{
@@ -26,6 +28,9 @@ returned by the \code{get_stan_data()} function}
 \item{date_of_the_nowcast}{a date, when the nowcast is made to add as a
 column to the data frame with results}
 
+\item{prior_delay_param}{a vector of the Dirichlet distribution
+parameters for the delay probability prior}
+
 \item{mean_log}{a scalar, the location parameter of the log-normal prior for
 the dispersion parameter}
 
@@ -33,6 +38,9 @@ the dispersion parameter}
 the dispersion parameter}
 
 \item{stan_settings}{a list of STAN settings}
+
+\item{sensitivity_sc}{a string of a scenario name used in the
+sensitivity analysis. The "" strings corresponds to the main analysis.}
 }
 \value{
 list of the data frames with the MCMC draws of different quantities:

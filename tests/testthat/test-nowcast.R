@@ -55,7 +55,6 @@ test_that("Model output from the MCMC method is stable and plausible", {
     )
     data_list <- get_stan_data(
       obs_full$reports,
-      prior_delay_param = params$prior_delay_param,
       skip_rows = params$skip_rows
     )
 
@@ -65,6 +64,7 @@ test_that("Model output from the MCMC method is stable and plausible", {
       data_list,
       model_obs,
       date_of_the_nowcast = as.Date("2024-12-09"),  # Arbitrary date
+      prior_delay_param = params$prior_delay_param,
       mean_log = 0,
       sd_log = 1.5,
       stan_settings
