@@ -11,6 +11,7 @@ plot_disp_par(
   fitting_method = c("mcmc", "glm"),
   disp_prior_pars = NULL,
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
   true_value = NULL,
   save_plot = TRUE
 )
@@ -40,6 +41,9 @@ NegBin1D.}
 \item{data_origin}{a string indicating the data generating process of
 simulated data, or whether the data correspond to the case study. Possible
 values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
+
+\item{sensitivity_sc}{a string indicating the sensitivity analysis scenario
+of the MCMC method. Empty string "" indicates the main analysis.}
 
 \item{true_value}{NULL for \code{data_origin = "case_study"}, otherwise the
 true value of the dispersion parameter used to generate the data}

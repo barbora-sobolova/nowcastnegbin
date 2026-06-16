@@ -276,6 +276,7 @@ list(
       group_branches(
         sim_time_horizons,
         sim_disp_par_prior,
+        sim_prior_delay_param,
         fitting_method = "mcmc"
       ),
       train_data_begin,
@@ -308,10 +309,7 @@ list(
     # Prepare the STAN data for each date of the simulation study.
     tar_target(
       sim_stan_data,
-      get_stan_data(
-        sim_train_data$train_data,
-        sim_prior_delay_param
-      ),
+      get_stan_data(sim_train_data$train_data),
       pattern = map(sim_time_horizons, sim_train_data),
       iteration = "list"
     ),
@@ -337,9 +335,11 @@ list(
         stan_data = sim_stan_data,
         model_obs = sim_branches_mcmc$model_code,
         date_of_the_nowcast = sim_branches_mcmc$nowcast_date,
+        prior_delay_param = select(sim_branches_mcmc, starts_with("delay_")),
         mean_log = sim_branches_mcmc$mean_log,
         sd_log = sim_branches_mcmc$sd_log,
-        stan_settings = stan_settings
+        stan_settings = stan_settings,
+        sensitivity_scenario_name = sim_branches_mcmc$scenario_name
       ),
       pattern = map(sim_branches_mcmc, sim_stan_data),
       iteration = "list"
@@ -596,11 +596,34 @@ list(
     fitted_glm_prev_year$log_disp_coeff,
     pattern = map(fitted_glm_prev_year)
   ),
+  # Determine the sensitivity analysis scenario. We examine the robustness of
+  # the MCMC model with respect to the flatness of the delay probability prior
+  # and the dispersion parameter prior. All other parameters are either fixed as
+  # some standard values, or estimated from the auxiliary data. We change only
+  # one parameter at a time to avoid fitting the whole grid of parameter
+  # combinations.
+  tar_target(sensitivity_scenarios, {
+    data.frame(
+      scenario_name = c(
+        "",  # Main analysis has no name
+        "disp_low",  # Low multiplicative factor ~ more informative prior
+        "disp_high",  # High multiplicative factor ~ less informative prior
+        "prob_low",  # Low multiplicative factor ~ more informative prior
+        "prob_high"  # High multiplicative factor ~ less informative prior
+      ),
+      delay_prob_factor = c(4, 4, 4, 1, 16),
+      disp_par_factor = c(3, 1, 9, 3, 3)
+    )
+  }),
   # Calculate the prior parameters based on the estimates of the dispersion
   # parameter
   tar_target(
     disp_par_prior,
-    calc_disp_par_prior(glm_log_disp_par_prev_year)
+    calc_disp_par_prior(
+      glm_log_disp_par_prev_year,
+      sensitivity_scenarios$disp_par_factor
+    ),
+    pattern = map(sensitivity_scenarios)
   ),
   # Calculate the parameters of the Dirichlet prior from the auxiliary data
   # only, without looking at the GLM estimates.
@@ -609,8 +632,9 @@ list(
       full_data,
       aux_analysis_start_date,
       aux_analysis_start_date +
-        (length_of_train_data + aux_timesteps_to_fit) * 7
-      )
+        (length_of_train_data + aux_timesteps_to_fit) * 7,
+      unique(sensitivity_scenarios$delay_prob_factor)
+    )
   }),
 
   # Main part of the case study ------------------------------------------------
@@ -630,7 +654,13 @@ list(
   # (for MCMC)
   tar_group_by(
     branches_mcmc,
-    group_branches(time_horizons, disp_par_prior, fitting_method = "mcmc"),
+    group_branches(
+      time_horizons,
+      disp_par_prior,
+      prior_delay_param,
+      fitting_method = "mcmc",
+      sensitivity_scenarios = sensitivity_scenarios
+      ),
     train_data_begin,
     nowcast_date
   ),
@@ -665,10 +695,9 @@ list(
     stan_data,
     get_stan_data(
       train_data$train_data,
-      prior_delay_param,
       train_data$skip_rows
     ),
-    pattern = map(time_horizons, train_data),
+    pattern = map(train_data),
     iteration = "list"
   ),
   # Calculate the reporting table rowsums and partial rowsums for each date.
@@ -693,9 +722,11 @@ list(
       stan_data = stan_data,
       model_obs = branches_mcmc$model_code,
       date_of_the_nowcast = branches_mcmc$nowcast_date,
+      prior_delay_param = select(branches_mcmc, starts_with("delay_")),
       mean_log = branches_mcmc$mean_log,
       sd_log = branches_mcmc$sd_log,
-      stan_settings = stan_settings
+      stan_settings = stan_settings,
+      sensitivity_scenario_name = branches_mcmc$scenario_name
     )
   },
   pattern = map(branches_mcmc, stan_data),
@@ -728,8 +759,14 @@ list(
       obs_model,
       time_horizons$nowcast_date,
       fitting_method = "mcmc",
-      prior_delay_param,
-      disp_par_prior,
+      prob_prior_pars = select(
+        branches_mcmc,
+        c("model_name", "scenario_name", paste0("delay_", seq_len(max_lag) - 1))
+      ),
+      disp_prior_pars = select(
+        branches_mcmc,
+        c("model_name", "mean_log", "sd_log", "scenario_name")
+      ),
       data_origin = "case_study"
     )
   },
