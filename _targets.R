@@ -856,6 +856,7 @@ list(
   tar_target(aggreg_plots_glm, {
     plot_aggregated(
       bind_rows(summarized_nowcast_glm),
+      full_data,
       obs_model_glm,
       fitting_method = "glm",
       data_origin = "case_study"
