@@ -1068,10 +1068,17 @@ plot_per_window <- function(
 #' @param df_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `quantile_50`
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
+#' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
+#' dates), `delay` (nowcast horizon)
+#' @param df_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_50`
+#' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
 #' `quantile_97.5` (bounds of the prediction intervals), `dispersion` (spread
 #' component of the CRPS), `underprediction` (CRPS component) and
-#' `overprediction` (CRPS component). This data frame contains the whole period,
-#' where we nowcasting has been done.
+#' `overprediction` (CRPS component), `date` (x-axis dates), `delay`
+#' (nowcast horizon) and `sensitivity_sc` (the name of a sensitivity analysis
+#' scenario). This data frame contains the whole period, where nowcasting has
+#' been done.
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
 #' @param fitting_method a method used for fitting the nowcasting model, either
@@ -1079,7 +1086,7 @@ plot_per_window <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
-#' @param save_plot logical indicator, whether to save the plot using
+#' @param save_plot logical indicator, whether to save the plots using
 #' \code{ggsave()}
 #'
 #' @return a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}
@@ -1300,6 +1307,31 @@ plot_trajectory <- function(
   ret
 }
 
+#' Plot the prediction bands for all horizons
+#'
+#' @description This function creates a patchwork picture composed of the
+#' incidence trajectory with the prediction intervals as bands around the
+#' observed data for all time horizons.
+#'
+#' @param full_data a data frame of the whole trajectory containing columns
+#' `date` and columns `value_0w`, `value_1w`, etc. until `max_lag - 1`.
+#' @param df_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_50`
+#' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
+#' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
+#' dates) and `delay` (nowcast horizon)
+#' @param start_date a date (in the date format), where the nowcasting ends.
+#' The starting point will be excluded.
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
+#'
+#' @return a ggplot object, or NULL if \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#' @importFrom tidyselect starts_with any_of
+#' @importFrom patchwork wrap_plots
+#'
+#' @export
 plot_nowcast_bands <- function(
   full_data,
   df_nowcast,
@@ -1381,6 +1413,27 @@ plot_nowcast_bands <- function(
   ret
 }
 
+#' Plot the prediction bands around the trajectory per horizon
+#'
+#' @description This function plots the incidence trajectory with the prediction
+#' intervals as bands around the observed data. The plot is created for one
+#' specific nowcasting horizon.
+#'
+#' @param true_data a vector of the final state of the incidence time series
+#' @param prelim_data a vector of the preliminary state of the incidence time
+#' series, which is the sum of partial counts until \code{delay}
+#' @param start_date a date (in the date format), where the nowcasting starts.
+#' The starting point will be included.
+#' @param horizon integer, the data up to this reporting delay are included in
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
+#'
+#' @return a ggplot object
+#'
+#' @import dplyr ggplot2
+#' @importFrom tidyr pivot_longer
+#'
+#' @export
 plot_nowcast_bands_per_horizon <- function(
   true_data,
   prelim_data,
