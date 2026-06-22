@@ -20,3 +20,16 @@ get_model_colors <- function() {
     "NegBin1M" = "#F0E442"
   )
 }
+
+get_plot_theme <- function() {
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16),
+    legend.spacing.y = unit(0.4, "cm"),
+    legend.key.spacing.y = unit(0.2, "cm")
+  )
+}
+

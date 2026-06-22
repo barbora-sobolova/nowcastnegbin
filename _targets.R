@@ -404,8 +404,12 @@ list(
     tar_target(sim_aggreg_plots_mcmc, {
       plot_aggregated(
         bind_rows(sim_summarized_nowcast_mcmc),
+        sim_full_data,
         # What observation models we fitted
         obs_model,
+        # There is no Christmas break in the simulated data, so we don't skip
+        # any dates.
+        skip_dates = NULL,
         fitting_method = "mcmc",
         # From which observation model we simulated the data
         data_origin = model_obs
@@ -502,8 +506,12 @@ list(
     tar_target(sim_aggreg_plots_glm, {
       plot_aggregated(
         bind_rows(sim_summarized_nowcast_glm),
+        sim_full_data,
         # What observation models we fitted
         obs_model_glm,
+        # There is no Christmas break in the simulated data, so we don't skip
+        # any dates.
+        skip_dates = NULL,
         fitting_method = "glm",
         # From which observation model we simulated the data
         data_origin = model_obs
@@ -790,6 +798,7 @@ list(
       bind_rows(summarized_nowcast_mcmc),
       full_data,
       obs_model,
+      skip_dates,
       fitting_method = "mcmc",
       data_origin = "case_study"
     )
@@ -858,6 +867,7 @@ list(
       bind_rows(summarized_nowcast_glm),
       full_data,
       obs_model_glm,
+      skip_dates,
       fitting_method = "glm",
       data_origin = "case_study"
     )

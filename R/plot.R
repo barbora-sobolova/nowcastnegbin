@@ -1004,15 +1004,21 @@ plot_per_window <- function(
       disp_true_val,
       save_plot
     )
-    # Prior parameters for the delay probability are supplied as a data frame.
-    # The parameters are typically different for each sensitivity analysis
-    # scenario, but they are identical for each model, so we can use `slice` to
-    # extract the parameters as a vector from the first data frame row.
-    prior_prob_pars <- prob_prior_pars |>
-      filter(.data$scenario_name == scenario[k]) |>
-      select(starts_with("delay")) |>
-      slice(1) |>
-      c(recursive = TRUE)
+    # If fitting was done using the MCMC method, create the data frame encoding
+    # the prior distribution for the reporting delay.
+    if (fitting_method == "mcmc") {
+      # Prior parameters for the delay probability are supplied as a data frame.
+      # The parameters are typically different for each sensitivity analysis
+      # scenario, but they are identical for each model, so we can use `slice`
+      # to extract the parameters as a vector from the first data frame row.
+      prior_prob_pars <- prob_prior_pars |>
+        filter(.data$scenario_name == scenario[k]) |>
+        select(starts_with("delay")) |>
+        slice(1) |>
+        c(recursive = TRUE)
+    } else {
+      prior_prob_pars <- NULL
+    }
     p_prob <- plot_delay_prob(
       filter(df_delay_prob, .data$sensitivity_sc == scenario[k]),
       model_names,
@@ -1098,6 +1104,7 @@ plot_aggregated <- function(
   df_nowcast,
   full_data,
   model_names,
+  skip_dates,
   fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
@@ -1129,9 +1136,10 @@ plot_aggregated <- function(
       save_plot
     )
     p_nowcast_bands <- plot_nowcast_bands(
-      full_data = full_data,
+      full_data,
       filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
       model_names,
+      skip_dates,
       fitting_method,
       data_origin,
       scenario[k],
@@ -1336,6 +1344,7 @@ plot_nowcast_bands <- function(
   full_data,
   df_nowcast,
   model_names,
+  skip_dates = NULL,
   fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
@@ -1349,7 +1358,7 @@ plot_nowcast_bands <- function(
   # we might need to adjust this.
   start_date <- min(df_nowcast$date)
   # In case we display a long trajectory like in the simulation study,
-  # we will show only the first
+  # we will show only the first 150 weeks
   end_date <- min(max(df_nowcast$date), start_date + 150 * 7)
 
   full_filtered <- full_data |>
@@ -1379,6 +1388,8 @@ plot_nowcast_bands <- function(
       prelim_data,
       df_nowcast_filtered,
       start_date,
+      end_date,
+      skip_dates,
       horizons[k]
     )
   }
@@ -1391,6 +1402,11 @@ plot_nowcast_bands <- function(
     axes = "collect"
   )
   if (save_plot) {
+    plot_height <- if (fitting_method == "mcmc") {
+      17.5
+    } else {
+      13
+    }
     save_figure(
       arranged,
       paste0(
@@ -1403,8 +1419,8 @@ plot_nowcast_bands <- function(
         ),
         sensitivity_sc
       ),
-      width = 7,
-      height = 12
+      width = 10,
+      height = 17.5
     )
     ret <- NULL
   } else {
@@ -1424,6 +1440,8 @@ plot_nowcast_bands <- function(
 #' series, which is the sum of partial counts until \code{delay}
 #' @param start_date a date (in the date format), where the nowcasting starts.
 #' The starting point will be included.
+#' @param start_date a date (in the date format), where the nowcasting ends.
+#' The starting point will be included.
 #' @param horizon integer, the data up to this reporting delay are included in
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
@@ -1439,12 +1457,15 @@ plot_nowcast_bands_per_horizon <- function(
   prelim_data,
   df_nowcast,
   start_date,
+  end_date,
+  skip_dates,
   horizon,
   model_names
 ) {
   if (length(true_data) != length(prelim_data)) {
     stop("The length of preliminary data 'prelim_data' to plot must be the same as the length of 'true_data'.")  # nolint
   }
+
   # Arrange the whole trajectory into a data frame for plotting
   totals <- data.frame(
     date = start_date + (seq_along(true_data) - 1) * 7,
@@ -1464,11 +1485,31 @@ plot_nowcast_bands_per_horizon <- function(
       )
     )
 
+  # In case there are dates, where we skip nowcasting, due to the reporting
+  # irregularities around Christmas, we would like to break the nowcast band
+  # into segments. For this reason, we split the data frame with the nowcasts
+  # into several parts, which will be plotted separately.
+  lower_bound <- c(start_date, skip_dates)
+  upper_bound <- c(skip_dates, end_date)
+  df_nowcast_splitted <- sapply(
+    seq_along(lower_bound),
+    function(ind) {
+      filter(
+        df_nowcast,
+        df_nowcast$nowcast_date >= lower_bound[ind] &
+          df_nowcast$nowcast_date <= upper_bound[ind]
+      )
+    },
+    simplify = FALSE
+  )
+  splitted_lengths <- lapply(df_nowcast_splitted, nrow) |> unlist()
+  df_nowcast_splitted <- df_nowcast_splitted[splitted_lengths > 0]
+
   # Set the x-axis breaks
   date_breaks <- seq(
     start_date,
-    start_date + (seq_along(true_data) - 1) * 7,
-    length = 5
+    end_date,
+    length = 3
   )
 
   nowcast_band_plot <- ggplot() +
@@ -1482,40 +1523,47 @@ plot_nowcast_bands_per_horizon <- function(
         linetype = .data$type
       ),
       linewidth = 0.15
-    ) +
-    # Nowcast as a colored, dashed line
-    geom_line(
-      df_nowcast,
-      mapping = aes(
-        x = .data$date,
-        y = .data$quantile_50,
-        color = .data$Distribution,
-        linetype = "Nowcast"
-      ),
-      linewidth = 0.15
-    ) +
-    # 95 % prediction interval
-    geom_ribbon(
-      df_nowcast,
-      mapping = aes(
-        x = .data$date,
-        ymin = .data$quantile_2.5,
-        ymax = .data$quantile_97.5,
-        fill = .data$Distribution,
-        alpha = "PI_95"
+    )
+
+  # Plot the nowcast segments
+  for (k in seq_along(df_nowcast_splitted)) {
+    nowcast_band_plot <- nowcast_band_plot +
+      # Nowcast as a colored, dashed line
+      geom_line(
+        df_nowcast_splitted[[k]],
+        mapping = aes(
+          x = .data$date,
+          y = .data$quantile_50,
+          color = .data$Distribution,
+          linetype = "Nowcast"
+        ),
+        linewidth = 0.15
+      ) +
+      # 95 % prediction interval
+      geom_ribbon(
+        df_nowcast_splitted[[k]],
+        mapping = aes(
+          x = .data$date,
+          ymin = .data$quantile_2.5,
+          ymax = .data$quantile_97.5,
+          fill = .data$Distribution,
+          alpha = "PI_95"
+        )
+      ) +
+      # 50 % prediction interval
+      geom_ribbon(
+        df_nowcast_splitted[[k]],
+        mapping = aes(
+          x = .data$date,
+          ymin = .data$quantile_25,
+          ymax = .data$quantile_75,
+          fill = .data$Distribution,
+          alpha = "PI_50"
+        )
       )
-    ) +
-    # 50 % prediction interval
-    geom_ribbon(
-      df_nowcast,
-      mapping = aes(
-        x = .data$date,
-        ymin = .data$quantile_25,
-        ymax = .data$quantile_75,
-        fill = .data$Distribution,
-        alpha = "PI_50"
-      )
-    ) +
+  }
+  # Finish the plot
+  nowcast_band_plot <- nowcast_band_plot +
     scale_x_date(breaks = date_breaks) +
     scale_color_manual(
       values = c(
@@ -1557,7 +1605,11 @@ plot_nowcast_bands_per_horizon <- function(
       y = "Incidence",
       title = paste("Horizon:", horizon, "weeks", sep = " ")
     ) +
-    theme(plot.title = element_text(hjust = 0.5)) +
+    get_plot_theme() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+    ) +
     facet_wrap(~Distribution, nrow = 2)
   nowcast_band_plot
 }
