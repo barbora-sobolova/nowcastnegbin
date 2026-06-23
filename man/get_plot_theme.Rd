@@ -2,13 +2,13 @@
 % Please edit documentation in R/helpers.R
 \name{get_plot_theme}
 \alias{get_plot_theme}
-\title{Get the ggplot theme for figures}
+\title{Shared ggplot theme for standardized text sizing and legend spacing}
 \usage{
 get_plot_theme()
 }
 \value{
-a ggplot theme optimized for the coverage and CRPS plots
+a \code{ggplot2::theme()} object
 }
 \description{
-Get the ggplot theme for figures
+Shared ggplot theme for standardized text sizing and legend spacing
 }

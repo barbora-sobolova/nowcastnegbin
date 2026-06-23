@@ -21,9 +21,11 @@ get_model_colors <- function() {
   )
 }
 
-#' Get the ggplot theme for figures
+#' Shared ggplot theme for standardized text sizing and legend spacing
 #'
-#' @return a ggplot theme optimized for the coverage and CRPS plots
+#' @return a \code{ggplot2::theme()} object
+#'
+#' @import ggplot2
 get_plot_theme <- function() {
   theme(
     axis.title = element_text(size = 16),
