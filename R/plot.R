@@ -1419,8 +1419,9 @@ plot_nowcast_bands <- function(
     filter(.data$date >= start_date & .data$date < end_date) |>
     select(starts_with("value_"))
   true_data <- full_filtered |> as.matrix() |> rowSums()
-  # Loop over the nowcasting horizons
+  # Loop over the nowcasting horizons sorted from -3 to 0
   horizons <- unique(df_nowcast$delay)
+  horizons <- horizons[order(horizons)]
   patches <- vector("list", length(horizons))
   for (k in seq_along(horizons)) {
     # Which columns of the full data to sum
