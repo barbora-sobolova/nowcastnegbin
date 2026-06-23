@@ -20,3 +20,36 @@ get_model_colors <- function() {
     "NegBin1M" = "#F0E442"
   )
 }
+
+#' Shared ggplot theme for standardized text sizing and legend spacing
+#'
+#' @return a \code{ggplot2::theme()} object
+#'
+#' @import ggplot2
+get_plot_theme <- function() {
+  theme(
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16),
+    legend.spacing.y = unit(0.4, "cm"),
+    legend.key.spacing.y = unit(0.2, "cm")
+  )
+}
+
+#' Labeller function for ggplot facet titles
+#'
+#' This function takes the number of columns of the reporting triangle and
+#' creates titles for the plots faceted by the nowcasting horizon.
+#'
+#' @param max_lag integer indicating the number of columns of the reporting
+#' triangle.
+#' @return a named vector of length \code{max_lag} with the factor levels and
+#' their corresponding labels
+label_horizon_facet <- function(max_lag) {
+  horizons <- -rev(seq_len(max_lag) - 1)
+  ret <- paste0("Horizon: ", horizons)
+  names(ret) <- as.character(horizons)
+  ret
+}
