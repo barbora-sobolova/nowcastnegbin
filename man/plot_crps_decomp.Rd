@@ -16,7 +16,8 @@ plot_crps_decomp(
 \arguments{
 \item{df_summarized_nowcast}{a data frame containing columns \code{Distribution}
 (containing the name of the observation model), \code{dispersion},
-\code{underprediction}, \code{overprediction} and \code{delay} (the nowcasting horizon).}
+\code{underprediction}, \code{overprediction}, \code{delay} (the nowcasting horizon),
+\code{quantile_50} and \code{true_val} (to calculate the mean absolute error).}
 
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}
@@ -39,7 +40,7 @@ a ggplot object with one facet per nowcasting horizon, or NULL if
 \code{save_plot = TRUE}
 }
 \description{
-This function plots and possibly saves the decomposition of
-the average CRPS decomposed according to the spread, underprediction and
-overprediction.
+This function plots and possibly saves the average CRPS
+decomposed according to the spread, underprediction and overprediction. Also
+the mean absolute error is displayed in this figure.
 }

@@ -45,16 +45,6 @@ plot_nowcast <- function(
     mutate(data = factor(data, levels = c("Preliminary", "Final")))
   # Plot the nowcasts
   nowcasts_plot <- ggplot() +
-    # Point prediction
-    geom_line(
-      data = df_summarized_nowcast,
-      mapping = aes(
-        x = .data$date,
-        y = .data$quantile_50,
-        color = .data$Distribution,
-        linetype = "Nowcast"
-      )
-    ) +
     # Different data versions - preliminary and final
     geom_line(
       data = df_total,
@@ -63,6 +53,16 @@ plot_nowcast <- function(
         y = .data$counts,
         color = .data$data,
         linetype = .data$data
+      )
+    ) +
+    # Point prediction
+    geom_line(
+      data = df_summarized_nowcast,
+      mapping = aes(
+        x = .data$date,
+        y = .data$quantile_50,
+        color = .data$Distribution,
+        linetype = "Nowcast"
       )
     ) +
     # 95% prediction intervals
@@ -185,6 +185,10 @@ plot_coverage <- function(
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
+  # Grab the maximum delay in order to label the facets according to the
+  # corresponding delay
+  max_lag <- length(unique(df_summarized_nowcast$delay))
+
   # Calculate the empirical coverage
   df_coverage <- df_summarized_nowcast |>
     group_by(.data$delay, .data$Distribution) |>
@@ -205,6 +209,7 @@ plot_coverage <- function(
       names_to = "nominal_coverage",
       values_to = "empirical_coverage"
     )
+
   # Plot the empirical coverage as horizontal bars
   coverage_plot <- ggplot(
     df_coverage,
@@ -224,8 +229,17 @@ plot_coverage <- function(
       name = ""
     ) +
     scale_fill_manual(values = get_model_colors()[model_names]) +
-    labs(x = "Empirical coverage", title = "Empirical coverage by horizon") +
-    facet_wrap(~delay, nrow = 2)
+    scale_x_continuous(
+      breaks = seq(0, 1, by = 0.25),
+      labels = c("0", "0.25", "0.5", "0.75", "1")
+    ) +
+    labs(x = "Empirical coverage") +
+    get_plot_theme() +
+    facet_wrap(
+      ~delay,
+      nrow = 2,
+      labeller = as_labeller(label_horizon_facet(max_lag))
+    )
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
@@ -252,13 +266,14 @@ plot_coverage <- function(
 
 #' Plot and save the decomposition of the CRPS
 #'
-#' @description This function plots and possibly saves the decomposition of
-#' the average CRPS decomposed according to the spread, underprediction and
-#' overprediction.
+#' @description This function plots and possibly saves the average CRPS
+#' decomposed according to the spread, underprediction and overprediction. Also
+#' the mean absolute error is displayed in this figure.
 #'
 #' @param df_summarized_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `dispersion`,
-#' `underprediction`, `overprediction` and `delay` (the nowcasting horizon).
+#' `underprediction`, `overprediction`, `delay` (the nowcasting horizon),
+#' `quantile_50` and `true_val` (to calculate the mean absolute error).
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
 #' @param fitting_method a method used for fitting the nowcasting model, either
@@ -286,38 +301,79 @@ plot_crps_decomp <- function(
   save_plot = TRUE
 ) {
   # Calculate the decomposition of the average CRPS
-  df_crps_decomp <- df_summarized_nowcast |>
+  df_crps <- df_summarized_nowcast |>
+    # Calculate the absolute error
+    mutate(AE = abs(.data$true_val - .data$quantile_50)) |>
     group_by(.data$delay, .data$Distribution) |>
     summarize(
+      # Mean absolute error
+      MAE = mean(.data$AE),
+      # CRPS components
       Spread = mean(.data$dispersion),
       Underprediction = mean(.data$underprediction),
       Overprediction = mean(.data$overprediction),
+      Total = mean(.data$crps),
       .groups = "drop"
     ) |>
+    # Calculate the x-coordinate of the labels denoting the total CRPS
+    group_by(.data$delay) |>
+    mutate(
+      lab_position = max(.data$Total) / 20
+    ) |>
+    ungroup()
+
+  # Grab the maximum delay in order to label the facets according to the
+  # corresponding delay
+  max_lag <- length(unique(df_crps$delay))
+
+  df_crps_decomp <- df_crps |>
     # Pivot for easier definition of the alpha aesthetic
     tidyr::pivot_longer(
       cols = c("Spread", "Overprediction", "Underprediction"),
       names_to = "Component",
       values_to = "CRPS"
     )
+
   # Plot the empirical coverage as horizontal bars
-  crps_decomp_plot <- ggplot(
-    df_crps_decomp,
-    aes(
-      x = .data$CRPS,
-      y = .data$Distribution,
-      fill = .data$Distribution,
-      alpha = .data$Component
-    )
-  ) +
-    geom_col(position = "stack") +
+  crps_decomp_plot <- ggplot() +
+    geom_col(
+      df_crps_decomp,
+      mapping = aes(
+        x = .data$CRPS,
+        y = .data$Distribution,
+        fill = .data$Distribution,
+        alpha = .data$Component
+      ),
+      position = "stack"
+    ) +
+    geom_label(
+      df_crps,
+      mapping = aes(
+        x = .data$lab_position,
+        y = .data$Distribution,
+        label = round(.data$Total, 2)
+      ),
+      text.color = "black",
+      color = "white",
+      hjust = 0
+    ) +
     scale_alpha_manual(
       values = c("Underprediction" = 1, "Spread" = 0.4, "Overprediction" = 0.7),
       name = ""
     ) +
+    geom_point(
+      df_crps_decomp,
+      mapping = aes(x = .data$MAE, y = .data$Distribution)
+    ) +
     scale_fill_manual(values = get_model_colors()[model_names]) +
-    labs(x = "Mean CRPS", title = "CRPS decomposition by horizon") +
-    facet_wrap(~delay, scales = "free_x", nrow = 2)
+    labs(x = "Mean CRPS/AE") +
+    get_plot_theme() +
+    facet_wrap(
+      ~delay,
+      scales = "free_x",
+      nrow = 2,
+      labeller = as_labeller(label_horizon_facet(max_lag))
+    )
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
@@ -993,15 +1049,21 @@ plot_per_window <- function(
       disp_true_val,
       save_plot
     )
-    # Prior parameters for the delay probability are supplied as a data frame.
-    # The parameters are typically different for each sensitivity analysis
-    # scenario, but they are identical for each model, so we can use `slice` to
-    # extract the parameters as a vector from the first data frame row.
-    prior_prob_pars <- prob_prior_pars |>
-      filter(.data$scenario_name == scenario[k]) |>
-      select(starts_with("delay")) |>
-      slice(1) |>
-      c(recursive = TRUE)
+    # If fitting was done using the MCMC method, create the data frame encoding
+    # the prior distribution for the reporting delay.
+    if (fitting_method == "mcmc") {
+      # Prior parameters for the delay probability are supplied as a data frame.
+      # The parameters are typically different for each sensitivity analysis
+      # scenario, but they are identical for each model, so we can use `slice`
+      # to extract the parameters as a vector from the first data frame row.
+      prior_prob_pars <- prob_prior_pars |>
+        filter(.data$scenario_name == scenario[k]) |>
+        select(starts_with("delay")) |>
+        slice(1) |>
+        c(recursive = TRUE)
+    } else {
+      prior_prob_pars <- NULL
+    }
     p_prob <- plot_delay_prob(
       filter(df_delay_prob, .data$sensitivity_sc == scenario[k]),
       model_names,
@@ -1059,16 +1121,24 @@ plot_per_window <- function(
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
 #' `quantile_97.5` (bounds of the prediction intervals), `dispersion` (spread
 #' component of the CRPS), `underprediction` (CRPS component) and
-#' `overprediction` (CRPS component). This data frame contains the whole period,
-#' where we nowcasting has been done.
+#' `overprediction` (CRPS component), `date` (x-axis dates), `delay`
+#' (nowcast horizon) and `sensitivity_sc` (the name of a sensitivity analysis
+#' scenario). This data frame contains the whole period, where nowcasting has
+#' been done.
+#' @param full_data a data frame with columns `date` and columns
+#' `value_0w`, `value_1w`, etc. until `max_lag - 1` used to plot the preliminary
+#' and final data alongside the nowcasts
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
+#' @param skip_dates a vector of dates, where no nowcasting has been done and
+#' where we should leave gaps in the plot of the nowcasts.
+#' \code{skip_dates = NULL} if no gaps are to be plotted.
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
-#' @param save_plot logical indicator, whether to save the plot using
+#' @param save_plot logical indicator, whether to save the plots using
 #' \code{ggsave()}
 #'
 #' @return a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}
@@ -1078,7 +1148,9 @@ plot_per_window <- function(
 #' @export
 plot_aggregated <- function(
   df_nowcast,
+  full_data,
   model_names,
+  skip_dates,
   fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
@@ -1109,7 +1181,21 @@ plot_aggregated <- function(
       scenario[k],
       save_plot
     )
-    ret_list[[k]] <- list(coverage = p_coverage, crps_decomp = p_crps_decomp)
+    p_nowcast_bands <- plot_nowcast_bands(
+      full_data,
+      filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
+      model_names,
+      skip_dates,
+      fitting_method,
+      data_origin,
+      scenario[k],
+      save_plot
+    )
+    ret_list[[k]] <- list(
+      coverage = p_coverage,
+      crps_decomp = p_crps_decomp,
+      nowcast_bands = p_nowcast_bands
+    )
   }
   ret_list
 }
@@ -1273,6 +1359,329 @@ plot_trajectory <- function(
     ret <- trajectory_plot
   }
   ret
+}
+
+#' Plot the prediction bands for all horizons
+#'
+#' @description This function creates a patchwork picture composed of the
+#' incidence trajectory with the prediction intervals as bands around the
+#' observed data for all time horizons.
+#'
+#' @param full_data a data frame of the whole trajectory containing columns
+#' `date` and columns `value_0w`, `value_1w`, etc. until `max_lag - 1` used to
+#' plot the preliminary
+#' and final data alongside the nowcasts
+#' @param df_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_50`
+#' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
+#' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
+#' dates), `nowcast_date` (when the nowcast was issued) and `delay` (nowcast
+#' horizon)
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
+#' @param skip_dates a vector of dates, where no nowcasting has been done and
+#' where we should leave gaps in the plot of the nowcasts.
+#' \code{skip_dates = NULL} if no gaps are to be plotted.
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggplot2::ggsave()}
+#'
+#' @return a ggplot object, or NULL if \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#' @importFrom tidyselect starts_with any_of
+#' @importFrom patchwork wrap_plots
+#'
+#' @export
+plot_nowcast_bands <- function(
+  full_data,
+  df_nowcast,
+  model_names,
+  skip_dates = NULL,
+  fitting_method = c("mcmc", "glm"),
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  sensitivity_sc = "",
+  save_plot = TRUE
+) {
+  data_origin <- match.arg(data_origin)
+  fitting_method <- match.arg(fitting_method)
+
+  # End points of the trajectory is recovered from the data frame containing the
+  # nowcasting results. In case we begin or end with skipped dates (Christmas),
+  # we might need to adjust this.
+  start_date <- min(df_nowcast$date)
+  # In case we display a long trajectory like in the simulation study,
+  # we will show only the first 150 weeks
+  end_date <- min(max(df_nowcast$date), start_date + 150 * 7)
+
+  full_filtered <- full_data |>
+    filter(.data$date >= start_date & .data$date < end_date) |>
+    select(starts_with("value_"))
+  true_data <- full_filtered |> as.matrix() |> rowSums()
+  # Loop over the nowcasting horizons sorted from -3 to 0
+  horizons <- unique(df_nowcast$delay)
+  horizons <- horizons[order(horizons)]
+  patches <- vector("list", length(horizons))
+  for (k in seq_along(horizons)) {
+    # Which columns of the full data to sum
+    value_colnames <- paste0(
+      "value_",
+      # The nowcsting horizon is a negative number, but the delay starts from
+      # zero to the maximum delay, which we need to account for
+      seq_len(length(horizons) - k + 1) - 1,
+      "w"
+    )
+    prelim_data <- full_filtered |>
+      select(any_of(value_colnames)) |>
+      as.matrix() |>
+      rowSums()
+    df_nowcast_filtered <- df_nowcast |>
+      filter(.data$delay == horizons[k] & .data$date < end_date)
+    patches[[k]] <- plot_nowcast_bands_per_horizon(
+      true_data,
+      prelim_data,
+      df_nowcast_filtered,
+      start_date,
+      end_date,
+      skip_dates,
+      horizons[k],
+      model_names
+    )
+  }
+  # Arrange the patches
+  arranged <- patchwork::wrap_plots(
+    patches,
+    nrow = length(horizons),
+    ncol = 1,
+    guides = "collect",
+    axes = "collect"
+  )
+  if (save_plot) {
+    plot_height <- if (fitting_method == "mcmc") {
+      17.5
+    } else {
+      13
+    }
+    save_figure(
+      arranged,
+      paste0(
+        paste(
+          "inst/figure/nowcast_bands",
+
+          data_origin,
+          fitting_method,
+          sep = "_"
+        ),
+        sensitivity_sc
+      ),
+      width = 10,
+      height = plot_height
+    )
+    ret <- NULL
+  } else {
+    ret <- arranged
+  }
+  ret
+}
+
+#' Plot the prediction bands around the trajectory per horizon
+#'
+#' @description This function plots the incidence trajectory with the prediction
+#' intervals as bands around the observed data. The plot is created for one
+#' specific nowcasting horizon.
+#'
+#' @param true_data a vector of the final state of the incidence time series
+#' @param prelim_data a vector of the preliminary state of the incidence time
+#' series, which is the sum of partial counts until \code{delay}
+#' @param df_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_50`
+#' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
+#' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
+#' dates) and `nowcast_date` (when the nowcast was issued)
+#' @param start_date a date (in the date format), where the nowcasting starts.
+#' The starting point will be included.
+#' @param end_date a date (in the date format), where the nowcasting ends.
+#' The ending point will be included.
+#' @param skip_dates a vector of dates, where no nowcasting has been done and
+#' where we should leave gaps in the plot of the nowcasts.
+#' \code{skip_dates = NULL} if no gaps are to be plotted.
+#' @param horizon integer, the data up to this reporting delay are included in
+#' the preliminary data
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
+#'
+#' @return a ggplot object
+#'
+#' @import dplyr ggplot2
+#' @importFrom tidyr pivot_longer
+#'
+#' @export
+plot_nowcast_bands_per_horizon <- function(
+  true_data,
+  prelim_data,
+  df_nowcast,
+  start_date,
+  end_date,
+  skip_dates,
+  horizon,
+  model_names
+) {
+  if (length(true_data) != length(prelim_data)) {
+    stop("The length of preliminary data 'prelim_data' to plot must be the same as the length of 'true_data'.")  # nolint
+  }
+
+  # Arrange the whole trajectory into a data frame for plotting
+  totals <- data.frame(
+    date = start_date + (seq_along(true_data) - 1) * 7,
+    true_data = true_data,
+    prelim_data = prelim_data
+  ) |>
+    pivot_longer(
+      c("true_data", "prelim_data"),
+      values_to = "counts",
+      names_to = "type"
+    ) |>
+    mutate(
+      type = factor(
+        .data$type,
+        levels = c("true_data", "prelim_data"),
+        labels = c("Final", "Preliminary")
+      )
+    )
+
+  # In case there are dates, where we skip nowcasting, due to the reporting
+  # irregularities around Christmas, we would like to break the nowcast band
+  # into segments. For this reason, we split the data frame with the nowcasts
+  # into several parts, which will be plotted separately.
+  lower_bound <- c(start_date, skip_dates)
+  upper_bound <- c(skip_dates, end_date)
+  df_nowcast_splitted <- sapply(
+    seq_along(lower_bound),
+    function(ind) {
+      filter(
+        df_nowcast,
+        df_nowcast$nowcast_date >= lower_bound[ind] &
+          df_nowcast$nowcast_date <= upper_bound[ind]
+      )
+    },
+    simplify = FALSE
+  )
+  splitted_lengths <- lapply(df_nowcast_splitted, nrow) |> unlist()
+  df_nowcast_splitted <- df_nowcast_splitted[splitted_lengths > 0]
+
+  # Set the x-axis breaks
+  date_breaks <- seq(
+    start_date,
+    end_date,
+    length = 3
+  )
+
+  nowcast_band_plot <- ggplot() +
+    # True and preliminary data as black and gray solid lines
+    geom_line(
+      totals,
+      mapping = aes(
+        x = .data$date,
+        y = .data$counts,
+        color = .data$type,
+        linetype = .data$type
+      ),
+      linewidth = 0.15
+    )
+
+  # Plot the nowcast segments
+  for (k in seq_along(df_nowcast_splitted)) {
+    nowcast_band_plot <- nowcast_band_plot +
+      # Nowcast as a colored, dashed line
+      geom_line(
+        df_nowcast_splitted[[k]],
+        mapping = aes(
+          x = .data$date,
+          y = .data$quantile_50,
+          color = .data$Distribution,
+          linetype = "Nowcast"
+        ),
+        linewidth = 0.15
+      ) +
+      # 95 % prediction interval
+      geom_ribbon(
+        df_nowcast_splitted[[k]],
+        mapping = aes(
+          x = .data$date,
+          ymin = .data$quantile_2.5,
+          ymax = .data$quantile_97.5,
+          fill = .data$Distribution,
+          alpha = "PI_95"
+        )
+      ) +
+      # 50 % prediction interval
+      geom_ribbon(
+        df_nowcast_splitted[[k]],
+        mapping = aes(
+          x = .data$date,
+          ymin = .data$quantile_25,
+          ymax = .data$quantile_75,
+          fill = .data$Distribution,
+          alpha = "PI_50"
+        )
+      )
+  }
+  # Finish the plot
+  nowcast_band_plot <- nowcast_band_plot +
+    scale_x_date(breaks = date_breaks) +
+    scale_color_manual(
+      values = c(
+        get_model_colors()[model_names],
+        "Final" = "black",
+        "Preliminary" = "gray60"
+      ),
+      guide = "none"
+    ) +
+    scale_linetype_manual(
+      name = "Type of data",
+      values = c(
+        "Preliminary" = "solid",
+        "Final" = "solid",
+        "Nowcast" = "dashed"
+      ),
+    ) +
+    scale_fill_manual(values = get_model_colors()[model_names]) +
+    # Set the transparency of the prediction intervals. The transparency is the
+    # same value for both prediction intervals, since the 50% interval is inside
+    # the 95% one. Hence, the transparency adds up.
+    scale_alpha_manual(
+      values = c("PI_50" = 0.2, "PI_95" = 0.2),
+      labels = c("50%", "95%"),
+      name = "Prediction interval"
+    ) +
+    guides(
+      # Customize the legend of the data versions
+      linetype = guide_legend(
+        override.aes = list(color = c("gray60", "black", "black"))
+      ),
+      # Customize the legend of the confidence interval transparency, which for
+      # the reader appear to be 0.4 for the 95% interval due to the "stacking"
+      # of the layers.
+      alpha = guide_legend(override.aes = list(alpha = c(0.4, 0.2)))
+    ) +
+    labs(
+      x = "Date",
+      y = "Incidence",
+      title = paste("Horizon:", horizon, "weeks", sep = " ")
+    ) +
+    get_plot_theme() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+    ) +
+    facet_wrap(~Distribution, nrow = 2)
+  nowcast_band_plot
 }
 
 #' Plot the summary of MCMC diagnostics
