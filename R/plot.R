@@ -1420,7 +1420,7 @@ plot_nowcast_bands <- function(
         sensitivity_sc
       ),
       width = 10,
-      height = 17.5
+      height = plot_height
     )
     ret <- NULL
   } else {
