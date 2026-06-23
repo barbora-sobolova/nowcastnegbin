@@ -36,3 +36,18 @@ get_plot_theme <- function() {
   )
 }
 
+#' Labeller function for ggplot facet titles
+#'
+#' This function takes the number of columns of the reporting triangle and
+#' creates titles for the plots faceted by the nowcasting horizon.
+#'
+#' @param max_lag integer indicating the number of columns of the reporting
+#' triangle.
+#' @return a named vector of length \code{max_lag} with the factor levels and
+#' their corresponding labels
+label_horizon_facet <- function(max_lag) {
+  horizons <- -rev(seq_len(max_lag) - 1)
+  ret <- paste0("Horizon: ", horizons)
+  names(ret) <- as.character(horizons)
+  ret
+}

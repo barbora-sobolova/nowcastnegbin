@@ -45,16 +45,6 @@ plot_nowcast <- function(
     mutate(data = factor(data, levels = c("Preliminary", "Final")))
   # Plot the nowcasts
   nowcasts_plot <- ggplot() +
-    # Point prediction
-    geom_line(
-      data = df_summarized_nowcast,
-      mapping = aes(
-        x = .data$date,
-        y = .data$quantile_50,
-        color = .data$Distribution,
-        linetype = "Nowcast"
-      )
-    ) +
     # Different data versions - preliminary and final
     geom_line(
       data = df_total,
@@ -63,6 +53,16 @@ plot_nowcast <- function(
         y = .data$counts,
         color = .data$data,
         linetype = .data$data
+      )
+    ) +
+    # Point prediction
+    geom_line(
+      data = df_summarized_nowcast,
+      mapping = aes(
+        x = .data$date,
+        y = .data$quantile_50,
+        color = .data$Distribution,
+        linetype = "Nowcast"
       )
     ) +
     # 95% prediction intervals
@@ -185,6 +185,10 @@ plot_coverage <- function(
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
+  # Grab the maximum delay in order to label the facets according to the
+  # corresponding delay
+  max_lag <- length(unique(df_summarized_nowcast$delay))
+
   # Calculate the empirical coverage
   df_coverage <- df_summarized_nowcast |>
     group_by(.data$delay, .data$Distribution) |>
@@ -205,6 +209,7 @@ plot_coverage <- function(
       names_to = "nominal_coverage",
       values_to = "empirical_coverage"
     )
+
   # Plot the empirical coverage as horizontal bars
   coverage_plot <- ggplot(
     df_coverage,
@@ -224,8 +229,17 @@ plot_coverage <- function(
       name = ""
     ) +
     scale_fill_manual(values = get_model_colors()[model_names]) +
-    labs(x = "Empirical coverage", title = "Empirical coverage by horizon") +
-    facet_wrap(~delay, nrow = 2)
+    scale_x_continuous(
+      breaks = seq(0, 1, by = 0.25),
+      labels = c("0", "0.25", "0.5", "0.75", "1")
+    ) +
+    labs(x = "Empirical coverage") +
+    get_plot_theme() +
+    facet_wrap(
+      ~delay,
+      nrow = 2,
+      labeller = as_labeller(label_horizon_facet(max_lag))
+    )
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
@@ -252,9 +266,9 @@ plot_coverage <- function(
 
 #' Plot and save the decomposition of the CRPS
 #'
-#' @description This function plots and possibly saves the decomposition of
-#' the average CRPS decomposed according to the spread, underprediction and
-#' overprediction.
+#' @description This function plots and possibly saves the average CRPS
+#' decomposed according to the spread, underprediction and overprediction. Also
+#' the mean absolute error is displayed in this figure.
 #'
 #' @param df_summarized_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `dispersion`,
@@ -286,7 +300,7 @@ plot_crps_decomp <- function(
   save_plot = TRUE
 ) {
   # Calculate the decomposition of the average CRPS
-  df_crps_decomp <- df_summarized_nowcast |>
+  df_crps <- df_summarized_nowcast |>
     # Calculate the absolute error
     mutate(AE = abs(.data$true_val - .data$quantile_50)) |>
     group_by(.data$delay, .data$Distribution) |>
@@ -297,14 +311,28 @@ plot_crps_decomp <- function(
       Spread = mean(.data$dispersion),
       Underprediction = mean(.data$underprediction),
       Overprediction = mean(.data$overprediction),
+      Total = mean(.data$crps),
       .groups = "drop"
     ) |>
+    # Calculate the x-coordinate of the labels denoting the total CRPS
+    group_by(.data$delay) |>
+    mutate(
+      lab_position = max(.data$Total) / 20
+    ) |>
+    ungroup()
+
+  # Grab the maximum delay in order to label the facets according to the
+  # corresponding delay
+  max_lag <- length(unique(df_crps$delay))
+
+  df_crps_decomp <- df_crps |>
     # Pivot for easier definition of the alpha aesthetic
     tidyr::pivot_longer(
       cols = c("Spread", "Overprediction", "Underprediction"),
       names_to = "Component",
       values_to = "CRPS"
     )
+
   # Plot the empirical coverage as horizontal bars
   crps_decomp_plot <- ggplot() +
     geom_col(
@@ -317,6 +345,17 @@ plot_crps_decomp <- function(
       ),
       position = "stack"
     ) +
+    geom_label(
+      df_crps,
+      mapping = aes(
+        x = .data$lab_position,
+        y = .data$Distribution,
+        label = round(.data$Total, 2)
+      ),
+      text.color = "black",
+      color = "white",
+      hjust = 0
+    ) +
     scale_alpha_manual(
       values = c("Underprediction" = 1, "Spread" = 0.4, "Overprediction" = 0.7),
       name = ""
@@ -326,9 +365,14 @@ plot_crps_decomp <- function(
       mapping = aes(x = .data$MAE, y = .data$Distribution)
     ) +
     scale_fill_manual(values = get_model_colors()[model_names]) +
-    labs(x = "Mean CRPS/AE", title = "CRPS decomposition by horizon") +
-    theme(plot.title = element_text(hjust = 0.5)) +
-    facet_wrap(~delay, scales = "free_x", nrow = 2)
+    labs(x = "Mean CRPS/AE") +
+    get_plot_theme() +
+    facet_wrap(
+      ~delay,
+      scales = "free_x",
+      nrow = 2,
+      labeller = as_labeller(label_horizon_facet(max_lag))
+    )
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
