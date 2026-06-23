@@ -39,7 +39,7 @@ a ggplot object with one facet per nowcasting horizon, or NULL if
 \code{save_plot = TRUE}
 }
 \description{
-This function plots and possibly saves the decomposition of
-the average CRPS decomposed according to the spread, underprediction and
-overprediction.
+This function plots and possibly saves the average CRPS
+decomposed according to the spread, underprediction and overprediction. Also
+the mean absolute error is displayed in this figure.
 }

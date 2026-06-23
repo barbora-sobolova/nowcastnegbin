@@ -6,7 +6,9 @@
 \usage{
 plot_aggregated(
   df_nowcast,
+  full_data,
   model_names,
+  skip_dates,
   fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
@@ -18,11 +20,21 @@ plot_aggregated(
 (the point nowcasts), \code{quantile_2.5}, \code{quantile_25}, \code{quantile_75},
 \code{quantile_97.5} (bounds of the prediction intervals), \code{dispersion} (spread
 component of the CRPS), \code{underprediction} (CRPS component) and
-\code{overprediction} (CRPS component). This data frame contains the whole period,
-where we nowcasting has been done.}
+\code{overprediction} (CRPS component), \code{date} (x-axis dates), \code{delay}
+(nowcast horizon) and \code{sensitivity_sc} (the name of a sensitivity analysis
+scenario). This data frame contains the whole period, where nowcasting has
+been done.}
+
+\item{full_data}{a data frame with columns \code{date} and columns
+\code{value_0w}, \code{value_1w}, etc. until \code{max_lag - 1} used to plot the preliminary
+and final data alongside the nowcasts}
 
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}
+
+\item{skip_dates}{a vector of dates, where no nowcasting has been done and
+where we should leave gaps in the plot of the nowcasts.
+\code{skip_dates = NULL} if no gaps are to be plotted.}
 
 \item{fitting_method}{a method used for fitting the nowcasting model, either
 "mcmc", or "glm"}
@@ -31,7 +43,7 @@ plot.}
 simulated data, or whether the data correspond to the case study. Possible
 values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
 
-\item{save_plot}{logical indicator, whether to save the plot using
+\item{save_plot}{logical indicator, whether to save the plots using
 \code{ggsave()}}
 }
 \value{

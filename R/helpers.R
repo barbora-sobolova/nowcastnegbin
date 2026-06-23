@@ -21,6 +21,9 @@ get_model_colors <- function() {
   )
 }
 
+#' Get the ggplot theme for figures
+#'
+#' @return a ggplot theme optimized for the coverage and CRPS plots
 get_plot_theme <- function() {
   theme(
     axis.title = element_text(size = 16),
