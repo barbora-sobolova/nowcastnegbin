@@ -1444,7 +1444,8 @@ plot_nowcast_bands <- function(
       start_date,
       end_date,
       skip_dates,
-      horizons[k]
+      horizons[k],
+      model_names
     )
   }
   # Arrange the patches
