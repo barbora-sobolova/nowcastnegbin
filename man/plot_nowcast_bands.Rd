@@ -25,7 +25,7 @@ and final data alongside the nowcasts}
 (containing the name of the observation model), \code{quantile_50}
 (the point nowcasts), \code{quantile_2.5}, \code{quantile_25}, \code{quantile_75},
 \code{quantile_97.5} (bounds of the prediction intervals), \code{date} (x-axis
-dates) and \code{delay} (nowcast horizon)}
+dates), \code{nowcast_date} (when the nowcast was issued) and \code{delay} (nowcast horizon)}
 
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}

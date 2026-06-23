@@ -24,8 +24,8 @@ series, which is the sum of partial counts until \code{delay}}
 \item{df_nowcast}{a data frame containing columns \code{Distribution}
 (containing the name of the observation model), \code{quantile_50}
 (the point nowcasts), \code{quantile_2.5}, \code{quantile_25}, \code{quantile_75},
-\code{quantile_97.5} (bounds of the prediction intervals) and \code{date} (x-axis
-dates)}
+\code{quantile_97.5} (bounds of the prediction intervals), \code{date} (x-axis
+dates) and \code{nowcast_date} (when the nowcast was issued)}
 
 \item{start_date}{a date (in the date format), where the nowcasting starts.
 The starting point will be included.}

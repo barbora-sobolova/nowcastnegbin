@@ -1374,7 +1374,7 @@ plot_trajectory <- function(
 #' (containing the name of the observation model), `quantile_50`
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
 #' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
-#' dates) and `delay` (nowcast horizon)
+#' dates), `nowcast_date` (when the nowcast was issued) and `delay` (nowcast horizon)
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
 #' @param skip_dates a vector of dates, where no nowcasting has been done and
@@ -1497,8 +1497,8 @@ plot_nowcast_bands <- function(
 #' @param df_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `quantile_50`
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
-#' `quantile_97.5` (bounds of the prediction intervals) and `date` (x-axis
-#' dates)
+#' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
+#' dates) and `nowcast_date` (when the nowcast was issued)
 #' @param start_date a date (in the date format), where the nowcasting starts.
 #' The starting point will be included.
 #' @param end_date a date (in the date format), where the nowcasting ends.
