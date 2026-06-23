@@ -16,7 +16,8 @@ plot_crps_decomp(
 \arguments{
 \item{df_summarized_nowcast}{a data frame containing columns \code{Distribution}
 (containing the name of the observation model), \code{dispersion},
-\code{underprediction}, \code{overprediction} and \code{delay} (the nowcasting horizon).}
+\code{underprediction}, \code{overprediction}, \code{delay} (the nowcasting horizon),
+\code{quantile_50} and \code{true_val} (to calculate the mean absolute error).}
 
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}

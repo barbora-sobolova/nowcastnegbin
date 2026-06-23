@@ -272,7 +272,8 @@ plot_coverage <- function(
 #'
 #' @param df_summarized_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `dispersion`,
-#' `underprediction`, `overprediction` and `delay` (the nowcasting horizon).
+#' `underprediction`, `overprediction`, `delay` (the nowcasting horizon),
+#' `quantile_50` and `true_val` (to calculate the mean absolute error).
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
 #' @param fitting_method a method used for fitting the nowcasting model, either
@@ -1374,14 +1375,18 @@ plot_trajectory <- function(
 #' (containing the name of the observation model), `quantile_50`
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
 #' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
-#' dates), `nowcast_date` (when the nowcast was issued) and `delay` (nowcast horizon)
+#' dates), `nowcast_date` (when the nowcast was issued) and `delay` (nowcast
+#' horizon)
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
 #' @param skip_dates a vector of dates, where no nowcasting has been done and
 #' where we should leave gaps in the plot of the nowcasts.
 #' \code{skip_dates = NULL} if no gaps are to be plotted.
-#' @param start_date a date (in the date format), where the nowcasting ends.
-#' The starting point will be excluded.
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param save_plot logical indicator, whether to save the plot using
@@ -1507,6 +1512,7 @@ plot_nowcast_bands <- function(
 #' where we should leave gaps in the plot of the nowcasts.
 #' \code{skip_dates = NULL} if no gaps are to be plotted.
 #' @param horizon integer, the data up to this reporting delay are included in
+#' the preliminary data
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
 #'

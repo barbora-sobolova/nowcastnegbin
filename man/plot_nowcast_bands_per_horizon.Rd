@@ -37,7 +37,8 @@ The ending point will be included.}
 where we should leave gaps in the plot of the nowcasts.
 \code{skip_dates = NULL} if no gaps are to be plotted.}
 
-\item{horizon}{integer, the data up to this reporting delay are included in}
+\item{horizon}{integer, the data up to this reporting delay are included in
+the preliminary data}
 
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}

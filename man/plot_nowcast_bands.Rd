@@ -25,7 +25,8 @@ and final data alongside the nowcasts}
 (containing the name of the observation model), \code{quantile_50}
 (the point nowcasts), \code{quantile_2.5}, \code{quantile_25}, \code{quantile_75},
 \code{quantile_97.5} (bounds of the prediction intervals), \code{date} (x-axis
-dates), \code{nowcast_date} (when the nowcast was issued) and \code{delay} (nowcast horizon)}
+dates), \code{nowcast_date} (when the nowcast was issued) and \code{delay} (nowcast
+horizon)}
 
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}
@@ -34,14 +35,18 @@ plot.}
 where we should leave gaps in the plot of the nowcasts.
 \code{skip_dates = NULL} if no gaps are to be plotted.}
 
+\item{fitting_method}{a method used for fitting the nowcasting model, either
+"mcmc", or "glm"}
+
+\item{data_origin}{a string indicating the data generating process of
+simulated data, or whether the data correspond to the case study. Possible
+values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
+
 \item{sensitivity_sc}{a string indicating the sensitivity analysis scenario
 of the MCMC method. Empty string "" indicates the main analysis.}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}
-
-\item{start_date}{a date (in the date format), where the nowcasting ends.
-The starting point will be excluded.}
 }
 \value{
 a ggplot object, or NULL if \code{save_plot = TRUE}
