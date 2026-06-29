@@ -75,7 +75,7 @@ summarize_nowcast <- function(
   # concerns only some priors. To allow for the data frame grouping used below,
   # we add the "" string as the sensitivity analysis scenario, which indicates
   # the main analysis when we use the MCMC method.
-  if (is.null(df_nowcast$sensitivity_sc)) {
+  if (!("sensitivity_sc" %in% colnames(df_nowcast))) {
     df_nowcast <- df_nowcast |> mutate(sensitivity_sc = "")
   }
 
