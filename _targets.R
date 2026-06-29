@@ -376,8 +376,12 @@ list(
         obs_model,
         sim_time_horizons$nowcast_date,
         fitting_method = "mcmc",
-        prob_prior_pars = sim_prior_delay_param,
-        disp_prior_pars = sim_disp_par_prior,
+        # We perform no sensitivity analysis for the simulation study. There
+        # are no additional scenarios with different prior parameters, so we
+        # can just add "" as the scenario name, which indicates the main
+        # analysis.
+        prob_prior_pars = mutate(sim_prior_delay_param, scenario_name = ""),
+        disp_prior_pars = mutate(sim_disp_par_prior, scenario_name = ""),
         # From which observation model we simulated the data
         data_origin = model_obs,
         # True values of the model parameters used to generate the data
