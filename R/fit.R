@@ -922,9 +922,9 @@ fit_glm_model <- function(
         list(n_basis = n_basis_functions)
       )
       refit <- try(eval(refit_call))
-      if (inherits(fit, "try-error")) {
-        ret_list <- NULL
+      if (inherits(refit, "try-error")) {
         warning("Refitting of the gamlss2 model errored.")
+        return(NULL)
       } else if (refit$iterations < maxit) {
         fit <- refit
       } else {
