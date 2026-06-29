@@ -142,7 +142,7 @@ list(
       # "zeroth" window as the first one. The length of training data is
       # identical here and in the case study.
       num_of_weeks = aux_timesteps_to_fit +
-        2 * length_of_train_data + sim_timesteps_to_fit - 1
+        2 * length_of_train_data + sim_timesteps_to_fit
     )
   }),
   # Data frame storing the beginning and end points of the training data for the
