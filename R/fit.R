@@ -877,38 +877,31 @@ fit_glm_model <- function(
   if (inherits(fit, "try-error")) {
     ret_list <- NULL
   } else {
-    # Fit the Poisson model using the gam() function from the mgcv package. This
-    # is necessary to extract the spline basis, which is not returned by the
-    # gamlss2() function. Since gamlss2() uses mgcv under the hood, the bases
-    # are identical and we can use it to reconstruct the spline curve.
-    mod_mgcv <- gam(
-      obs ~ s(week, k = n_basis_functions, bs = "bs") + delay,
-      data = glm_data,
-      family = poisson
-    )
-    smooth_coeffs_inds <- grep(pattern = "s()", names(mod_mgcv$coefficients))
-    # Extract the basis using `predict.gam(type = "lpmatrix", ...)`. Often,
-    # we can just extract the design matrix as is, but when we skip certain
-    # observations, some weeks might not be represented in the data. For these
-    # cases, we need to create a data frame with no gaps.
-    basis <- mgcv::predict.gam(
-      mod_mgcv,
-      newdata = data.frame(
-        week = seq_len(max((glm_data$week))),
-        delay = 1
-      ),
-      type = "lpmatrix"
-    )[, smooth_coeffs_inds]
+    # Extract the basis. The basis values will be duplicated based on the
+    # maximum delay. For this reason we need to extract only unique ones. If we
+    # skip individual dates, the matrix will still have a correct number of
+    # rows. However, we might end up with an incorrect number of rows if we want
+    # to skip as many (or more) consecutive weeks as there are columns of the
+    # reporting triangle.
+    basis <- unique(fit$specials$`s(week)`$X)
     # If the optimization doesn't converge until we reached the maximum
-    # iteration, we try the fitting again, using the mgcv Poisson estimates for
+    # iteration, we try the fitting again, using Poisson estimates for
     # the delay coefficients and for the dispersion parameter the last iteration
     # from the fit that didn't converge
     if (fit$iterations == maxit) {
+      fit_pois <- gamlss2(
+        obs ~ s(week, k = n_basis_functions, bs = "bs") + delay,
+        sigma.formula = gamlss_specs$sigma_formula,
+        family = gamlss.dist::PO(),
+        data = glm_data,
+        maxit = maxit,
+        trace = FALSE
+      )
       # Extract starting values from the previous fit
       start_vals <- coef(fit)
       # Replace the delay values from the previous fit, by the estimates from
-      # the mgcv Poisson model.
-      start_vals[seq_len(stan_data$d)] <- coef(mod_mgcv)[seq_len(stan_data$d)]
+      # the Poisson model.
+      start_vals[seq_len(stan_data$d)] <- coef(fit_pois)[seq_len(stan_data$d)]
       refit_call <- substitute(
         gamlss2(
           obs ~ s(week, k = n_basis, bs = "bs") + delay,
