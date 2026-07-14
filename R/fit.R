@@ -886,7 +886,10 @@ fit_glm_model <- function(
       data = glm_data,
       family = poisson
     )
-    smooth_coeffs_inds <- grep(pattern = "s()", names(mod_mgcv$coefficients))
+    smooth_coeffs_inds <- grep(
+      pattern = "^s\\(week\\)",
+      names(mod_mgcv$coefficients)
+    )
     # Extract the basis using `predict.gam(type = "lpmatrix", ...)`. Often,
     # we can just extract the design matrix as is, but when we skip certain
     # observations, some weeks might not be represented in the data. For these
