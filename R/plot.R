@@ -243,6 +243,11 @@ plot_coverage <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
+    plot_height <- if (fitting_method == "mcmc") {
+      9
+    } else {
+      4.5
+    }
     save_figure(
       coverage_plot,
       paste0(
@@ -255,7 +260,7 @@ plot_coverage <- function(
         sensitivity_sc
       ),
       width = 9,
-      height = 7
+      height = plot_height
     )
     ret <- NULL
   } else {
@@ -379,6 +384,11 @@ plot_crps_decomp <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
+    plot_height <- if (fitting_method == "mcmc") {
+      9
+    } else {
+      4.5
+    }
     save_figure(
       crps_decomp_plot,
       paste0(
@@ -391,7 +401,7 @@ plot_crps_decomp <- function(
         sensitivity_sc
       ),
       width = 9,
-      height = 7
+      height = plot_height
     )
     ret <- NULL
   } else {
