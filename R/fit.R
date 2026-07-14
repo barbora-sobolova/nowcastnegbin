@@ -836,6 +836,9 @@ fit_glm_model <- function(
 ) {
   model_name <- match.arg(model_name)
 
+  # Set the maximum number of iterations for fitting the GLM model
+  maxit <- 900
+
   # Select the gamlss.family and sigma.formula based on the model
   gamlss_specs <- select_gamlss_model(model_name)  # nolint
 
@@ -864,8 +867,8 @@ fit_glm_model <- function(
       sigma.formula = gamlss_specs$sigma_formula,
       family = gamlss_specs$family,
       data = glm_data,
-      # For some models (NegBin2D), it takes some time to converge
-      maxit = 900,
+      # For some models (NegBin1D), it takes some time to converge
+      maxit = maxit,
       trace = FALSE
     ),
     list(n_basis = n_basis_functions)
@@ -883,7 +886,10 @@ fit_glm_model <- function(
       data = glm_data,
       family = poisson
     )
-    smooth_coeffs_inds <- grep(pattern = "s()", names(mod_mgcv$coefficients))
+    smooth_coeffs_inds <- grep(
+      pattern = "^s\\(week\\)",
+      names(mod_mgcv$coefficients)
+    )
     # Extract the basis using `predict.gam(type = "lpmatrix", ...)`. Often,
     # we can just extract the design matrix as is, but when we skip certain
     # observations, some weeks might not be represented in the data. For these
@@ -896,6 +902,38 @@ fit_glm_model <- function(
       ),
       type = "lpmatrix"
     )[, smooth_coeffs_inds]
+    # If the optimization doesn't converge until we reached the maximum
+    # iteration, we try the fitting again, using the mgcv Poisson estimates for
+    # the delay coefficients and for the dispersion parameter the last iteration
+    # from the fit that didn't converge
+    if (fit$iterations == maxit) {
+      # Extract starting values from the previous fit
+      start_vals <- coef(fit)
+      # Replace the delay values from the previous fit, by the estimates from
+      # the mgcv Poisson model.
+      start_vals[seq_len(stan_data$d)] <- coef(mod_mgcv)[seq_len(stan_data$d)]
+      refit_call <- substitute(
+        gamlss2(
+          obs ~ s(week, k = n_basis, bs = "bs") + delay,
+          sigma.formula = gamlss_specs$sigma_formula,
+          family = gamlss_specs$family,
+          data = glm_data,
+          maxit = maxit,
+          trace = FALSE,
+          start = start_vals
+        ),
+        list(n_basis = n_basis_functions)
+      )
+      refit <- try(eval(refit_call))
+      if (inherits(refit, "try-error")) {
+        warning("Refitting of the gamlss2 model errored.")
+        return(NULL)
+      } else if (refit$iterations < maxit) {
+        fit <- refit
+      } else {
+        warning("Refitting of the gamlss2 model reached the maximum iteration.")
+      }
+    }
 
     # Generate nowcasts by the van de Kasstelee 2019 method, using sampling from
     # the multivariate normal distribution for the parameters.
