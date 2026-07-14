@@ -316,11 +316,13 @@ plot_crps_decomp <- function(
       .groups = "drop"
     ) |>
     # Calculate the x-coordinate of the labels denoting the total CRPS
-    group_by(.data$delay) |>
     mutate(
-      lab_position = max(.data$Total) / 20
-    ) |>
-    ungroup()
+      lab_position = ifelse(
+        .data$delay == "0",
+        max(.data$Total) / 35,
+        .data$MAE * 1.3
+      )
+    )
 
   # Grab the maximum delay in order to label the facets according to the
   # corresponding delay
@@ -334,7 +336,7 @@ plot_crps_decomp <- function(
       values_to = "CRPS"
     )
 
-  # Plot the empirical coverage as horizontal bars
+  # Plot the CRPS as horizontal bars
   crps_decomp_plot <- ggplot() +
     geom_col(
       df_crps_decomp,
@@ -353,6 +355,7 @@ plot_crps_decomp <- function(
         y = .data$Distribution,
         label = round(.data$Total, 2)
       ),
+      border.color = "black",
       text.color = "black",
       color = "white",
       hjust = 0
@@ -370,7 +373,6 @@ plot_crps_decomp <- function(
     get_plot_theme() +
     facet_wrap(
       ~delay,
-      scales = "free_x",
       nrow = 2,
       labeller = as_labeller(label_horizon_facet(max_lag))
     )
