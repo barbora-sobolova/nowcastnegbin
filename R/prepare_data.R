@@ -366,7 +366,9 @@ calc_disp_par_prior <- function(log_disp_par, disp_par_prior_scale_factor = 3) {
       # Loosely inspired by Rubin's rules. The scale factor is there to make
       # prior distribution even wider and can be subjected to a sensitivity
       # analysis.
-      sd_log = (sqrt(mean(.data$log_disp_se^2) + var(.data$log_disp_hat))) *
+      sd_log = sqrt(
+        mean(.data$log_disp_se^2) + (1 + 1 / n()) * var(.data$log_disp_hat)
+      ) *
         disp_par_prior_scale_factor,
       disp_par_factor = disp_par_prior_scale_factor
     ) |>
