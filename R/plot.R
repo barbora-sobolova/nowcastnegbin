@@ -1438,7 +1438,7 @@ plot_nowcast_bands <- function(
   true_data <- full_filtered |> as.matrix() |> rowSums()
   # Loop over the nowcasting horizons sorted from -3 to 0
   horizons <- unique(df_nowcast$delay)
-  horizons <- horizons[order(horizons)]
+  horizons <- horizons[order(as.numeric(as.character(horizons)))]
   patches <- vector("list", length(horizons))
   for (k in seq_along(horizons)) {
     # Which columns of the full data to sum
@@ -1466,38 +1466,91 @@ plot_nowcast_bands <- function(
       model_names
     )
   }
-  # Arrange the patches
-  arranged <- patchwork::wrap_plots(
-    patches,
-    nrow = length(horizons),
-    ncol = 1,
-    guides = "collect",
-    axes = "collect"
-  )
-  if (save_plot) {
-    plot_height <- if (fitting_method == "mcmc") {
-      17.5
-    } else {
-      13
-    }
-    save_figure(
-      arranged,
-      paste0(
-        paste(
-          "inst/figure/nowcast_bands",
-
-          data_origin,
-          fitting_method,
-          sep = "_"
-        ),
-        sensitivity_sc
-      ),
-      width = 10,
-      height = plot_height
+  # For some settings, we split the patchwork plot into 2 figures. The first one
+  # showing only the nowcasts for horizon 0 will go to the main manuscript, the
+  # rest into the supplement.
+  # We need to split:
+  # - the case study fitted using the MCMC method
+  # - the case study fitted using the GLM method
+  # - the NegBinX simulation study fitted using the MCMC method
+  # - the NegBinX simulation study fitted using the GLM method
+  split_figures <- (data_origin %in% c("case_study", "NegBinX")) &&
+    sensitivity_sc == ""
+  if (split_figures) {
+    # Arrange all the patches
+    arranged <- patchwork::wrap_plots(
+      # The last patch corresponds to delay zero, which is plotted separately
+      patches[seq_len(length(horizons) - 1)],
+      nrow = length(horizons) - 1,
+      ncol = 1,
+      guides = "collect",
+      axes = "collect"
     )
-    ret <- NULL
+    ret <- list(
+      arranged_plot = arranged,
+      separated_plot = patches[[length(horizons)]]
+    )
   } else {
-    ret <- arranged
+    # Arrange all the patches
+    arranged <- patchwork::wrap_plots(
+      patches,
+      nrow = length(horizons),
+      ncol = 1,
+      guides = "collect",
+      axes = "collect"
+    )
+    ret <- list(
+      arranged_plot = arranged,
+      separated_plot = NULL
+    )
+  }
+
+  if (save_plot) {
+    # For the case study, we have 4 nowcasting horizons, for the simulation
+    # study only 3
+    plot_height <- if (data_origin == "case_study") {
+      20
+    } else {
+      15
+    }
+    # For the GLM method we have only 3 nowcasting models instead of 6.
+    # We divide by a number lesser than 1 to allow for individual plot titles
+    # indicating the nowcasting horizon.
+    if (fitting_method == "glm") {
+      plot_height <- plot_height / 1.75
+    }
+    plot_path <- paste0(
+      paste(
+        "inst/figure/nowcast_bands",
+        data_origin,
+        fitting_method,
+        sep = "_"
+      ),
+      sensitivity_sc
+    )
+    if (split_figures) {
+      save_figure(
+        arranged,
+        plot_path,
+        width = 11.5,
+        height = plot_height * (length(horizons) - 1) / length(horizons)
+      )
+      save_figure(
+        patches[length(horizons)],
+        paste(plot_path, "delay0", sep = "_"),
+        width = 11.5,
+        # Increase the height to make enough space for the axis labels
+        height = plot_height / length(horizons) + 1
+      )
+    } else {
+      save_figure(
+        arranged,
+        plot_path,
+        width = 11.5,
+        height = plot_height
+      )
+    }
+    ret <- NULL
   }
   ret
 }
@@ -1572,7 +1625,10 @@ plot_nowcast_bands_per_horizon <- function(
   # into segments. For this reason, we split the data frame with the nowcasts
   # into several parts, which will be plotted separately.
   lower_bound <- c(start_date, skip_dates)
-  upper_bound <- c(skip_dates, end_date)
+  # In case that skip_dates = NULL, the resulting vector will be coerced to
+  # numeric. For this reason, we need to keep as.Date. This is not the case
+  # for the lower bound, since there we always start with a date.
+  upper_bound <- as.Date(c(skip_dates, end_date))
   df_nowcast_splitted <- sapply(
     seq_along(lower_bound),
     function(ind) {
@@ -1591,8 +1647,16 @@ plot_nowcast_bands_per_horizon <- function(
   date_breaks <- seq(
     start_date,
     end_date,
-    length = 3
+    length = 4
   )
+
+  # For MCMC, we have 6 models - 2 rows and 3 columns in the plot. For GLM we
+  # have only 3 models - 1 row and 3 columns.
+  n_plot_row <- if (length(model_names) > 3) {
+    2
+  } else {
+    1
+  }
 
   nowcast_band_plot <- ggplot() +
     # True and preliminary data as black and gray solid lines
@@ -1604,7 +1668,7 @@ plot_nowcast_bands_per_horizon <- function(
         color = .data$type,
         linetype = .data$type
       ),
-      linewidth = 0.15
+      linewidth = 0.3
     )
 
   # Plot the nowcast segments
@@ -1646,7 +1710,7 @@ plot_nowcast_bands_per_horizon <- function(
   }
   # Finish the plot
   nowcast_band_plot <- nowcast_band_plot +
-    scale_x_date(breaks = date_breaks) +
+    scale_x_date(breaks = date_breaks, date_labels = "%b %Y") +
     scale_color_manual(
       values = c(
         get_model_colors()[model_names],
@@ -1670,7 +1734,7 @@ plot_nowcast_bands_per_horizon <- function(
     scale_alpha_manual(
       values = c("PI_50" = 0.2, "PI_95" = 0.2),
       labels = c("50%", "95%"),
-      name = "Prediction interval"
+      name = "Prediction\ninterval"
     ) +
     guides(
       # Customize the legend of the data versions
@@ -1692,7 +1756,7 @@ plot_nowcast_bands_per_horizon <- function(
       plot.title = element_text(hjust = 0.5),
       axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
     ) +
-    facet_wrap(~Distribution, nrow = 2)
+    facet_wrap(~Distribution, nrow = n_plot_row)
   nowcast_band_plot
 }
 
