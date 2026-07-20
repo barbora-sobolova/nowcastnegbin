@@ -1439,7 +1439,9 @@ plot_trajectory <- function(
       label.size = 4.5
     ) +
     labs(y = "Incidence") +
-    ylim(c(0, overall_max_cases + 3 * bracket_offset)) +
+    ylim(
+      c(0, max(overall_max_cases, first_window_bracket_y) + 3 * bracket_offset)
+    ) +
     get_plot_theme()
 
   # Save the plot if required, the width, height and path are hard-coded here.
