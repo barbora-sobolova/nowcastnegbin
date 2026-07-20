@@ -1223,7 +1223,7 @@ plot_aggregated <- function(
   }
   # If the plots are to be saved, glue together the coverage and CRPS plots from
   # the sensitivity analysis.
-  if (save_plot) {
+  if (save_plot && fitting_method == "mcmc" && data_origin == "case_study") {
     save_patchwork_plots(ret_list)
     # If we save a plot, we usually return NULL in place of the individual
     # plots. For consistency, we reconstruct the list of NULLs with a
