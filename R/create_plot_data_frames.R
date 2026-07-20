@@ -144,14 +144,16 @@ summarize_nowcast <- function(
 
 #' Combine data frames of results from different methods
 #'
-#' @description This function
+#' @description This function combines data frames containing results from the
+#' MCMC and GLM method while also filtering only results corresponding to
+#' selected dates and observation model.
 #'
 #' @param df_mcmc a data frame with results obtained via the MCMC method
 #' @param df_glm a data frame with results obtained via the GLM method
 #' @param dates_to_show a selection of 4-6 consecutive dates for which we want
 #' to show the estimates.
 #' @param model_to_show a string indicating an observation model, from which we
-#' want to show th estimates
+#' want to show the estimates
 #'
 #' @return a filtered data frame combining the GLM and MCMC results
 #'

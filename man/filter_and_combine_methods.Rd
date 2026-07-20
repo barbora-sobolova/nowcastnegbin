@@ -15,11 +15,13 @@ filter_and_combine_methods(df_mcmc, df_glm, dates_to_show, model_to_show)
 to show the estimates.}
 
 \item{model_to_show}{a string indicating an observation model, from which we
-want to show th estimates}
+want to show the estimates}
 }
 \value{
 a filtered data frame combining the GLM and MCMC results
 }
 \description{
-This function
+This function combines data frames containing results from the
+MCMC and GLM method while also filtering only results corresponding to
+selected dates and observation model.
 }
