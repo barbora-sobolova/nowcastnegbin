@@ -1977,27 +1977,34 @@ plot_glm_overshoot <- function(
   save_plot = TRUE
 ) {
   # Bind rows of all the data frames that are in a list format
+  df_nowcast <- bind_rows(df_nowcast)
+  df_total <- bind_rows(df_total) |>
+    # Reverse the factor ordering to plot the colors in the correct ordering
+    mutate(data = factor(data, levels = c("Preliminary", "Final")))
   df_lambda <- bind_rows(df_lambda) |>
     group_by(.data$week, .data$nowcast_date, .data$method) |>
     summarize(
       lambda_median = median(.data$.value),
       .groups = "drop_last"
-    ) |>
+    )
+  # Derive the length of the rolling window
+  window_len <- max(df_lambda$week)
+  # Derive the date based on the week number and the nowcast date
+  df_lambda <- df_lambda |>
     group_by(.data$nowcast_date, .data$method) |>
     mutate(
-      date = as.Date((.data$week - 20) * 7, origin = .data$nowcast_date[1])
+      date = as.Date(
+        (.data$week - window_len) * 7,
+        origin = .data$nowcast_date[1]
+      )
     )
-  df_nowcast <- bind_rows(df_nowcast)
-  df_total <- bind_rows(df_total) |>
-    # Reverse the factor ordering to plot the colors in the correct ordering
-    mutate(data = factor(data, levels = c("Preliminary", "Final")))
 
   # Set the colors and labels for the GLM and MCMC method in the plot of lambda
   # and the nowcasts
   method_colors <- c("glm" = "sienna3", "mcmc" = "turquoise3")
   method_labels <- c("glm" = "GAM", "mcmc" = "HMC")
   # Set the x-axis breaks
-  x_axis_dates <- as.Date(unique(df_total$date))
+  x_axis_dates <- as.Date(sort(unique(df_total$date)))
   x_axis_breaks <- x_axis_dates[seq(1, length(x_axis_dates), by = 6)]
   # Format the facet titles
   facet_titles <- rlang::set_names(
