@@ -1396,12 +1396,21 @@ plot_trajectory <- function(
     # na.rm = TRUE is usually not needed, but it prevents the plot element to
     # disappear in the case of missing values
     max(na.rm = TRUE)
-  last_window_max_cases <- totals |>
-    filter(date >= last_window_beg) |>
+  overall_max_cases <- totals |>
     pull(.data$counts) |>
     max(na.rm = TRUE)
   # 5% offset of the braces to avoid overplotting the trajectory
   bracket_offset <- first_window_max_cases * 0.05
+  # For the simulation study, place the bracket indicating the first window a
+  # little bit higher, since it is located near a season peak.
+  if (data_origin == "case_study") {
+    figure_path <- "inst/figure/SARI_trajectory"
+    first_window_bracket_y <- first_window_max_cases + bracket_offset
+  } else {
+    figure_path <- paste0("inst/figure/", data_origin, "_simulation_trajectory")
+    first_window_bracket_y <- first_window_max_cases + 5 * bracket_offset
+  }
+
   trajectory_plot <- ggplot(totals, aes(x = .data$date, y = .data$counts)) +
     geom_line() +
     # Highlight the period used for determining the priors
@@ -1410,82 +1419,33 @@ plot_trajectory <- function(
       xmax = aux_study_end,
       y.position = first_window_max_cases + bracket_offset,
       label = "Data used to\ndetermine priors",
-      label.size = 3
+      label.size = 4.5
     ) +
-    ylim(c(0, NA))
-  if (data_origin == "case_study") {
-    figure_path <- "inst/figure/SARI_trajectory"
-    # If we plot the case study data, we will highlight the rolling window and
-    # also divide it into the purely training data and the part, where
-    # nowcasting is being done
-    trajectory_plot <- trajectory_plot +
-      # Highlight the first window of training data excluding the nowcasting
-      # part
-      ggpubr::geom_bracket(
-        xmin = start_date,
-        xmax = first_window_end - (max_lag - 2) * 7 - 1,
-        y.position = first_window_max_cases + bracket_offset,
-        label = "First\ntraining\ndata",
-        label.size = 3
-      ) +
-      # Highlight the first nowcasting target
-      ggpubr::geom_bracket(
-        xmin = first_window_end - (max_lag - 2) * 7 + 1,
-        xmax = first_window_end,
-        y.position = first_window_max_cases + bracket_offset,
-        label = "First\nnowcasting\ntarget",
-        label.size = 3
-      ) +
-      # Highlight the last window of training data excluding the nowcasting part
-      ggpubr::geom_bracket(
-        xmin = last_window_beg,
-        xmax = last_window_beg + (length_of_train_data - max_lag + 2) * 7 - 1,
-        y.position = last_window_max_cases + bracket_offset,
-        label = "Last\ntraining\ndata",
-        label.size = 3
-      ) +
-      # Highlight the last nowcasting target
-      ggpubr::geom_bracket(
-        xmin = last_window_beg + (length_of_train_data - max_lag + 2) * 7 + 1,
-        xmax = last_window_beg + length_of_train_data * 7,
-        y.position = last_window_max_cases + bracket_offset,
-        label = "Last\nnowcasting\ntarget",
-        label.size = 3
-      ) +
-      labs(title = "SARI incidence", y = "Incidence")
-  } else {
-    figure_path <- paste0("inst/figure/", data_origin, "_simulation_trajectory")
-    # If we plot the simulation study data, we will highlight the rolling window
-    # without further differentiation, which part of data is complete and what
-    # the nowcasting target is
-    trajectory_plot <- trajectory_plot +
-      # Highlight the first window of training data including the nowcasting
-      # part
-      ggpubr::geom_bracket(
-        xmin = start_date,
-        xmax = first_window_end,
-        y.position = first_window_max_cases + bracket_offset,
-        label = "First\nwindow",
-        label.size = 3
-      ) +
-      # Highlight the last window of training data including the nowcasting part
-      ggpubr::geom_bracket(
-        xmin = last_window_beg,
-        xmax = last_window_beg + length_of_train_data * 7,
-        y.position = last_window_max_cases + bracket_offset,
-        label = "Last\nwindow",
-        label.size = 3
-      ) +
-      labs(
-        title = paste0(data_origin, " simulation incidence"),
-        y = "Incidence"
-      )
-  }
+    # Highlight the first window of training data including the nowcasting
+    # part
+    ggpubr::geom_bracket(
+      xmin = start_date,
+      xmax = first_window_end,
+      y.position = first_window_bracket_y,
+      label = "First\nwindow",
+      label.size = 4.5
+    ) +
+    # Highlight the last window of training data including the nowcasting part
+    ggpubr::geom_bracket(
+      xmin = last_window_beg,
+      xmax = last_window_beg + length_of_train_data * 7,
+      y.position = overall_max_cases + bracket_offset,
+      label = "Last\nwindow",
+      label.size = 4.5
+    ) +
+    labs(y = "Incidence") +
+    ylim(c(0, overall_max_cases + 3 * bracket_offset)) +
+    get_plot_theme()
 
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
-    save_figure(trajectory_plot, figure_path, width = 11, height = 7)
+    save_figure(trajectory_plot, figure_path, width = 9, height = 6)
     ret <- NULL
   } else {
     ret <- trajectory_plot
