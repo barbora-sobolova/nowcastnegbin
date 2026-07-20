@@ -1126,7 +1126,10 @@ plot_per_window <- function(
 #' A wrapper around plotting functions creating all relevant aggregated plots
 #'
 #' @description This is a wrapper around functions that plot the aggregated
-#' results: \code{plot_coverage()} and \code{plot_crps_decomp()}.
+#' results: \code{plot_coverage()}, \code{plot_crps_decomp()} and
+#' \code{plot_nowcast_bands()}. For the MCMC method, we run 4 additional
+#' scenarios as a robustness check. For these scenarios, the coverage and CRPS
+#' plots are saved as glued together by pairs.
 #'
 #' @param df_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `quantile_50`
@@ -1156,6 +1159,7 @@ plot_per_window <- function(
 #' @return a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
+#' @importFrom patchwork plot_layout plot_spacer
 #'
 #' @export
 plot_aggregated <- function(
@@ -1176,14 +1180,21 @@ plot_aggregated <- function(
   # loop to be executed.
   scenario <- unique(df_nowcast$sensitivity_sc)
   ret_list <- vector("list", length(scenario))
+  names(ret_list) <- scenario
   for (k in seq_along(scenario)) {
+    # Logical indicating whether we are plotting results from the main scenario.
+    # For the sensitivity analysis scenario, we do not save the coverage and
+    # CRPS plots individually. Rather, we glue them together using patchwork to
+    # fit better on page of the manuscript.
+    main_scenario <- scenario[k] == ""
     p_coverage <- plot_coverage(
       filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
       model_names,
       fitting_method,
       data_origin,
       scenario[k],
-      save_plot
+      # Avoid saving the individual plot for other scenarios than the main one
+      save_plot && main_scenario
     )
     p_crps_decomp <- plot_crps_decomp(
       filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
@@ -1191,7 +1202,8 @@ plot_aggregated <- function(
       fitting_method,
       data_origin,
       scenario[k],
-      save_plot
+      # Avoid saving the individual plot for other scenarios than the main one
+      save_plot && main_scenario
     )
     p_nowcast_bands <- plot_nowcast_bands(
       full_data,
@@ -1209,7 +1221,115 @@ plot_aggregated <- function(
       nowcast_bands = p_nowcast_bands
     )
   }
+  # If the plots are to be saved, glue together the coverage and CRPS plots from
+  # the sensitivity analysis.
+  if (save_plot) {
+    save_patchwork_plots(ret_list)
+    # If we save a plot, we usually return NULL in place of the individual
+    # plots. For consistency, we reconstruct the list of NULLs with a
+    # corresponding structure here.
+    ret_list <- replicate(length(scenario), vector("list", 3), simplify = FALSE)
+    names(ret_list) <- scenario
+  }
   ret_list
+}
+
+#' Arrange and save figures from the robustness check
+#'
+#' @description This functions takes the individual coverage and CRPS plots of
+#' the results from the sensitivity analysis, groups them together and saves
+#' them. For the MCMC method, we run 4 additional
+#' scenarios as a robustness check. For these scenarios, the coverage and CRPS
+#' plots are saved as glued together by pairs.
+#' \itemize{
+#'   \item coverage in scenarios with stronger and weaker prior on the delay
+#'   probability,
+#'   \item CRPS in scenarios with stronger and weaker prior on the delay
+#'   probability,
+#'   \item coverage in scenarios with stronger and weaker prior on the
+#'   dispersion parameter,
+#'   \item CRPS in scenarios with stronger and weaker prior on the
+#'   dispersion parameter.
+#' }
+#'
+#' @param plot_list a list containing the individual plots from the 4
+#' sensitivity analysis scenarios. The outer list is indexed by the scenarios,
+#' the inner list by plot type. The names of the sensitivity screnarios are:
+#' `prob_high`, `prob_low`, `disp_high`, `disp_low`. The names of the relevant
+#' individual plots are `coverage` and `crps_decomp`.
+#'
+#' @return NULL
+#'
+#' @import ggplot2
+#' @importFrom patchwork plot_layout plot_spacer
+#'
+#' @export
+save_patchwork_plots <- function(plot_list) {
+  # Add a plot title to distinguish between more and less informative priors.
+  # The same title is used for the delay probability and the dispersion
+  # parameter.
+  p_theme_chunk_stronger <- list(
+    labs(title = "Stronger prior"),
+    theme(plot.title = element_text(hjust = 0.5, size = 16))
+  )
+  p_theme_chunk_weaker <- list(
+    labs(title = "Weaker prior"),
+    theme(plot.title = element_text(hjust = 0.5, size = 16))
+  )
+  # Layout of the patchwork plot. The plots will be placed next to each other,
+  # so we add a narrow spacer between them.
+  p_layout <- patchwork::plot_layout(
+    guides = "collect",
+    axes = "collect_y",
+    widths = c(7.4, 0.2, 7.4)
+  )
+  # List of the plots to iterate over
+  patchworked_list <- vector("list", 4)
+  # Names that will be used as file names
+  names(patchworked_list) <- c(
+    "coverage_plot_case_study_mcmc_prob",
+    "coverage_plot_case_study_mcmc_disp",
+    "crps_decomposition_plot_case_study_mcmc_prob",
+    "crps_decomposition_plot_case_study_mcmc_disp"
+  )
+  # Coverage plot for scenarios modifying the dispersion of the delay
+  # probability prior
+  patchworked_list[[1]] <- (
+    (plot_list$prob_high$coverage + p_theme_chunk_weaker) |
+      patchwork::plot_spacer() |
+      (plot_list$prob_low$coverage + p_theme_chunk_stronger)
+  ) + p_layout
+  # Coverage plot for scenarios modifying the dispersion of the dispersion
+  # parameter prior
+  patchworked_list[[2]] <- (
+    (plot_list$disp_high$coverage + p_theme_chunk_weaker) |
+      patchwork::plot_spacer() |
+      (plot_list$disp_low$coverage + p_theme_chunk_stronger)
+  ) + p_layout
+  # CRPS plot for scenarios modifying the dispersion of the delay probability
+  # prior
+  patchworked_list[[3]] <- (
+    (plot_list$prob_high$crps_decomp + p_theme_chunk_weaker) |
+      patchwork::plot_spacer() |
+      (plot_list$prob_low$crps_decomp + p_theme_chunk_stronger)
+  ) + p_layout
+  # CRPS plot for scenarios modifying the dispersion of the dispersion parameter
+  # prior
+  patchworked_list[[4]] <- (
+    (plot_list$disp_high$crps_decomp + p_theme_chunk_weaker) |
+      patchwork::plot_spacer() |
+      (plot_list$disp_low$crps_decomp + p_theme_chunk_stronger)
+  ) + p_layout
+  # Iterate over the plots and save them
+  for (k in seq_along(patchworked_list)) {
+    save_figure(
+      patchworked_list[[k]],
+      paste0("inst/figure/", names(patchworked_list)[k]),
+      width = 15,
+      height = 7
+    )
+  }
+  NULL
 }
 
 #' Plot the whole incidence trajectory
