@@ -141,3 +141,129 @@ summarize_nowcast <- function(
   )
   df_nowcast_plot
 }
+
+#' Combine data frames of results from different methods
+#'
+#' @description This function
+#'
+#' @param df_mcmc a data frame with results obtained via the MCMC method
+#' @param df_glm a data frame with results obtained via the GLM method
+#' @param dates_to_show a selection of 4-6 consecutive dates for which we want
+#' to show the estimates.
+#' @param model_to_show a string indicating an observation model, from which we
+#' want to show th estimates
+#'
+#' @return a filtered data frame combining the GLM and MCMC results
+#'
+#' @import dplyr
+#'
+#' @export
+filter_and_combine_methods <- function(
+  df_mcmc,
+  df_glm,
+  dates_to_show,
+  model_to_show
+) {
+  df_combined <- bind_rows(
+    mutate(
+      dplyr::filter(
+        df_mcmc,
+        # Keep only rows with the desired date and observation model
+        .data$nowcast_date %in% dates_to_show &
+          .data$Distribution == model_to_show
+      ),
+      method = "mcmc"
+    ),
+    mutate(
+      dplyr::filter(
+        df_glm,
+        # Keep only rows with the desired date and observation model
+        .data$nowcast_date %in% dates_to_show &
+          .data$Distribution == model_to_show
+      ),
+      method = "glm"
+    )
+  )
+  df_combined
+}
+
+#' Extract estimates of the mean process and nowcasts for selected time windows
+#'
+#' @description This function filters data frame rows corresponding to selected
+#' dates and observation model.
+#'
+#' @param df_nowcast_mcmc a data frame with columns `week`, `.value`,
+#' `Distribution`, `nowcast_date` and `sensitivity_sc` that contains the
+#' distribution of the nowcast obtained from the MCMC method in a sample format
+#' @param df_nowcast_glm same as \code{df_nowcast_mcmc} but the results are
+#' obtained from the GLM method
+#' @param df_lambda_mcmc a data frame with columns `week`, `.value`,
+#' `Distribution` and `nowcast_date`, that contains the distribution of the mean
+#' process obtained from the MCMC method in a sample format
+#' @param df_lambda_glm same as \code{df_lambda_mcmc} but the results are
+#' obtained from the GLM method
+#' @param df_total a data frame containing columns `date`, `counts` and `data`.
+#' The last column `data` is an indicator, whether the values in the `counts`
+#' column are the final sums of the counts, or the preliminary data version.
+#' Needed to plot the observations alongside the nowcasts.
+#' @param dates_to_show a selection of 4-6 consecutive dates for which we want
+#' to show the estimates.
+#' @param model_to_show a string indicating an observation model, from which we
+#' want to show th estimates
+#'
+#' @return a list containing 3 data frames
+#' \describe{
+#'   \item{\code{lambda}}{with columns `week` (the time as an integer starting
+#'   from 1), `.value` (sampled value of lambda), `Distribution` (observation
+#'   model name), `nowcast_date` (date when the nowcast was calculated),
+#'   `sensitivity_sc` (name of the sensitivity analysis scenario, applicable
+#'   only for the MCMC method) and `method` (either "mcmc" or "glm"),}
+#'   \item{\code{nowcast}}{with columns `date` (date of the nowcasting target),
+#'   `delay` (reporting delay in weeks), `nowcast_date`, `Distribution`,
+#'   `quantile_2.5`,`quantile_25`, `quantile_50`, `quantile_75`, `quantile_97.5`
+#'   and `method`,
+#'   \item{\code{total}}{a data frame containing columns `date`, `counts` and
+#'   `data` (indicator, whether the counts are preliminary or final).}
+#' }
+#' The returned data frames are empty, if the input data contained no entries
+#' from the selected dates.
+#'
+#' @import dplyr
+#'
+#' @export
+filter_glm_overshoot_dates <- function(
+  df_nowcast_mcmc,
+  df_nowcast_glm,
+  df_lambda_mcmc,
+  df_lambda_glm,
+  df_total,
+  dates_to_show = c("2019-03-24", "2019-03-31", "2019-04-07", "2019-04-14"),
+  model_to_show = "NegBinX"
+) {
+  # We filter out all rolling windows we don't want to show. Since the function
+  # is called for each dynamic branch, in most cases, the filtered data frame
+  # will have 0 rows.
+  df_lambda <- filter_and_combine_methods(
+    df_lambda_mcmc,
+    df_lambda_glm,
+    dates_to_show,
+    model_to_show
+  )
+  df_nowcast <- filter_and_combine_methods(
+    df_nowcast_mcmc,
+    df_nowcast_glm,
+    dates_to_show,
+    model_to_show
+  )
+  ret_list <- list(lambda = df_lambda, nowcast = df_nowcast)
+  # We also select the data frame with the total counts only for the selected
+  # dates. Otherwise we return NULL.
+  if (max(df_total$date) %in% dates_to_show) {
+    # Add the date of the nowcast for easier faceting during plotting
+    df_total <- df_total |> mutate(nowcast_date = max(df_total$date))
+    ret_list <- c(ret_list, list(total = df_total))
+  } else {
+    ret_list <- c(ret_list, list(total = NULL))
+  }
+  ret_list
+}

@@ -27,6 +27,9 @@ tar_option_set(
 )
 tar_source(files = "R")
 
+# Set the locale
+Sys.setlocale("LC_TIME", "English")
+
 # set the ggplot theme
 ggplot2::theme_set(ggplot2::theme_bw())
 
@@ -82,6 +85,11 @@ sim_disp_par <- c("NegBinX" = 0.04, "NegBin2D" = 0.01, "NegBin1D" = 100)
 sim_obs_model <- data.frame(
   model_obs = c("NegBinX", "NegBin2D", "NegBin1D"),
   model_number = c(1, 2, 3)
+)
+# The GLM method often overestimates the mean process around season peaks.
+# We show this in a separate plot for the selected dates.
+glm_overshoot_dates <- as.Date(
+  c("2019-03-24", "2019-03-31", "2019-04-07", "2019-04-14")
 )
 # Seed used to simulate the counts
 sim_seed <- 2436
@@ -521,6 +529,42 @@ list(
         data_origin = model_obs
       )
     })
+  ),
+  # Extract the estimate of the mean process from both fitting methods for
+  # selected dates in the NegBinX simulation study in order to show the GLM
+  # model overshooting the mean value. We do it per branch to avoid loading all
+  # fits at once when we want to plot only the NegBinX model fits for the
+  # selected dates.
+  tar_target(
+    sim_lambda_overshoot,
+    filter_glm_overshoot_dates(
+      sim_summarized_nowcast_mcmc_NegBinX,
+      sim_summarized_nowcast_glm_NegBinX,
+      sim_fitted_mcmc_NegBinX$lambda,
+      sim_fitted_glm_NegBinX$lambda,
+      sim_df_total_NegBinX,
+      dates_to_show = glm_overshoot_dates,
+      model_to_show = "NegBinX"
+    ),
+    pattern = map(
+      sim_summarized_nowcast_mcmc_NegBinX,
+      sim_summarized_nowcast_glm_NegBinX,
+      sim_fitted_mcmc_NegBinX,
+      sim_fitted_glm_NegBinX,
+      sim_df_total_NegBinX
+    ),
+    iteration = "list"
+  ),
+  # Plot the example of the GLM method overshooting the mean
+  tar_target(
+    sim_plot_overshoot,
+    plot_glm_overshoot(
+      map(sim_lambda_overshoot, "nowcast"),
+      map(sim_lambda_overshoot, "lambda"),
+      map(sim_lambda_overshoot, "total"),
+      glm_overshoot_dates,
+      "NegBinX"
+    )
   ),
 
   # Case study =================================================================

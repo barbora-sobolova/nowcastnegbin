@@ -1854,6 +1854,175 @@ plot_mcmc_diagnostics <- function(
   ret
 }
 
+
+#' Plot the nowcasts, where the GLM method overshoots
+#'
+#' @description This function plots and possibly saves the plot of nowcasts and
+#' estimate of the mean process \eqn{\lambda_t} for selected dates to highlight
+#' the shortcomings of the GLM method leading to somewhat worse results compared
+#' to the MCMC method.
+#'
+#' @param df_nowcast_mcmc a data frame with columns `date` (date of the
+#' nowcasting target), `delay` (reporting delay in weeks), `nowcast_date`,
+#' `Distribution`, `quantile_2.5`,`quantile_25`, `quantile_50`, `quantile_75`,
+#' `quantile_97.5` and `method`, that contains summarized nowcasting results
+#' from both the MCMC and GLM method
+#' @param df_lambda a data frame with columns `week`, `.value`,
+#' `Distribution` and `nowcast_date`, that contains the distribution of the mean
+#' process in a sample format
+#' @param df_total a data frame containing columns `date`, `counts` and `data`.
+#' The last column `data` is an indicator, whether the values in the `counts`
+#' column are the final sums of the counts, or the preliminary data version.
+#' Needed to plot the observations alongside the nowcasts.
+#' @param dates_to_show a selection of 4-6 consecutive dates for which we want
+#' to show the estimates.
+#' @param model_to_show a string indicating an observation model, from which we
+#' want to show th estimates
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggplot2::ggsave()}
+#'
+#' @return a ggplot object, or NULL if \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2 patchwork
+#'
+#' @export
+plot_glm_overshoot <- function(
+  df_nowcast,
+  df_lambda,
+  df_total,
+  dates_to_show,
+  model_to_show = "NegBinX",
+  save_plot = TRUE
+) {
+  # Bind rows of all the data frames that are in a list format
+  df_lambda <- bind_rows(df_lambda) |>
+    group_by(.data$week, .data$nowcast_date, .data$method) |>
+    summarize(
+      lambda_median = median(.data$.value),
+      .groups = "drop_last"
+    ) |>
+    group_by(.data$nowcast_date, .data$method) |>
+    mutate(
+      date = as.Date((.data$week - 20) * 7, origin = .data$nowcast_date[1])
+    )
+  df_nowcast <- bind_rows(df_nowcast)
+  df_total <- bind_rows(df_total) |>
+    # Reverse the factor ordering to plot the colors in the correct ordering
+    mutate(data = factor(data, levels = c("Preliminary", "Final")))
+
+  # Set the colors and labels for the GLM and MCMC method in the plot of lambda
+  # and the nowcasts
+  method_colors <- c("glm" = "sienna3", "mcmc" = "turquoise3")
+  method_labels <- c("glm" = "GAM", "mcmc" = "HMC")
+  # Set the x-axis breaks
+  x_axis_dates <- as.Date(unique(df_total$date))
+  x_axis_breaks <- x_axis_dates[seq(1, length(x_axis_dates), by = 6)]
+  # Format the facet titles
+  facet_titles <- rlang::set_names(
+    paste0("Nowcasts on ", format(as.Date(dates_to_show), "%d %b %Y")),
+    dates_to_show
+  )
+
+  # Plot the nowcasts faceted by different rolling windows
+  p_nowcast <- ggplot() +
+    geom_line(
+      df_total,
+      mapping = aes(x = .data$date, y = .data$counts, color = .data$data)
+    ) +
+    geom_line(
+      df_nowcast,
+      mapping = aes(
+        x = .data$date,
+        y = .data$quantile_50,
+        color = .data$method
+      ),
+      linetype = "dashed"
+    ) +
+    geom_ribbon(
+      df_nowcast,
+      mapping = aes(
+        x = .data$date,
+        ymin = .data$quantile_2.5,
+        ymax = .data$quantile_97.5,
+        fill = .data$method
+      ),
+      alpha = 0.2
+    ) +
+    scale_color_manual(
+      values = c("Final" = "black", "Preliminary" = "gray", method_colors),
+      breaks = c("Final", "Preliminary"),
+      name = "Data"
+    ) +
+    scale_fill_manual(
+      values = method_colors,
+      name = "Method",
+      labels = method_labels
+    ) +
+    scale_x_date(
+      breaks = x_axis_breaks,
+      date_labels = "%d %b",
+      minor_breaks = x_axis_dates
+    ) +
+    labs(x = "Date", y = "Incidence", title = "Nowcast with 95% PIs") +
+    facet_wrap(
+      ~nowcast_date,
+      labeller = as_labeller(facet_titles),
+      nrow = 2
+    ) +
+    theme(plot.title = element_text(hjust = 0.5))
+  # Plot the mean process estimates faceted by different rolling windows
+  p_lambda <- ggplot() +
+    geom_line(
+      df_total,
+      mapping = aes(x = .data$date, y = .data$counts, color = .data$data)
+    ) +
+    geom_line(
+      df_lambda,
+      mapping = aes(
+        x = .data$date,
+        y = .data$lambda_median,
+        color = .data$method
+      )
+    ) +
+    scale_color_manual(
+      values = c("Final" = "black", "Preliminary" = "gray", method_colors),
+      breaks = c("Final", "Preliminary"),
+      name = "Data"
+    ) +
+    labs(
+      x = "Date",
+      y = "Incidence",
+      title = expression(Estimate~of~lambda[t]) # nolint
+    ) +
+    scale_x_date(
+      breaks = x_axis_breaks,
+      date_labels = "%d %b",
+      minor_breaks = x_axis_dates
+    ) +
+    facet_wrap(
+      ~nowcast_date,
+      labeller = as_labeller(facet_titles),
+      nrow = 2
+    ) +
+    theme(plot.title = element_text(hjust = 0.5))
+  # Compose the plots vertically
+  p_combined <- (p_nowcast / p_lambda) +
+    patchwork::plot_layout(nrow = 2, axes = "collect", guides = "collect")
+
+  if (save_plot) {
+    save_figure(
+      p_combined,
+      paste("inst/figure/glm_overshoot", model_to_show, sep = "_"),
+      width = 7,
+      height = 8
+    )
+    ret <- NULL
+  } else {
+    ret <- p_combined
+  }
+  ret
+}
+
 #' Save a figure in the PDF and the PNG format
 #'
 #' @param figure a ggplot chart to be saved
