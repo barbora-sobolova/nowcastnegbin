@@ -38,7 +38,7 @@ Needed to plot the observations alongside the nowcasts.}
 to show the estimates.}
 
 \item{model_to_show}{a string indicating an observation model, from which we
-want to show th estimates}
+want to show the estimates}
 }
 \value{
 a list containing 3 data frames
@@ -51,7 +51,7 @@ only for the MCMC method) and \code{method} (either "mcmc" or "glm"),}
 \item{\code{nowcast}}{with columns \code{date} (date of the nowcasting target),
 \code{delay} (reporting delay in weeks), \code{nowcast_date}, \code{Distribution},
 \code{quantile_2.5},\code{quantile_25}, \code{quantile_50}, \code{quantile_75}, \code{quantile_97.5}
-and \code{method},
+and \code{method},}
 \item{\code{total}}{a data frame containing columns \code{date}, \code{counts} and
 \code{data} (indicator, whether the counts are preliminary or final).}
 }

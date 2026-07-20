@@ -209,7 +209,7 @@ filter_and_combine_methods <- function(
 #' @param dates_to_show a selection of 4-6 consecutive dates for which we want
 #' to show the estimates.
 #' @param model_to_show a string indicating an observation model, from which we
-#' want to show th estimates
+#' want to show the estimates
 #'
 #' @return a list containing 3 data frames
 #' \describe{
@@ -221,7 +221,7 @@ filter_and_combine_methods <- function(
 #'   \item{\code{nowcast}}{with columns `date` (date of the nowcasting target),
 #'   `delay` (reporting delay in weeks), `nowcast_date`, `Distribution`,
 #'   `quantile_2.5`,`quantile_25`, `quantile_50`, `quantile_75`, `quantile_97.5`
-#'   and `method`,
+#'   and `method`,}
 #'   \item{\code{total}}{a data frame containing columns `date`, `counts` and
 #'   `data` (indicator, whether the counts are preliminary or final).}
 #' }
