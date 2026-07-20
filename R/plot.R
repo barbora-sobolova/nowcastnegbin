@@ -244,7 +244,7 @@ plot_coverage <- function(
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     plot_height <- if (fitting_method == "mcmc") {
-      9
+      7
     } else {
       4.5
     }
@@ -385,7 +385,7 @@ plot_crps_decomp <- function(
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
     plot_height <- if (fitting_method == "mcmc") {
-      9
+      7
     } else {
       4.5
     }
