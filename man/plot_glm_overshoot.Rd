@@ -14,6 +14,12 @@ plot_glm_overshoot(
 )
 }
 \arguments{
+\item{df_nowcast}{a data frame with columns \code{date} (date of the
+nowcasting target), \code{delay} (reporting delay in weeks), \code{nowcast_date},
+\code{Distribution}, \code{quantile_2.5},\code{quantile_25}, \code{quantile_50}, \code{quantile_75},
+\code{quantile_97.5} and \code{method}, that contains summarized nowcasting results
+from both the MCMC and GLM method}
+
 \item{df_lambda}{a data frame with columns \code{week}, \code{.value},
 \code{Distribution} and \code{nowcast_date}, that contains the distribution of the mean
 process in a sample format}
@@ -31,12 +37,6 @@ want to show th estimates}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}
-
-\item{df_nowcast_mcmc}{a data frame with columns \code{date} (date of the
-nowcasting target), \code{delay} (reporting delay in weeks), \code{nowcast_date},
-\code{Distribution}, \code{quantile_2.5},\code{quantile_25}, \code{quantile_50}, \code{quantile_75},
-\code{quantile_97.5} and \code{method}, that contains summarized nowcasting results
-from both the MCMC and GLM method}
 }
 \value{
 a ggplot object, or NULL if \code{save_plot = TRUE}

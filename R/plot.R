@@ -1942,7 +1942,7 @@ plot_mcmc_diagnostics <- function(
 #' the shortcomings of the GLM method leading to somewhat worse results compared
 #' to the MCMC method.
 #'
-#' @param df_nowcast_mcmc a data frame with columns `date` (date of the
+#' @param df_nowcast a data frame with columns `date` (date of the
 #' nowcasting target), `delay` (reporting delay in weeks), `nowcast_date`,
 #' `Distribution`, `quantile_2.5`,`quantile_25`, `quantile_50`, `quantile_75`,
 #' `quantile_97.5` and `method`, that contains summarized nowcasting results
