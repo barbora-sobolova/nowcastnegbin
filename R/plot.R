@@ -243,6 +243,11 @@ plot_coverage <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
+    plot_height <- if (fitting_method == "mcmc") {
+      7
+    } else {
+      4.5
+    }
     save_figure(
       coverage_plot,
       paste0(
@@ -255,7 +260,7 @@ plot_coverage <- function(
         sensitivity_sc
       ),
       width = 9,
-      height = 7
+      height = plot_height
     )
     ret <- NULL
   } else {
@@ -316,11 +321,13 @@ plot_crps_decomp <- function(
       .groups = "drop"
     ) |>
     # Calculate the x-coordinate of the labels denoting the total CRPS
-    group_by(.data$delay) |>
     mutate(
-      lab_position = max(.data$Total) / 20
-    ) |>
-    ungroup()
+      lab_position = ifelse(
+        .data$delay == "0",
+        max(.data$Total) / 35,
+        .data$MAE * 1.3
+      )
+    )
 
   # Grab the maximum delay in order to label the facets according to the
   # corresponding delay
@@ -334,7 +341,7 @@ plot_crps_decomp <- function(
       values_to = "CRPS"
     )
 
-  # Plot the empirical coverage as horizontal bars
+  # Plot the CRPS as horizontal bars
   crps_decomp_plot <- ggplot() +
     geom_col(
       df_crps_decomp,
@@ -353,6 +360,7 @@ plot_crps_decomp <- function(
         y = .data$Distribution,
         label = round(.data$Total, 2)
       ),
+      border.color = "black",
       text.color = "black",
       color = "white",
       hjust = 0
@@ -370,13 +378,17 @@ plot_crps_decomp <- function(
     get_plot_theme() +
     facet_wrap(
       ~delay,
-      scales = "free_x",
       nrow = 2,
       labeller = as_labeller(label_horizon_facet(max_lag))
     )
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
+    plot_height <- if (fitting_method == "mcmc") {
+      7
+    } else {
+      4.5
+    }
     save_figure(
       crps_decomp_plot,
       paste0(
@@ -389,7 +401,7 @@ plot_crps_decomp <- function(
         sensitivity_sc
       ),
       width = 9,
-      height = 7
+      height = plot_height
     )
     ret <- NULL
   } else {
@@ -583,6 +595,10 @@ plot_disp_par <- function(
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
 #' true value of the delay probability vector used to generate the data
+#' @param example logical indicator, whether we want to point out the plot as
+#' an example of different posteriors between the NegBinX and NegBin2D/1D
+#' models. If \code{example = TRUE}, than we plot/save a version of the plot
+#' more focused on the selected models.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -601,11 +617,19 @@ plot_delay_prob <- function(
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   true_value = NULL,
+  example = FALSE,
   save_plot = TRUE
 ) {
+  max_lag <- max(df_delay_prob$delay)
+
   df_delay_prob <- df_delay_prob |>
     # Turn the delay into a factor to allow for easier faceting
     mutate(delay = factor(.data$delay))
+
+  facet_titles <- rlang::set_names(
+    paste0("Delay: ", seq_len(max_lag), " weeks"),
+    seq_len(max_lag)
+  )
 
   delay_prob_plot <- ggplot() +
     # Plot the density of the delay probability estimates
@@ -621,7 +645,13 @@ plot_delay_prob <- function(
     scale_color_manual(values = get_model_colors()[model_names]) +
     labs(x = "delay probability", y = "density") +
     coord_cartesian(ylim = c(0, 80)) +
-    facet_wrap(~delay, scales = "free_x", nrow = 2)
+    facet_wrap(
+      ~delay,
+      scales = "free_x",
+      nrow = 2,
+      labeller = as_labeller(facet_titles)
+    )
+
   if (fitting_method == "mcmc") {
     if (is.null(prob_prior_pars) || length(prob_prior_pars) == 0) {
       stop("`prob_prior_pars` must be provided when fitting_method = 'mcmc'.")
@@ -657,9 +687,14 @@ plot_delay_prob <- function(
         mapping = aes(x = .data$p, y = .data$dens, linetype = "Prior")
       ) +
       scale_linetype_manual(
-        values = c("Prior" = "dotted", "Posterior" = "solid")
+        values = c("Prior" = "dotted", "Posterior" = "solid"),
+        name = ""
       ) +
-      labs(title = "Posterior of the delay probability")
+      labs(
+        title = "Posterior of the delay probability",
+        x = "Delay probability",
+        y = "Density"
+      )
   } else {
     # For the GLM method, remove the linetype aesthetics distinguishing between
     # the prior and posterior distribution from the legend
@@ -681,9 +716,44 @@ plot_delay_prob <- function(
       )
   }
 
+  # If we want to save the plot and show it in the manuscript, we show only
+  # models we are interested in and adjust the plot size in order to emphasize
+  # the comparison between the selected models.
+  if (example) {
+    # Show only selected models
+    delay_prob_plot$layers[[1]]$data <- filter(
+      delay_prob_plot$layers[[1]]$data,
+      .data$Distribution %in% model_names
+    )
+    # Add a new faceting specification to make all scales varying
+    delay_prob_plot <- delay_prob_plot +
+      facet_wrap(
+        ~delay,
+        scales = "free",
+        nrow = 2,
+        labeller = as_labeller(facet_titles)
+      )
+    # Remove the y-limit
+    delay_prob_plot$coordinates$limits$y <- c(0, NA)
+    # Remove the title
+    delay_prob_plot$labels$title <- NULL
+    if (save_plot) {
+      save_figure(
+        delay_prob_plot,
+        paste(
+          "inst/figure/delay_posterior_difference",
+          date_of_the_nowcast,
+          sep = "_"
+        ),
+        width = 7,
+        height = 4
+      )
+    }
+  }
+
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
-  if (save_plot) {
+  if (save_plot && !example) {
     save_figure(
       delay_prob_plot,
       paste0(
@@ -1075,6 +1145,9 @@ plot_per_window <- function(
       data_origin,
       scenario[k],
       prob_true_val,
+      # Within this wrapper, we don't plot the more focused example of the delay
+      # probability posterior, thus example = FALSE
+      FALSE,
       save_plot
     )
     max_lag <- max(df_delay_prob$delay)
@@ -1114,7 +1187,10 @@ plot_per_window <- function(
 #' A wrapper around plotting functions creating all relevant aggregated plots
 #'
 #' @description This is a wrapper around functions that plot the aggregated
-#' results: \code{plot_coverage()} and \code{plot_crps_decomp()}.
+#' results: \code{plot_coverage()}, \code{plot_crps_decomp()} and
+#' \code{plot_nowcast_bands()}. For the MCMC method, we run 4 additional
+#' scenarios as a robustness check. For these scenarios, the coverage and CRPS
+#' plots are saved as glued together by pairs.
 #'
 #' @param df_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `quantile_50`
@@ -1144,6 +1220,7 @@ plot_per_window <- function(
 #' @return a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
+#' @importFrom patchwork plot_layout plot_spacer
 #'
 #' @export
 plot_aggregated <- function(
@@ -1164,14 +1241,21 @@ plot_aggregated <- function(
   # loop to be executed.
   scenario <- unique(df_nowcast$sensitivity_sc)
   ret_list <- vector("list", length(scenario))
+  names(ret_list) <- scenario
   for (k in seq_along(scenario)) {
+    # Logical indicating whether we are plotting results from the main scenario.
+    # For the sensitivity analysis scenario, we do not save the coverage and
+    # CRPS plots individually. Rather, we glue them together using patchwork to
+    # fit better on page of the manuscript.
+    main_scenario <- scenario[k] == ""
     p_coverage <- plot_coverage(
       filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
       model_names,
       fitting_method,
       data_origin,
       scenario[k],
-      save_plot
+      # Avoid saving the individual plot for other scenarios than the main one
+      save_plot && main_scenario
     )
     p_crps_decomp <- plot_crps_decomp(
       filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
@@ -1179,7 +1263,8 @@ plot_aggregated <- function(
       fitting_method,
       data_origin,
       scenario[k],
-      save_plot
+      # Avoid saving the individual plot for other scenarios than the main one
+      save_plot && main_scenario
     )
     p_nowcast_bands <- plot_nowcast_bands(
       full_data,
@@ -1197,7 +1282,115 @@ plot_aggregated <- function(
       nowcast_bands = p_nowcast_bands
     )
   }
+  # If the plots are to be saved, glue together the coverage and CRPS plots from
+  # the sensitivity analysis.
+  if (save_plot && fitting_method == "mcmc" && data_origin == "case_study") {
+    save_patchwork_plots(ret_list)
+    # If we save a plot, we usually return NULL in place of the individual
+    # plots. For consistency, we reconstruct the list of NULLs with a
+    # corresponding structure here.
+    ret_list <- replicate(length(scenario), vector("list", 3), simplify = FALSE)
+    names(ret_list) <- scenario
+  }
   ret_list
+}
+
+#' Arrange and save figures from the robustness check
+#'
+#' @description This functions takes the individual coverage and CRPS plots of
+#' the results from the sensitivity analysis, groups them together and saves
+#' them. For the MCMC method, we run 4 additional
+#' scenarios as a robustness check. For these scenarios, the coverage and CRPS
+#' plots are saved as glued together by pairs.
+#' \itemize{
+#'   \item coverage in scenarios with stronger and weaker prior on the delay
+#'   probability,
+#'   \item CRPS in scenarios with stronger and weaker prior on the delay
+#'   probability,
+#'   \item coverage in scenarios with stronger and weaker prior on the
+#'   dispersion parameter,
+#'   \item CRPS in scenarios with stronger and weaker prior on the
+#'   dispersion parameter.
+#' }
+#'
+#' @param plot_list a list containing the individual plots from the 4
+#' sensitivity analysis scenarios. The outer list is indexed by the scenarios,
+#' the inner list by plot type. The names of the sensitivity screnarios are:
+#' `prob_high`, `prob_low`, `disp_high`, `disp_low`. The names of the relevant
+#' individual plots are `coverage` and `crps_decomp`.
+#'
+#' @return NULL
+#'
+#' @import ggplot2
+#' @importFrom patchwork plot_layout plot_spacer
+#'
+#' @export
+save_patchwork_plots <- function(plot_list) {
+  # Add a plot title to distinguish between more and less informative priors.
+  # The same title is used for the delay probability and the dispersion
+  # parameter.
+  p_theme_chunk_stronger <- list(
+    labs(title = "Stronger prior"),
+    theme(plot.title = element_text(hjust = 0.5, size = 16))
+  )
+  p_theme_chunk_weaker <- list(
+    labs(title = "Weaker prior"),
+    theme(plot.title = element_text(hjust = 0.5, size = 16))
+  )
+  # Layout of the patchwork plot. The plots will be placed next to each other,
+  # so we add a narrow spacer between them.
+  p_layout <- patchwork::plot_layout(
+    guides = "collect",
+    axes = "collect_y",
+    widths = c(7.4, 0.2, 7.4)
+  )
+  # List of the plots to iterate over
+  patchworked_list <- vector("list", 4)
+  # Names that will be used as file names
+  names(patchworked_list) <- c(
+    "coverage_plot_case_study_mcmc_prob",
+    "coverage_plot_case_study_mcmc_disp",
+    "crps_decomposition_plot_case_study_mcmc_prob",
+    "crps_decomposition_plot_case_study_mcmc_disp"
+  )
+  # Coverage plot for scenarios modifying the dispersion of the delay
+  # probability prior
+  patchworked_list[[1]] <- (
+    (plot_list$prob_high$coverage + p_theme_chunk_weaker) |
+      patchwork::plot_spacer() |
+      (plot_list$prob_low$coverage + p_theme_chunk_stronger)
+  ) + p_layout
+  # Coverage plot for scenarios modifying the dispersion of the dispersion
+  # parameter prior
+  patchworked_list[[2]] <- (
+    (plot_list$disp_high$coverage + p_theme_chunk_weaker) |
+      patchwork::plot_spacer() |
+      (plot_list$disp_low$coverage + p_theme_chunk_stronger)
+  ) + p_layout
+  # CRPS plot for scenarios modifying the dispersion of the delay probability
+  # prior
+  patchworked_list[[3]] <- (
+    (plot_list$prob_high$crps_decomp + p_theme_chunk_weaker) |
+      patchwork::plot_spacer() |
+      (plot_list$prob_low$crps_decomp + p_theme_chunk_stronger)
+  ) + p_layout
+  # CRPS plot for scenarios modifying the dispersion of the dispersion parameter
+  # prior
+  patchworked_list[[4]] <- (
+    (plot_list$disp_high$crps_decomp + p_theme_chunk_weaker) |
+      patchwork::plot_spacer() |
+      (plot_list$disp_low$crps_decomp + p_theme_chunk_stronger)
+  ) + p_layout
+  # Iterate over the plots and save them
+  for (k in seq_along(patchworked_list)) {
+    save_figure(
+      patchworked_list[[k]],
+      paste0("inst/figure/", names(patchworked_list)[k]),
+      width = 15,
+      height = 7
+    )
+  }
+  NULL
 }
 
 #' Plot the whole incidence trajectory
@@ -1264,12 +1457,21 @@ plot_trajectory <- function(
     # na.rm = TRUE is usually not needed, but it prevents the plot element to
     # disappear in the case of missing values
     max(na.rm = TRUE)
-  last_window_max_cases <- totals |>
-    filter(date >= last_window_beg) |>
+  overall_max_cases <- totals |>
     pull(.data$counts) |>
     max(na.rm = TRUE)
   # 5% offset of the braces to avoid overplotting the trajectory
   bracket_offset <- first_window_max_cases * 0.05
+  # For the simulation study, place the bracket indicating the first window a
+  # little bit higher, since it is located near a season peak.
+  if (data_origin == "case_study") {
+    figure_path <- "inst/figure/SARI_trajectory"
+    first_window_bracket_y <- first_window_max_cases + bracket_offset
+  } else {
+    figure_path <- paste0("inst/figure/", data_origin, "_simulation_trajectory")
+    first_window_bracket_y <- first_window_max_cases + 5 * bracket_offset
+  }
+
   trajectory_plot <- ggplot(totals, aes(x = .data$date, y = .data$counts)) +
     geom_line() +
     # Highlight the period used for determining the priors
@@ -1278,82 +1480,35 @@ plot_trajectory <- function(
       xmax = aux_study_end,
       y.position = first_window_max_cases + bracket_offset,
       label = "Data used to\ndetermine priors",
-      label.size = 3
+      label.size = 4.5
     ) +
-    ylim(c(0, NA))
-  if (data_origin == "case_study") {
-    figure_path <- "inst/figure/SARI_trajectory"
-    # If we plot the case study data, we will highlight the rolling window and
-    # also divide it into the purely training data and the part, where
-    # nowcasting is being done
-    trajectory_plot <- trajectory_plot +
-      # Highlight the first window of training data excluding the nowcasting
-      # part
-      ggpubr::geom_bracket(
-        xmin = start_date,
-        xmax = first_window_end - (max_lag - 2) * 7 - 1,
-        y.position = first_window_max_cases + bracket_offset,
-        label = "First\ntraining\ndata",
-        label.size = 3
-      ) +
-      # Highlight the first nowcasting target
-      ggpubr::geom_bracket(
-        xmin = first_window_end - (max_lag - 2) * 7 + 1,
-        xmax = first_window_end,
-        y.position = first_window_max_cases + bracket_offset,
-        label = "First\nnowcasting\ntarget",
-        label.size = 3
-      ) +
-      # Highlight the last window of training data excluding the nowcasting part
-      ggpubr::geom_bracket(
-        xmin = last_window_beg,
-        xmax = last_window_beg + (length_of_train_data - max_lag + 2) * 7 - 1,
-        y.position = last_window_max_cases + bracket_offset,
-        label = "Last\ntraining\ndata",
-        label.size = 3
-      ) +
-      # Highlight the last nowcasting target
-      ggpubr::geom_bracket(
-        xmin = last_window_beg + (length_of_train_data - max_lag + 2) * 7 + 1,
-        xmax = last_window_beg + length_of_train_data * 7,
-        y.position = last_window_max_cases + bracket_offset,
-        label = "Last\nnowcasting\ntarget",
-        label.size = 3
-      ) +
-      labs(title = "SARI incidence", y = "Incidence")
-  } else {
-    figure_path <- paste0("inst/figure/", data_origin, "_simulation_trajectory")
-    # If we plot the simulation study data, we will highlight the rolling window
-    # without further differentiation, which part of data is complete and what
-    # the nowcasting target is
-    trajectory_plot <- trajectory_plot +
-      # Highlight the first window of training data including the nowcasting
-      # part
-      ggpubr::geom_bracket(
-        xmin = start_date,
-        xmax = first_window_end,
-        y.position = first_window_max_cases + bracket_offset,
-        label = "First\nwindow",
-        label.size = 3
-      ) +
-      # Highlight the last window of training data including the nowcasting part
-      ggpubr::geom_bracket(
-        xmin = last_window_beg,
-        xmax = last_window_beg + length_of_train_data * 7,
-        y.position = last_window_max_cases + bracket_offset,
-        label = "Last\nwindow",
-        label.size = 3
-      ) +
-      labs(
-        title = paste0(data_origin, " simulation incidence"),
-        y = "Incidence"
-      )
-  }
+    # Highlight the first window of training data including the nowcasting
+    # part
+    ggpubr::geom_bracket(
+      xmin = start_date,
+      xmax = first_window_end,
+      y.position = first_window_bracket_y,
+      label = "First\nwindow",
+      label.size = 4.5
+    ) +
+    # Highlight the last window of training data including the nowcasting part
+    ggpubr::geom_bracket(
+      xmin = last_window_beg,
+      xmax = last_window_beg + length_of_train_data * 7,
+      y.position = overall_max_cases + bracket_offset,
+      label = "Last\nwindow",
+      label.size = 4.5
+    ) +
+    labs(y = "Incidence") +
+    ylim(
+      c(0, max(overall_max_cases, first_window_bracket_y) + 3 * bracket_offset)
+    ) +
+    get_plot_theme()
 
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
-    save_figure(trajectory_plot, figure_path, width = 11, height = 7)
+    save_figure(trajectory_plot, figure_path, width = 9, height = 6)
     ret <- NULL
   } else {
     ret <- trajectory_plot
@@ -1426,7 +1581,7 @@ plot_nowcast_bands <- function(
   true_data <- full_filtered |> as.matrix() |> rowSums()
   # Loop over the nowcasting horizons sorted from -3 to 0
   horizons <- unique(df_nowcast$delay)
-  horizons <- horizons[order(horizons)]
+  horizons <- horizons[order(as.numeric(as.character(horizons)))]
   patches <- vector("list", length(horizons))
   for (k in seq_along(horizons)) {
     # Which columns of the full data to sum
@@ -1454,38 +1609,91 @@ plot_nowcast_bands <- function(
       model_names
     )
   }
-  # Arrange the patches
-  arranged <- patchwork::wrap_plots(
-    patches,
-    nrow = length(horizons),
-    ncol = 1,
-    guides = "collect",
-    axes = "collect"
-  )
-  if (save_plot) {
-    plot_height <- if (fitting_method == "mcmc") {
-      17.5
-    } else {
-      13
-    }
-    save_figure(
-      arranged,
-      paste0(
-        paste(
-          "inst/figure/nowcast_bands",
-
-          data_origin,
-          fitting_method,
-          sep = "_"
-        ),
-        sensitivity_sc
-      ),
-      width = 10,
-      height = plot_height
+  # For some settings, we split the patchwork plot into 2 figures. The first one
+  # showing only the nowcasts for horizon 0 will go to the main manuscript, the
+  # rest into the supplement.
+  # We need to split:
+  # - the case study fitted using the MCMC method
+  # - the case study fitted using the GLM method
+  # - the NegBinX simulation study fitted using the MCMC method
+  # - the NegBinX simulation study fitted using the GLM method
+  split_figures <- (data_origin %in% c("case_study", "NegBinX")) &&
+    sensitivity_sc == ""
+  if (split_figures) {
+    # Arrange all the patches
+    arranged <- patchwork::wrap_plots(
+      # The last patch corresponds to delay zero, which is plotted separately
+      patches[seq_len(length(horizons) - 1)],
+      nrow = length(horizons) - 1,
+      ncol = 1,
+      guides = "collect",
+      axes = "collect"
     )
-    ret <- NULL
+    ret <- list(
+      arranged_plot = arranged,
+      separated_plot = patches[[length(horizons)]]
+    )
   } else {
-    ret <- arranged
+    # Arrange all the patches
+    arranged <- patchwork::wrap_plots(
+      patches,
+      nrow = length(horizons),
+      ncol = 1,
+      guides = "collect",
+      axes = "collect"
+    )
+    ret <- list(
+      arranged_plot = arranged,
+      separated_plot = NULL
+    )
+  }
+
+  if (save_plot) {
+    # For the case study, we have 4 nowcasting horizons, for the simulation
+    # study only 3
+    plot_height <- if (data_origin == "case_study") {
+      20
+    } else {
+      15
+    }
+    # For the GLM method we have only 3 nowcasting models instead of 6.
+    # We divide by a number lesser than 1 to allow for individual plot titles
+    # indicating the nowcasting horizon.
+    if (fitting_method == "glm") {
+      plot_height <- plot_height / 1.75
+    }
+    plot_path <- paste0(
+      paste(
+        "inst/figure/nowcast_bands",
+        data_origin,
+        fitting_method,
+        sep = "_"
+      ),
+      sensitivity_sc
+    )
+    if (split_figures) {
+      save_figure(
+        arranged,
+        plot_path,
+        width = 11.5,
+        height = plot_height * (length(horizons) - 1) / length(horizons)
+      )
+      save_figure(
+        patches[[length(horizons)]],
+        paste(plot_path, "delay0", sep = "_"),
+        width = 11.5,
+        # Increase the height to make enough space for the axis labels
+        height = plot_height / length(horizons) + 1
+      )
+    } else {
+      save_figure(
+        arranged,
+        plot_path,
+        width = 11.5,
+        height = plot_height
+      )
+    }
+    ret <- NULL
   }
   ret
 }
@@ -1560,7 +1768,10 @@ plot_nowcast_bands_per_horizon <- function(
   # into segments. For this reason, we split the data frame with the nowcasts
   # into several parts, which will be plotted separately.
   lower_bound <- c(start_date, skip_dates)
-  upper_bound <- c(skip_dates, end_date)
+  # In case that skip_dates = NULL, the resulting vector will be coerced to
+  # numeric. For this reason, we need to keep as.Date. This is not the case
+  # for the lower bound, since there we always start with a date.
+  upper_bound <- as.Date(c(skip_dates, end_date))
   df_nowcast_splitted <- sapply(
     seq_along(lower_bound),
     function(ind) {
@@ -1579,8 +1790,16 @@ plot_nowcast_bands_per_horizon <- function(
   date_breaks <- seq(
     start_date,
     end_date,
-    length = 3
+    length = 4
   )
+
+  # For MCMC, we have 6 models - 2 rows and 3 columns in the plot. For GLM we
+  # have only 3 models - 1 row and 3 columns.
+  n_plot_row <- if (length(model_names) > 3) {
+    2
+  } else {
+    1
+  }
 
   nowcast_band_plot <- ggplot() +
     # True and preliminary data as black and gray solid lines
@@ -1592,7 +1811,7 @@ plot_nowcast_bands_per_horizon <- function(
         color = .data$type,
         linetype = .data$type
       ),
-      linewidth = 0.15
+      linewidth = 0.3
     )
 
   # Plot the nowcast segments
@@ -1634,7 +1853,7 @@ plot_nowcast_bands_per_horizon <- function(
   }
   # Finish the plot
   nowcast_band_plot <- nowcast_band_plot +
-    scale_x_date(breaks = date_breaks) +
+    scale_x_date(breaks = date_breaks, date_labels = "%b %Y") +
     scale_color_manual(
       values = c(
         get_model_colors()[model_names],
@@ -1658,7 +1877,7 @@ plot_nowcast_bands_per_horizon <- function(
     scale_alpha_manual(
       values = c("PI_50" = 0.2, "PI_95" = 0.2),
       labels = c("50%", "95%"),
-      name = "Prediction interval"
+      name = "Prediction\ninterval"
     ) +
     guides(
       # Customize the legend of the data versions
@@ -1680,7 +1899,7 @@ plot_nowcast_bands_per_horizon <- function(
       plot.title = element_text(hjust = 0.5),
       axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
     ) +
-    facet_wrap(~Distribution, nrow = 2)
+    facet_wrap(~Distribution, nrow = n_plot_row)
   nowcast_band_plot
 }
 
@@ -1774,6 +1993,182 @@ plot_mcmc_diagnostics <- function(
     } else {
       ret[[k]] <- diag_plot
     }
+  }
+  ret
+}
+
+
+#' Plot the nowcasts, where the GLM method overshoots
+#'
+#' @description This function plots and possibly saves the plot of nowcasts and
+#' estimate of the mean process \eqn{\lambda_t} for selected dates to highlight
+#' the shortcomings of the GLM method leading to somewhat worse results compared
+#' to the MCMC method.
+#'
+#' @param df_nowcast a data frame with columns `date` (date of the
+#' nowcasting target), `delay` (reporting delay in weeks), `nowcast_date`,
+#' `Distribution`, `quantile_2.5`,`quantile_25`, `quantile_50`, `quantile_75`,
+#' `quantile_97.5` and `method`, that contains summarized nowcasting results
+#' from both the MCMC and GLM method
+#' @param df_lambda a data frame with columns `week`, `.value`,
+#' `Distribution` and `nowcast_date`, that contains the distribution of the mean
+#' process in a sample format
+#' @param df_total a data frame containing columns `date`, `counts` and `data`.
+#' The last column `data` is an indicator, whether the values in the `counts`
+#' column are the final sums of the counts, or the preliminary data version.
+#' Needed to plot the observations alongside the nowcasts.
+#' @param dates_to_show a selection of 4-6 consecutive dates for which we want
+#' to show the estimates.
+#' @param model_to_show a string indicating an observation model, from which we
+#' want to show th estimates
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggplot2::ggsave()}
+#'
+#' @return a ggplot object, or NULL if \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2 patchwork
+#'
+#' @export
+plot_glm_overshoot <- function(
+  df_nowcast,
+  df_lambda,
+  df_total,
+  dates_to_show,
+  model_to_show = "NegBinX",
+  save_plot = TRUE
+) {
+  # Bind rows of all the data frames that are in a list format
+  df_nowcast <- bind_rows(df_nowcast)
+  df_total <- bind_rows(df_total) |>
+    # Reverse the factor ordering to plot the colors in the correct ordering
+    mutate(data = factor(data, levels = c("Preliminary", "Final")))
+  df_lambda <- bind_rows(df_lambda) |>
+    group_by(.data$week, .data$nowcast_date, .data$method) |>
+    summarize(
+      lambda_median = median(.data$.value),
+      .groups = "drop_last"
+    )
+  # Derive the length of the rolling window
+  window_len <- max(df_lambda$week)
+  # Derive the date based on the week number and the nowcast date
+  df_lambda <- df_lambda |>
+    group_by(.data$nowcast_date, .data$method) |>
+    mutate(
+      date = as.Date(
+        (.data$week - window_len) * 7,
+        origin = .data$nowcast_date[1]
+      )
+    )
+
+  # Set the colors and labels for the GLM and MCMC method in the plot of lambda
+  # and the nowcasts
+  method_colors <- c("glm" = "sienna3", "mcmc" = "turquoise3")
+  method_labels <- c("glm" = "GAM", "mcmc" = "HMC")
+  # Set the x-axis breaks
+  x_axis_dates <- as.Date(sort(unique(df_total$date)))
+  x_axis_breaks <- x_axis_dates[seq(1, length(x_axis_dates), by = 6)]
+  # Format the facet titles
+  facet_titles <- rlang::set_names(
+    paste0("Nowcasts on ", format(as.Date(dates_to_show), "%d %b %Y")),
+    dates_to_show
+  )
+
+  # Plot the nowcasts faceted by different rolling windows
+  p_nowcast <- ggplot() +
+    geom_line(
+      df_total,
+      mapping = aes(x = .data$date, y = .data$counts, color = .data$data)
+    ) +
+    geom_line(
+      df_nowcast,
+      mapping = aes(
+        x = .data$date,
+        y = .data$quantile_50,
+        color = .data$method
+      ),
+      linetype = "dashed"
+    ) +
+    geom_ribbon(
+      df_nowcast,
+      mapping = aes(
+        x = .data$date,
+        ymin = .data$quantile_2.5,
+        ymax = .data$quantile_97.5,
+        fill = .data$method
+      ),
+      alpha = 0.2
+    ) +
+    scale_color_manual(
+      values = c("Final" = "black", "Preliminary" = "gray", method_colors),
+      breaks = c("Final", "Preliminary"),
+      name = "Data"
+    ) +
+    scale_fill_manual(
+      values = method_colors,
+      name = "Method",
+      labels = method_labels
+    ) +
+    scale_x_date(
+      breaks = x_axis_breaks,
+      date_labels = "%d %b",
+      minor_breaks = x_axis_dates
+    ) +
+    labs(x = "Date", y = "Incidence", title = "Nowcast with 95% PIs") +
+    facet_wrap(
+      ~nowcast_date,
+      labeller = as_labeller(facet_titles),
+      nrow = 2
+    ) +
+    theme(plot.title = element_text(hjust = 0.5))
+  # Plot the mean process estimates faceted by different rolling windows
+  p_lambda <- ggplot() +
+    geom_line(
+      df_total,
+      mapping = aes(x = .data$date, y = .data$counts, color = .data$data)
+    ) +
+    geom_line(
+      df_lambda,
+      mapping = aes(
+        x = .data$date,
+        y = .data$lambda_median,
+        color = .data$method
+      )
+    ) +
+    scale_color_manual(
+      values = c("Final" = "black", "Preliminary" = "gray", method_colors),
+      breaks = c("Final", "Preliminary"),
+      name = "Data"
+    ) +
+    labs(
+      x = "Date",
+      y = "Incidence",
+      title = expression(Estimate~of~lambda[t]) # nolint
+    ) +
+    scale_x_date(
+      breaks = x_axis_breaks,
+      date_labels = "%d %b",
+      minor_breaks = x_axis_dates
+    ) +
+    facet_wrap(
+      ~nowcast_date,
+      labeller = as_labeller(facet_titles),
+      nrow = 2
+    ) +
+    theme(plot.title = element_text(hjust = 0.5))
+  # Compose the plots vertically
+  p_combined <- (p_nowcast / p_lambda) +
+    patchwork::plot_layout(nrow = 2, axes = "collect", guides = "collect")
+
+  if (save_plot) {
+    save_figure(
+      p_combined,
+      paste("inst/figure/glm_overshoot", model_to_show, sep = "_"),
+      width = 7,
+      height = 8
+    )
+    ret <- NULL
+  } else {
+    ret <- p_combined
   }
   ret
 }

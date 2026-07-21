@@ -27,6 +27,9 @@ tar_option_set(
 )
 tar_source(files = "R")
 
+# Set the locale
+Sys.setlocale("LC_TIME", "English")
+
 # set the ggplot theme
 ggplot2::theme_set(ggplot2::theme_bw())
 
@@ -56,6 +59,10 @@ timesteps_to_fit <- 104
 skip_dates <- as.Date(
   c("2023-12-24", "2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28")
 )
+# The posterior for the delay probability often quite differs between the
+# NegBinX and NegBin1D/2D models. We plot the posterior of the delay probability
+# for one rolling window as an example.
+delay_prob_example_date <- as.Date(c("2025-10-12"))
 
 # Where the beginning of the data used for the simulation study is. For the
 # simulation study, we take the total SARI counts from several years back,
@@ -82,6 +89,11 @@ sim_disp_par <- c("NegBinX" = 0.04, "NegBin2D" = 0.01, "NegBin1D" = 100)
 sim_obs_model <- data.frame(
   model_obs = c("NegBinX", "NegBin2D", "NegBin1D"),
   model_number = c(1, 2, 3)
+)
+# The GLM method often overestimates the mean process around season peaks.
+# We show this in a separate plot for the selected dates.
+glm_overshoot_dates <- as.Date(
+  c("2019-03-24", "2019-03-31", "2019-04-07", "2019-04-14")
 )
 # Seed used to simulate the counts
 sim_seed <- 2436
@@ -522,6 +534,42 @@ list(
       )
     })
   ),
+  # Extract the estimate of the mean process from both fitting methods for
+  # selected dates in the NegBinX simulation study in order to show the GLM
+  # model overshooting the mean value. We do it per branch to avoid loading all
+  # fits at once when we want to plot only the NegBinX model fits for the
+  # selected dates.
+  tar_target(
+    sim_lambda_overshoot,
+    filter_glm_overshoot_dates(
+      sim_summarized_nowcast_mcmc_NegBinX,
+      sim_summarized_nowcast_glm_NegBinX,
+      sim_fitted_mcmc_NegBinX$lambda,
+      sim_fitted_glm_NegBinX$lambda,
+      sim_df_total_NegBinX,
+      dates_to_show = glm_overshoot_dates,
+      model_to_show = "NegBinX"
+    ),
+    pattern = map(
+      sim_summarized_nowcast_mcmc_NegBinX,
+      sim_summarized_nowcast_glm_NegBinX,
+      sim_fitted_mcmc_NegBinX,
+      sim_fitted_glm_NegBinX,
+      sim_df_total_NegBinX
+    ),
+    iteration = "list"
+  ),
+  # Plot the example of the GLM method overshooting the mean
+  tar_target(
+    sim_plot_overshoot,
+    plot_glm_overshoot(
+      map(sim_lambda_overshoot, "nowcast"),
+      map(sim_lambda_overshoot, "lambda"),
+      map(sim_lambda_overshoot, "total"),
+      glm_overshoot_dates,
+      "NegBinX"
+    )
+  ),
 
   # Case study =================================================================
 
@@ -817,6 +865,34 @@ list(
       diagnostics,
       obs_model,
       data_origin = "case_study"
+    )
+  }),
+  tar_target(delay_prob_example, {
+    filter(
+      fitted_mcmc$delay_prob,
+      .data$nowcast_date == delay_prob_example_date & .data$sensitivity_sc == ""
+    )
+    },
+    pattern = map(fitted_mcmc),
+  ),
+  tar_target(plot_delay_prob_example, {
+    plot_delay_prob(
+      delay_prob_example,
+      model_names = c("NegBinX", "NegBin2D", "NegBin1D"),
+      date_of_the_nowcast = delay_prob_example_date,
+      fitting_method = "mcmc",
+      prob_prior_pars = as.vector(
+        select(
+          filter(prior_delay_param, delay_prob_factor == 4),
+          -"delay_prob_factor"
+        ),
+        mode = "numeric"
+      ),
+      data_origin = "case_study",
+      sensitivity_sc = "",
+      true_value = NULL,
+      example = TRUE,
+      save_plot = TRUE
     )
   }),
   # Fit the gamlss models
