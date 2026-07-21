@@ -737,16 +737,18 @@ plot_delay_prob <- function(
     delay_prob_plot$coordinates$limits$y <- c(0, NA)
     # Remove the title
     delay_prob_plot$labels$title <- NULL
-    save_figure(
-      delay_prob_plot,
-      paste(
-        "inst/figure/delay_posterior_difference",
-        date_of_the_nowcast,
-        sep = "_"
-      ),
-      width = 7,
-      height = 4
-    )
+    if (save_plot) {
+      save_figure(
+        delay_prob_plot,
+        paste(
+          "inst/figure/delay_posterior_difference",
+          date_of_the_nowcast,
+          sep = "_"
+        ),
+        width = 7,
+        height = 4
+      )
+    }
   }
 
   # Save the plot if required, the width, height and path are hard-coded here.
