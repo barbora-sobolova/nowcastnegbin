@@ -28,8 +28,9 @@ get_model_colors <- function() {
 #' @import ggplot2
 get_plot_theme <- function() {
   theme(
-    axis.title = element_text(size = 16),
-    axis.text = element_text(size = 14),
+    plot.title = element_text(size = 16),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
     legend.title = element_text(size = 16),
     legend.text = element_text(size = 14),
     strip.text = element_text(size = 16),

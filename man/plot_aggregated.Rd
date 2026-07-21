@@ -51,5 +51,8 @@ a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}
 }
 \description{
 This is a wrapper around functions that plot the aggregated
-results: \code{plot_coverage()} and \code{plot_crps_decomp()}.
+results: \code{plot_coverage()}, \code{plot_crps_decomp()} and
+\code{plot_nowcast_bands()}. For the MCMC method, we run 4 additional
+scenarios as a robustness check. For these scenarios, the coverage and CRPS
+plots are saved as glued together by pairs.
 }

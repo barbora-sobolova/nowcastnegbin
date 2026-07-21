@@ -13,6 +13,7 @@ plot_delay_prob(
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   true_value = NULL,
+  example = FALSE,
   save_plot = TRUE
 )
 }
@@ -43,6 +44,11 @@ of the MCMC method. Empty string "" indicates the main analysis.}
 
 \item{true_value}{NULL for \code{data_origin = "case_study"}, otherwise the
 true value of the delay probability vector used to generate the data}
+
+\item{example}{logical indicator, whether we want to point out the plot as
+an example of different posteriors between the NegBinX and NegBin2D/1D
+models. If \code{example = TRUE}, than we plot/save a version of the plot
+more focused on the selected models.}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}
