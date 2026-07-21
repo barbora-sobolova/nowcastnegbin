@@ -645,7 +645,13 @@ plot_delay_prob <- function(
     scale_color_manual(values = get_model_colors()[model_names]) +
     labs(x = "delay probability", y = "density") +
     coord_cartesian(ylim = c(0, 80)) +
-    facet_wrap(~delay, scales = "free_x", nrow = 2)
+    facet_wrap(
+      ~delay,
+      scales = "free_x",
+      nrow = 2,
+      labeller = as_labeller(facet_titles)
+    )
+
   if (fitting_method == "mcmc") {
     if (is.null(prob_prior_pars) || length(prob_prior_pars) == 0) {
       stop("`prob_prior_pars` must be provided when fitting_method = 'mcmc'.")
@@ -681,9 +687,14 @@ plot_delay_prob <- function(
         mapping = aes(x = .data$p, y = .data$dens, linetype = "Prior")
       ) +
       scale_linetype_manual(
-        values = c("Prior" = "dotted", "Posterior" = "solid")
+        values = c("Prior" = "dotted", "Posterior" = "solid"),
+        name = ""
       ) +
-      labs(title = "Posterior of the delay probability")
+      labs(
+        title = "Posterior of the delay probability",
+        x = "Delay probability",
+        y = "Density"
+      )
   } else {
     # For the GLM method, remove the linetype aesthetics distinguishing between
     # the prior and posterior distribution from the legend
