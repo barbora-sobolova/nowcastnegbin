@@ -595,6 +595,10 @@ plot_disp_par <- function(
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
 #' true value of the delay probability vector used to generate the data
+#' @param example logical indicator, whether we want to point out the plot as
+#' an example of different posteriors between the NegBinX and NegBin2D/1D
+#' models. If \code{example = TRUE}, than we plot/save a version of the plot
+#' more focused on the selected models.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -613,11 +617,19 @@ plot_delay_prob <- function(
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   true_value = NULL,
+  example = FALSE,
   save_plot = TRUE
 ) {
+  max_lag <- max(df_delay_prob$delay)
+
   df_delay_prob <- df_delay_prob |>
     # Turn the delay into a factor to allow for easier faceting
     mutate(delay = factor(.data$delay))
+
+  facet_titles <- rlang::set_names(
+    paste0("Delay: ", seq_len(max_lag), " weeks"),
+    seq_len(max_lag)
+  )
 
   delay_prob_plot <- ggplot() +
     # Plot the density of the delay probability estimates
@@ -693,9 +705,42 @@ plot_delay_prob <- function(
       )
   }
 
+  # If we want to save the plot and show it in the manuscript, we show only
+  # models we are interested in and adjust the plot size in order to emphasize
+  # the comparison between the selected models.
+  if (example) {
+    # Show only selected models
+    delay_prob_plot$layers[[1]]$data <- filter(
+      delay_prob_plot$layers[[1]]$data,
+      .data$Distribution %in% model_names
+    )
+    # Add a new faceting specification to make all scales varying
+    delay_prob_plot <- delay_prob_plot +
+      facet_wrap(
+        ~delay,
+        scales = "free",
+        nrow = 2,
+        labeller = as_labeller(facet_titles)
+      )
+    # Remove the y-limit
+    delay_prob_plot$coordinates$limits$y <- c(0, NA)
+    # Remove the title
+    delay_prob_plot$labels$title <- NULL
+    save_figure(
+      delay_prob_plot,
+      paste(
+        "inst/figure/delay_posterior_difference",
+        date_of_the_nowcast,
+        sep = "_"
+      ),
+      width = 7,
+      height = 4
+    )
+  }
+
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
-  if (save_plot) {
+  if (save_plot && !example) {
     save_figure(
       delay_prob_plot,
       paste0(
@@ -1087,6 +1132,9 @@ plot_per_window <- function(
       data_origin,
       scenario[k],
       prob_true_val,
+      # Within this wrapper, we don't plot the more focused example of the delay
+      # probability posterior, thus example = FALSE
+      FALSE,
       save_plot
     )
     max_lag <- max(df_delay_prob$delay)

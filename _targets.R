@@ -59,6 +59,10 @@ timesteps_to_fit <- 104
 skip_dates <- as.Date(
   c("2023-12-24", "2024-12-22", "2024-12-29", "2025-12-21", "2025-12-28")
 )
+# The posterior for the delay probability often quite differs between the
+# NegBinX and NegBin1D/2D models. We plot the posterior of the delay probability
+# for one rolling window as an example.
+delay_prob_example_date <- as.Date(c("2025-10-12"))
 
 # Where the beginning of the data used for the simulation study is. For the
 # simulation study, we take the total SARI counts from several years back,
@@ -861,6 +865,34 @@ list(
       diagnostics,
       obs_model,
       data_origin = "case_study"
+    )
+  }),
+  tar_target(delay_prob_example, {
+    filter(
+      fitted_mcmc$delay_prob,
+      .data$nowcast_date == delay_prob_example_date & .data$sensitivity_sc == ""
+    )
+    },
+    pattern = map(fitted_mcmc),
+  ),
+  tar_target(plot_delay_prob_example, {
+    plot_delay_prob(
+      delay_prob_example,
+      model_names = c("NegBinX", "NegBin2D", "NegBin1D"),
+      date_of_the_nowcast = delay_prob_example_date,
+      fitting_method = "mcmc",
+      prob_prior_pars = as.vector(
+        select(
+          filter(prior_delay_param, delay_prob_factor == 4),
+          -"delay_prob_factor"
+        ),
+        mode = "numeric"
+      ),
+      data_origin = "case_study",
+      sensitivity_sc = "",
+      true_value = NULL,
+      example = TRUE,
+      save_plot = TRUE
     )
   }),
   # Fit the gamlss models
