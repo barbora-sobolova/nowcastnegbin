@@ -7,9 +7,7 @@
 plot_aggregated(
   df_nowcast,
   full_data,
-  model_names,
   skip_dates,
-  fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 )
@@ -29,15 +27,9 @@ been done.}
 \code{value_0w}, \code{value_1w}, etc. until \code{max_lag - 1} used to plot the preliminary
 and final data alongside the nowcasts}
 
-\item{model_names}{a vector of names of the observation models, we wish to
-plot.}
-
 \item{skip_dates}{a vector of dates, where no nowcasting has been done and
 where we should leave gaps in the plot of the nowcasts.
 \code{skip_dates = NULL} if no gaps are to be plotted.}
-
-\item{fitting_method}{a method used for fitting the nowcasting model, either
-"mcmc", or "glm"}
 
 \item{data_origin}{a string indicating the data generating process of
 simulated data, or whether the data correspond to the case study. Possible

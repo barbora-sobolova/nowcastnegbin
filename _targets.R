@@ -413,24 +413,6 @@ list(
       ),
       iteration = "list"
     ),
-    # Create plots of aggregated results from the simulation study for the MCMC
-    # method. We plot:
-    # - the coverage of nowcasts,
-    # - the crps decomposition.
-    tar_target(sim_aggreg_plots_mcmc, {
-      plot_aggregated(
-        bind_rows(sim_summarized_nowcast_mcmc),
-        sim_full_data,
-        # What observation models we fitted
-        obs_model,
-        # There is no Christmas break in the simulated data, so we don't skip
-        # any dates.
-        skip_dates = NULL,
-        fitting_method = "mcmc",
-        # From which observation model we simulated the data
-        data_origin = model_obs
-      )
-    }),
     # Extract the diagnostic summaries for the MCMC models in the simulation
     # study. We do it per branch to avoid loading all fits at once when we want
     # to plot the diagnostics into a single plot.
@@ -473,7 +455,7 @@ list(
     # obtained by the GLM method
     tar_target(
       sim_summarized_nowcast_glm,
-      summarize_nowcast(sim_fitted_glm$nowcast, df_total = sim_df_total),
+      summarize_nowcast(sim_fitted_glm$nowcast, sim_df_total, "glm"),
       pattern = map(sim_fitted_glm, sim_df_total),
       iteration = "list"
     ),
@@ -515,20 +497,20 @@ list(
       ),
       iteration = "list"
     ),
-    # Create plots of aggregated results from the simulation study for the GLM
-    # method. We plot:
+    # Create plots of aggregated results from the simulation study. We plot:
     # - the coverage of nowcasts,
-    # - the crps decomposition.
-    tar_target(sim_aggreg_plots_glm, {
+    # - the crps decomposition,
+    # - the prediction intervals as bands around the data for each horizon
+    tar_target(sim_aggreg_plots, {
       plot_aggregated(
-        bind_rows(sim_summarized_nowcast_glm),
+        bind_rows(
+          bind_rows(sim_summarized_nowcast_mcmc),
+          bind_rows(sim_summarized_nowcast_glm)
+        ),
         sim_full_data,
-        # What observation models we fitted
-        obs_model_glm,
         # There is no Christmas break in the simulated data, so we don't skip
         # any dates.
         skip_dates = NULL,
-        fitting_method = "glm",
         # From which observation model we simulated the data
         data_origin = model_obs
       )
@@ -795,7 +777,7 @@ list(
   ),
   # Calculate the quantiles and CRPS of the nowcasts obtained by the MCMC method
   tar_target(summarized_nowcast_mcmc, {
-    summarize_nowcast(fitted_mcmc$nowcast, df_total = df_total)
+    summarize_nowcast(fitted_mcmc$nowcast, df_total, "mcmc")
   },
   pattern = map(fitted_mcmc, df_total),
   iteration = "list"
@@ -842,19 +824,6 @@ list(
     n = 15
   ),
   iteration = "list"),
-  # Create plots of aggregated results from the MCMC method. We plot:
-  # - the coverage of nowcasts,
-  # - the crps decomposition.
-  tar_target(aggreg_plots_mcmc, {
-    plot_aggregated(
-      bind_rows(summarized_nowcast_mcmc),
-      full_data,
-      obs_model,
-      skip_dates,
-      fitting_method = "mcmc",
-      data_origin = "case_study"
-    )
-  }),
   # Extract the diagnostic summaries for the MCMC models. We do it per branch to
   # avoid loading all fits at once when we want to plot the diagnostics into a
   # single plot.
@@ -908,7 +877,7 @@ list(
   ),
   # Calculate the quantiles and CRPS of the nowcasts obtained by the GLM method
   tar_target(summarized_nowcast_glm, {
-    summarize_nowcast(fitted_glm$nowcast, df_total = df_total)
+    summarize_nowcast(fitted_glm$nowcast, df_total, "glm")
   },
   pattern = map(fitted_glm, df_total),
   iteration = "list"
@@ -939,16 +908,18 @@ list(
     n = 15
   ),
   iteration = "list"),
-  # Create plots of aggregated results from the GLM method. We plot:
+  # Create plots of aggregated results. We plot:
   # - the coverage of nowcasts,
   # - the crps decomposition.
-  tar_target(aggreg_plots_glm, {
+  # - the prediction intervals as bands around the data for each horizon
+  tar_target(aggreg_plots, {
     plot_aggregated(
-      bind_rows(summarized_nowcast_glm),
+      bind_rows(
+        bind_rows(summarized_nowcast_mcmc),
+        bind_rows(summarized_nowcast_glm)
+      ),
       full_data,
-      obs_model_glm,
       skip_dates,
-      fitting_method = "glm",
       data_origin = "case_study"
     )
   }),

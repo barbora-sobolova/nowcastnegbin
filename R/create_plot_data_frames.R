@@ -40,6 +40,8 @@ create_totals_data_frame <- function(
 #' @param df_total a data frame containing columns `date`, `counts` and `data`.
 #' The last column `data` is an indicator, whether the values in the `counts`
 #' column are the final sums of the counts, or the preliminary data version.
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
 #'
 #' @return a data frame with columns
 #' \describe{
@@ -65,8 +67,11 @@ create_totals_data_frame <- function(
 #' @export
 summarize_nowcast <- function(
   df_nowcast,
-  df_total
+  df_total,
+  fitting_method = c("mcmc", "glm")
 ) {
+  fitting_method <- match.arg(fitting_method)
+
   # Recover the beginning of the estimation window from the total
   # counts
   start_date <- min(df_total$date)
@@ -130,7 +135,8 @@ summarize_nowcast <- function(
       delay = factor(as.numeric(date - .data$nowcast_date) / 7),
       # Convert to factor to make sure, the plotting order of the models is
       # consistent.
-      Distribution = factor(.data$Distribution, levels = get_model_names())
+      Distribution = factor(.data$Distribution, levels = get_model_names()),
+      method = fitting_method
     )
   # Rename the quantile columns to have nicer names
   cols_to_rename <- colnames(df_nowcast_plot) %in% paste0(quantiles_to_get, "%")

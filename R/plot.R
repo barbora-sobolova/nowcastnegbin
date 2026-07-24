@@ -159,10 +159,6 @@ plot_nowcast <- function(
 #' `quantile_25`, `quantile_75`, `quantile_97.5` (bounds of the prediction
 #' intervals), `delay` (the nowcasting horizon) and the true value of the
 #' prediction target `true_val`
-#' @param model_names a vector of names of the observation models, we wish to
-#' plot.
-#' @param fitting_method a method used for fitting the nowcasting model, either
-#' "mcmc", or "glm"
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
@@ -179,19 +175,13 @@ plot_nowcast <- function(
 #' @export
 plot_coverage <- function(
   df_summarized_nowcast,
-  model_names,
-  fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
-  # Grab the maximum delay in order to label the facets according to the
-  # corresponding delay
-  max_lag <- length(unique(df_summarized_nowcast$delay))
-
   # Calculate the empirical coverage
   df_coverage <- df_summarized_nowcast |>
-    group_by(.data$delay, .data$Distribution) |>
+    group_by(.data$delay, .data$Distribution, .data$method) |>
     summarize(
       coverage_50 = sum(
         .data$true_val >= .data$quantile_25 &
@@ -208,15 +198,33 @@ plot_coverage <- function(
       cols = starts_with("coverage"),
       names_to = "nominal_coverage",
       values_to = "empirical_coverage"
+    ) |>
+    mutate(
+      model_method_interact = factor(
+        interaction(.data$Distribution, .data$method),
+        levels = names(get_interaction_names()),
+        labels = get_interaction_names()
+      )
     )
+
+  # Grab the maximum delay in order to label the plot facets according to the
+  # corresponding delay
+  max_lag <- length(unique(df_coverage$delay))
+  # Grab the number of models in order to set the height of the plot
+  # accordingly. We plot only the 6 MCMC-based models for the scenarios of the
+  # sensitivity analysis. Otherwise we plot 9 models (6  MCMC, and 3 GLM).
+  n_models <- length(unique(df_coverage$model_method_interact))
+  if (!(n_models %in% c(6, 9))) {
+    stop("Number of models must be 6 or 9.")
+  }
 
   # Plot the empirical coverage as horizontal bars
   coverage_plot <- ggplot(
     df_coverage,
     aes(
       x = .data$empirical_coverage,
-      y = .data$Distribution,
-      fill = .data$Distribution,
+      y = .data$model_method_interact,
+      fill = .data$model_method_interact,
       alpha = .data$nominal_coverage
     )
   ) +
@@ -228,12 +236,15 @@ plot_coverage <- function(
       labels = c("50% coverage", "95% coverage"),
       name = ""
     ) +
-    scale_fill_manual(values = get_model_colors()[model_names]) +
+    scale_fill_manual(values = get_interaction_colors(), name = "Model") +
     scale_x_continuous(
       breaks = seq(0, 1, by = 0.25),
       labels = c("0", "0.25", "0.5", "0.75", "1")
     ) +
-    labs(x = "Empirical coverage") +
+    labs(x = "Empirical coverage", y = "Model") +
+    # By default, the colors in the legend show up in the reverse order
+    # compared to the barplot
+    guides(fill = guide_legend(reverse = TRUE)) +
     get_plot_theme() +
     facet_wrap(
       ~delay,
@@ -243,24 +254,11 @@ plot_coverage <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
-    plot_height <- if (fitting_method == "mcmc") {
-      7
-    } else {
-      4.5
-    }
     save_figure(
       coverage_plot,
-      paste0(
-        paste(
-          "inst/figure/coverage_plot",
-          data_origin,
-          fitting_method,
-          sep = "_"
-        ),
-        sensitivity_sc
-      ),
+      paste0("inst/figure/coverage_plot_", data_origin, sensitivity_sc),
       width = 9,
-      height = plot_height
+      height = 9
     )
     ret <- NULL
   } else {
@@ -279,10 +277,6 @@ plot_coverage <- function(
 #' (containing the name of the observation model), `dispersion`,
 #' `underprediction`, `overprediction`, `delay` (the nowcasting horizon),
 #' `quantile_50` and `true_val` (to calculate the mean absolute error).
-#' @param model_names a vector of names of the observation models, we wish to
-#' plot.
-#' @param fitting_method a method used for fitting the nowcasting model, either
-#' "mcmc", or "glm"
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
@@ -299,8 +293,6 @@ plot_coverage <- function(
 #' @export
 plot_crps_decomp <- function(
   df_summarized_nowcast,
-  model_names,
-  fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   save_plot = TRUE
@@ -309,7 +301,7 @@ plot_crps_decomp <- function(
   df_crps <- df_summarized_nowcast |>
     # Calculate the absolute error
     mutate(AE = abs(.data$true_val - .data$quantile_50)) |>
-    group_by(.data$delay, .data$Distribution) |>
+    group_by(.data$delay, .data$Distribution, .data$method) |>
     summarize(
       # Mean absolute error
       MAE = mean(.data$AE),
@@ -324,14 +316,31 @@ plot_crps_decomp <- function(
     mutate(
       lab_position = ifelse(
         .data$delay == "0",
+        # For horizon 0, the bar is wide enough to place the label inside it
         max(.data$Total) / 35,
+        # For other horizons, we place the label outside of the bar, after the
+        # dot denoting the MAE
         .data$MAE * 1.3
+      )
+    ) |>
+    mutate(
+      model_method_interact = factor(
+        interaction(.data$Distribution, .data$method),
+        levels = names(get_interaction_names()),
+        labels = get_interaction_names()
       )
     )
 
   # Grab the maximum delay in order to label the facets according to the
   # corresponding delay
   max_lag <- length(unique(df_crps$delay))
+  # Grab the number of models in order to set the height of the plot
+  # accordingly. We plot only the 6 MCMC-based models for the scenarios of the
+  # sensitivity analysis. Otherwise we plot 9 models (6  MCMC, and 3 GLM).
+  n_models <- length(unique(df_crps$model_method_interact))
+  if (!(n_models %in% c(6, 9))) {
+    stop("Number of models must be 6 or 9.")
+  }
 
   df_crps_decomp <- df_crps |>
     # Pivot for easier definition of the alpha aesthetic
@@ -347,8 +356,8 @@ plot_crps_decomp <- function(
       df_crps_decomp,
       mapping = aes(
         x = .data$CRPS,
-        y = .data$Distribution,
-        fill = .data$Distribution,
+        y = .data$model_method_interact,
+        fill = .data$model_method_interact,
         alpha = .data$Component
       ),
       position = "stack"
@@ -357,7 +366,7 @@ plot_crps_decomp <- function(
       df_crps,
       mapping = aes(
         x = .data$lab_position,
-        y = .data$Distribution,
+        y = .data$model_method_interact,
         label = round(.data$Total, 2)
       ),
       border.color = "black",
@@ -367,14 +376,17 @@ plot_crps_decomp <- function(
     ) +
     scale_alpha_manual(
       values = c("Underprediction" = 1, "Spread" = 0.4, "Overprediction" = 0.7),
-      name = ""
+      name = "CRPS component"
     ) +
     geom_point(
       df_crps_decomp,
-      mapping = aes(x = .data$MAE, y = .data$Distribution)
+      mapping = aes(x = .data$MAE, y = .data$model_method_interact)
     ) +
-    scale_fill_manual(values = get_model_colors()[model_names]) +
-    labs(x = "Mean CRPS/AE") +
+    scale_fill_manual(values = get_interaction_colors(), name = "Model") +
+    labs(x = "Mean CRPS/AE", y = "Model") +
+    # By default, the colors in the legend show up in the reverse order
+    # compared to the barplot
+    guides(fill = guide_legend(reverse = TRUE)) +
     get_plot_theme() +
     facet_wrap(
       ~delay,
@@ -384,24 +396,15 @@ plot_crps_decomp <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
-    plot_height <- if (fitting_method == "mcmc") {
-      7
-    } else {
-      4.5
-    }
     save_figure(
       crps_decomp_plot,
       paste0(
-        paste(
-          "inst/figure/crps_decomposition_plot",
-          data_origin,
-          fitting_method,
-          sep = "_"
-        ),
+        "inst/figure/crps_decomposition_plot_",
+        data_origin,
         sensitivity_sc
       ),
       width = 9,
-      height = plot_height
+      height = 9
     )
     ret <- NULL
   } else {
@@ -1204,13 +1207,9 @@ plot_per_window <- function(
 #' @param full_data a data frame with columns `date` and columns
 #' `value_0w`, `value_1w`, etc. until `max_lag - 1` used to plot the preliminary
 #' and final data alongside the nowcasts
-#' @param model_names a vector of names of the observation models, we wish to
-#' plot.
 #' @param skip_dates a vector of dates, where no nowcasting has been done and
 #' where we should leave gaps in the plot of the nowcasts.
 #' \code{skip_dates = NULL} if no gaps are to be plotted.
-#' @param fitting_method a method used for fitting the nowcasting model, either
-#' "mcmc", or "glm"
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
@@ -1226,14 +1225,11 @@ plot_per_window <- function(
 plot_aggregated <- function(
   df_nowcast,
   full_data,
-  model_names,
   skip_dates,
-  fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
-  fitting_method <- match.arg(fitting_method)
 
   # Loop over the sensitivity analysis scenarios. The data frame is always
   # filtered to contain only values from the corresponding scenario. For the GLM
@@ -1250,8 +1246,6 @@ plot_aggregated <- function(
     main_scenario <- scenario[k] == ""
     p_coverage <- plot_coverage(
       filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
-      model_names,
-      fitting_method,
       data_origin,
       scenario[k],
       # Avoid saving the individual plot for other scenarios than the main one
@@ -1259,8 +1253,6 @@ plot_aggregated <- function(
     )
     p_crps_decomp <- plot_crps_decomp(
       filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
-      model_names,
-      fitting_method,
       data_origin,
       scenario[k],
       # Avoid saving the individual plot for other scenarios than the main one
@@ -1269,9 +1261,7 @@ plot_aggregated <- function(
     p_nowcast_bands <- plot_nowcast_bands(
       full_data,
       filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
-      model_names,
       skip_dates,
-      fitting_method,
       data_origin,
       scenario[k],
       save_plot
@@ -1284,7 +1274,7 @@ plot_aggregated <- function(
   }
   # If the plots are to be saved, glue together the coverage and CRPS plots from
   # the sensitivity analysis.
-  if (save_plot && fitting_method == "mcmc" && data_origin == "case_study") {
+  if (save_plot && data_origin == "case_study") {
     save_patchwork_plots(ret_list)
     # If we save a plot, we usually return NULL in place of the individual
     # plots. For consistency, we reconstruct the list of NULLs with a
@@ -1348,10 +1338,10 @@ save_patchwork_plots <- function(plot_list) {
   patchworked_list <- vector("list", 4)
   # Names that will be used as file names
   names(patchworked_list) <- c(
-    "coverage_plot_case_study_mcmc_prob",
-    "coverage_plot_case_study_mcmc_disp",
-    "crps_decomposition_plot_case_study_mcmc_prob",
-    "crps_decomposition_plot_case_study_mcmc_disp"
+    "coverage_plot_case_study_prob",
+    "coverage_plot_case_study_disp",
+    "crps_decomposition_plot_case_study_prob",
+    "crps_decomposition_plot_case_study_disp"
   )
   # Coverage plot for scenarios modifying the dispersion of the delay
   # probability prior
@@ -1532,13 +1522,9 @@ plot_trajectory <- function(
 #' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
 #' dates), `nowcast_date` (when the nowcast was issued) and `delay` (nowcast
 #' horizon)
-#' @param model_names a vector of names of the observation models, we wish to
-#' plot.
 #' @param skip_dates a vector of dates, where no nowcasting has been done and
 #' where we should leave gaps in the plot of the nowcasts.
 #' \code{skip_dates = NULL} if no gaps are to be plotted.
-#' @param fitting_method a method used for fitting the nowcasting model, either
-#' "mcmc", or "glm"
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
@@ -1557,15 +1543,12 @@ plot_trajectory <- function(
 plot_nowcast_bands <- function(
   full_data,
   df_nowcast,
-  model_names,
   skip_dates = NULL,
-  fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
-  fitting_method <- match.arg(fitting_method)
 
   # End points of the trajectory is recovered from the data frame containing the
   # nowcasting results. In case we begin or end with skipped dates (Christmas),
@@ -1605,8 +1588,7 @@ plot_nowcast_bands <- function(
       start_date,
       end_date,
       skip_dates,
-      horizons[k],
-      model_names
+      horizons[k]
     )
   }
   # For some settings, we split the patchwork plot into 2 figures. The first one
@@ -1651,24 +1633,14 @@ plot_nowcast_bands <- function(
   if (save_plot) {
     # For the case study, we have 4 nowcasting horizons, for the simulation
     # study only 3
-    plot_height <- if (data_origin == "case_study") {
+    plot_height <- if (data_origin == "case_study" && sensitivity_sc == "") {
       20
     } else {
       15
     }
-    # For the GLM method we have only 3 nowcasting models instead of 6.
-    # We divide by a number lesser than 1 to allow for individual plot titles
-    # indicating the nowcasting horizon.
-    if (fitting_method == "glm") {
-      plot_height <- plot_height / 1.75
-    }
     plot_path <- paste0(
-      paste(
-        "inst/figure/nowcast_bands",
-        data_origin,
-        fitting_method,
-        sep = "_"
-      ),
+      "inst/figure/nowcast_bands_",
+      data_origin,
       sensitivity_sc
     )
     if (split_figures) {
@@ -1743,6 +1715,15 @@ plot_nowcast_bands_per_horizon <- function(
   if (length(true_data) != length(prelim_data)) {
     stop("The length of preliminary data 'prelim_data' to plot must be the same as the length of 'true_data'.")  # nolint
   }
+  # Set the factor for the different models and methods and its names
+  df_nowcast <- df_nowcast |>
+    mutate(
+      model_method_interact = factor(
+        interaction(.data$Distribution, .data$method),
+        levels = names(get_interaction_names(nowcast_bands_ordering = TRUE)),
+        labels = get_interaction_names(nowcast_bands_ordering = TRUE)
+      )
+    )
 
   # Arrange the whole trajectory into a data frame for plotting
   totals <- data.frame(
@@ -1762,6 +1743,13 @@ plot_nowcast_bands_per_horizon <- function(
         labels = c("Final", "Preliminary")
       )
     )
+  # Grab the number of models in order to set the height of the plot
+  # accordingly. We plot only the 6 MCMC-based models for the scenarios of the
+  # sensitivity analysis. Otherwise we plot 9 models (6  MCMC, and 3 GLM).
+  n_models <- length(unique(df_nowcast$model_method_interact))
+  if (!(n_models %in% c(6, 9))) {
+    stop("Number of models must be 6 or 9.")
+  }
 
   # In case there are dates, where we skip nowcasting, due to the reporting
   # irregularities around Christmas, we would like to break the nowcast band
@@ -1793,14 +1781,6 @@ plot_nowcast_bands_per_horizon <- function(
     length = 4
   )
 
-  # For MCMC, we have 6 models - 2 rows and 3 columns in the plot. For GLM we
-  # have only 3 models - 1 row and 3 columns.
-  n_plot_row <- if (length(model_names) > 3) {
-    2
-  } else {
-    1
-  }
-
   nowcast_band_plot <- ggplot() +
     # True and preliminary data as black and gray solid lines
     geom_line(
@@ -1823,7 +1803,7 @@ plot_nowcast_bands_per_horizon <- function(
         mapping = aes(
           x = .data$date,
           y = .data$quantile_50,
-          color = .data$Distribution,
+          color = .data$model_method_interact,
           linetype = "Nowcast"
         ),
         linewidth = 0.15
@@ -1835,7 +1815,7 @@ plot_nowcast_bands_per_horizon <- function(
           x = .data$date,
           ymin = .data$quantile_2.5,
           ymax = .data$quantile_97.5,
-          fill = .data$Distribution,
+          fill = .data$model_method_interact,
           alpha = "PI_95"
         )
       ) +
@@ -1846,7 +1826,7 @@ plot_nowcast_bands_per_horizon <- function(
           x = .data$date,
           ymin = .data$quantile_25,
           ymax = .data$quantile_75,
-          fill = .data$Distribution,
+          fill = .data$model_method_interact,
           alpha = "PI_50"
         )
       )
@@ -1856,7 +1836,7 @@ plot_nowcast_bands_per_horizon <- function(
     scale_x_date(breaks = date_breaks, date_labels = "%b %Y") +
     scale_color_manual(
       values = c(
-        get_model_colors()[model_names],
+        get_interaction_colors(),
         "Final" = "black",
         "Preliminary" = "gray60"
       ),
@@ -1870,7 +1850,7 @@ plot_nowcast_bands_per_horizon <- function(
         "Nowcast" = "dashed"
       ),
     ) +
-    scale_fill_manual(values = get_model_colors()[model_names]) +
+    scale_fill_manual(values = get_interaction_colors(), name = "Model") +
     # Set the transparency of the prediction intervals. The transparency is the
     # same value for both prediction intervals, since the 50% interval is inside
     # the 95% one. Hence, the transparency adds up.
@@ -1899,7 +1879,8 @@ plot_nowcast_bands_per_horizon <- function(
       plot.title = element_text(hjust = 0.5),
       axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
     ) +
-    facet_wrap(~Distribution, nrow = n_plot_row)
+    # Plot 3 models per row, since `n_models` can be either 6, or 9
+    facet_wrap(~model_method_interact, nrow = n_models / 3)
   nowcast_band_plot
 }
 

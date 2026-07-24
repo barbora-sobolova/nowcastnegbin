@@ -1,14 +1,53 @@
 #' Get the names of the observation models
 #'
-#' @return a character vector containing the names of the 6 observational
+#' @return a character vector containing the names of the 6 observation
 #' models. They are ordered the same way as in the STAN implementation.
 get_model_names <- function() {
   c("Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M", "NegBin1M")
 }
 
+#' Get the names of the interaction of an observation model and a fitting
+#' method
+#'
+#' @description This function creates a named vector that controls the names
+#' and ordering of the observation models as they appear in the aggregated
+#' plots.
+#'
+#' @param nowcast_bands_ordering logical indicator switching between different
+#' vector orderings. If \code{nowcast_bands_ordering = FALSE}, the ordering
+#' corresponds to the coverage and CRPS plots. If TRUE, the models are ordered
+#' as in the plot of the incidence trajectory alongside the nowcasts.
+#'
+#' @return a named character vector containing the names of the 9 models
+#' (6 for the MCMC method and 3 for the GLM method). The elements of the vector
+#' correspond to model names as they appear in the plot. The names of the vector
+#' correspond to the model names as they are created by the
+#' \code{interaction()} function
+get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
+  ret <- c(
+    "NegBinX.glm" = "NegBinX_GAM",
+    "NegBin1D.glm" = "NegBin1D_GAM",
+    "Poisson.glm" = "Poisson_GAM",
+    "NegBinX.mcmc" = "NegBinX_HMC",
+    "NegBin2D.mcmc" = "NegBin2D_HMC",
+    "NegBin1D.mcmc" = "NegBin1D_HMC",
+    "NegBin2M.mcmc" = "NegBin2M_HMC",
+    "NegBin1M.mcmc" = "NegBin1M_HMC",
+    "Poisson.mcmc" = "Poisson_HMC"
+  )
+  # For plotting the nowcasting bands, we need to change the ordering to have
+  # the NegBin1M, NegBin2M and NegBin2D models, which don't have the GLM
+  # alternative in one row, Poisson, NegBinX and NegBin1D in another row and
+  # GAM models in the last row
+  if (nowcast_bands_ordering) {
+    ret <- ret[c(7, 8, 5, 9, 4, 6, 3, 1, 2)]
+  }
+  ret
+}
+
 #' Get the colors of the observation models for the plots
 #'
-#' @return a named character vector containing the colors of the 6 observational
+#' @return a named character vector containing the colors of the 6 observation
 #' models. They are ordered the same way as in the STAN implementation.
 get_model_colors <- function() {
   c(
@@ -20,6 +59,27 @@ get_model_colors <- function() {
     "NegBin1M" = "#F0E442"
   )
 }
+
+#' Get the colors of the interaction of an observation model and a fitting
+#' method for the plots
+#'
+#' @return a named character vector containing the colors of the 9 models
+#' (6 for the MCMC method and 3 for the GLM method).
+get_interaction_colors <- function() {
+  c(
+    "Poisson_HMC" = "#CC79A7",
+    "NegBinX_HMC" = "#D55E00",
+    "NegBin2D_HMC" = "#009E73",
+    "NegBin1D_HMC" = "#56B4E9",
+    "NegBin2M_HMC" = "#004282",
+    "NegBin1M_HMC" = "#F0E442",
+    "Poisson_GAM" = "#862D67",
+    "NegBinX_GAM" = "#993700",
+    "NegBin1D_GAM" = "#1D79B9"
+  )
+}
+
+
 
 #' Shared ggplot theme for standardized text sizing and legend spacing
 #'
@@ -33,7 +93,7 @@ get_plot_theme <- function() {
     axis.text = element_text(size = 12),
     legend.title = element_text(size = 16),
     legend.text = element_text(size = 14),
-    strip.text = element_text(size = 16),
+    strip.text = element_text(size = 14),
     legend.spacing.y = unit(0.4, "cm"),
     legend.key.spacing.y = unit(0.2, "cm")
   )
