@@ -171,6 +171,8 @@ plot_nowcast <- function(
 #' \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
+#' @importFrom ggpubr get_legend
+#' @importFrom patchwork wrap_elements
 #'
 #' @export
 plot_coverage <- function(
@@ -246,11 +248,23 @@ plot_coverage <- function(
     # compared to the barplot
     guides(fill = guide_legend(reverse = TRUE)) +
     get_plot_theme() +
+    theme(legend.background = element_blank()) +
     facet_wrap(
       ~delay,
       nrow = 2,
       labeller = as_labeller(label_horizon_facet(max_lag))
     )
+
+  # If we plot the results of the simulation study, we have only 3 nowcasting
+  # horizons, but the plot facets are arranged in 2 times 2 grid, leaving
+  # one tile empty. In this case, we will move the plot legend there to make the
+  # figure more space effective.
+  if (data_origin != "case_study") {
+    plot_legend <- patchwork::wrap_elements(ggpubr::get_legend(coverage_plot)) &
+      theme(plot.background = element_blank())
+    coverage_plot <- coverage_plot + theme(legend.position = "none")
+    coverage_plot <- coverage_plot + inset_element(plot_legend, 0.6, 1, 1, -0.5)
+  }
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
@@ -258,7 +272,7 @@ plot_coverage <- function(
       coverage_plot,
       paste0("inst/figure/coverage_plot_", data_origin, sensitivity_sc),
       width = 9,
-      height = 9
+      height = 10.5
     )
     ret <- NULL
   } else {
@@ -289,6 +303,8 @@ plot_coverage <- function(
 #' \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
+#' @importFrom ggpubr get_legend
+#' @importFrom patchwork wrap_elements
 #'
 #' @export
 plot_crps_decomp <- function(
@@ -388,11 +404,26 @@ plot_crps_decomp <- function(
     # compared to the barplot
     guides(fill = guide_legend(reverse = TRUE)) +
     get_plot_theme() +
+    theme(legend.background = element_blank()) +
     facet_wrap(
       ~delay,
       nrow = 2,
       labeller = as_labeller(label_horizon_facet(max_lag))
     )
+
+  # If we plot the results of the simulation study, we have only 3 nowcasting
+  # horizons, but the plot facets are arranged in 2 times 2 grid, leaving
+  # one tile empty. In this case, we will move the plot legend there to make the
+  # figure more space effective.
+  if (data_origin != "case_study") {
+    plot_legend <- patchwork::wrap_elements(
+      ggpubr::get_legend(crps_decomp_plot)
+    ) &
+      theme(plot.background = element_blank())
+    crps_decomp_plot <- crps_decomp_plot + theme(legend.position = "none")
+    crps_decomp_plot <- crps_decomp_plot +
+      inset_element(plot_legend, 0.6, 1, 1, -0.5)
+  }
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
@@ -404,7 +435,7 @@ plot_crps_decomp <- function(
         sensitivity_sc
       ),
       width = 9,
-      height = 9
+      height = 10.5
     )
     ret <- NULL
   } else {
@@ -1219,7 +1250,8 @@ plot_per_window <- function(
 #' @return a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
-#' @importFrom patchwork plot_layout plot_spacer
+#' @importFrom patchwork plot_layout plot_spacer wrap_elements
+#' @importFrom ggpubr get_legend
 #'
 #' @export
 plot_aggregated <- function(
