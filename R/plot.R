@@ -22,6 +22,11 @@
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param axis_limits a list with 2 elements named `x` and `y`. Each element
+#' is a vector of length 2 indicating the lower and upper limit of the
+#' corresponding plot axis. `x` should be a date, or a string convertible to
+#' date. `y` should be numeric. For no automatic axis limits, supply a
+#' \code{c(NA, NA)} vector.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
