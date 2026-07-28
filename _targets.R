@@ -65,7 +65,7 @@ skip_dates <- as.Date(
 delay_prob_example_date <- as.Date(c("2025-10-12"))
 # Dates for which we want to show, what the nowcasts actually look like.
 nowcast_example_dates <- as.Date(
-  c("2026-01-18", "2026-01-25", "2026-02-01", "2026-02-08")
+  c("2025-01-26", "2025-02-02", "2025-02-09", "2025-02-16")
 )
 
 # Where the beginning of the data used for the simulation study is. For the
