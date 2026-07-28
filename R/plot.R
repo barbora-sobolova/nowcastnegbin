@@ -2036,8 +2036,13 @@ plot_nowcast_example <- function(
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
+  data_origin <- match.arg(data_origin)
+
+  # Bind rows of all the data frames that are in a list format
   df_total <- bind_rows(df_total)
   df_nowcast <- bind_rows(df_nowcast) |>
+    # Create a faceting variable, which is the interaction of the observation
+    # model and the fitting method
     mutate(
       model_method_interact = factor(
         interaction(.data$Distribution, .data$method),
@@ -2070,7 +2075,7 @@ plot_nowcast_example <- function(
       get_interaction_names(),
       dates_to_show[k],
       fitting_method = "both",
-      data_origin = "case_study",
+      data_origin = data_origin,
       sensitivity_sc = "",
       axis_limits = axis_limits,
       save_plot = FALSE
