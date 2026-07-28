@@ -205,15 +205,16 @@ filter_and_combine_methods <- function(
 #' distribution of the nowcast obtained from the MCMC method in a sample format
 #' @param df_nowcast_glm same as \code{df_nowcast_mcmc} but the results are
 #' obtained from the GLM method
-#' @param df_lambda_mcmc a data frame with columns `week`, `.value`,
-#' `Distribution` and `nowcast_date`, that contains the distribution of the mean
-#' process obtained from the MCMC method in a sample format
-#' @param df_lambda_glm same as \code{df_lambda_mcmc} but the results are
-#' obtained from the GLM method
 #' @param df_total a data frame containing columns `date`, `counts` and `data`.
 #' The last column `data` is an indicator, whether the values in the `counts`
 #' column are the final sums of the counts, or the preliminary data version.
 #' Needed to plot the observations alongside the nowcasts.
+#' @param df_lambda_mcmc a data frame with columns `week`, `.value`,
+#' `Distribution` and `nowcast_date`, that contains the distribution of the mean
+#' process obtained from the MCMC method in a sample format. If NULL, the
+#' distribution of the mean process is ignored.
+#' @param df_lambda_glm same as \code{df_lambda_mcmc} but the results are
+#' obtained from the GLM method
 #' @param dates_to_show a selection of 4-6 consecutive dates for which we want
 #' to show the estimates.
 #' @param model_to_show a string indicating an observation model, from which we

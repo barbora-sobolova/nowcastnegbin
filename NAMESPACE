@@ -2,7 +2,7 @@
 
 export(create_totals_data_frame)
 export(filter_and_combine_methods)
-export(filter_glm_overshoot_dates)
+export(filter_nowcast_example_dates)
 export(filter_train_period)
 export(fit_all_glm_models)
 export(fit_all_stan_models)

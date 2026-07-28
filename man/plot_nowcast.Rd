@@ -9,9 +9,10 @@ plot_nowcast(
   df_total,
   model_names,
   date_of_the_nowcast,
-  fitting_method = c("mcmc", "glm"),
+  fitting_method = c("mcmc", "glm", "both"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
+  axis_limits = list(x = c(NA, NA), y = c(NA, NA)),
   save_plot = TRUE
 )
 }
