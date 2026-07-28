@@ -2030,6 +2030,39 @@ plot_mcmc_diagnostics <- function(
   ret
 }
 
+#' Plot the nowcasts for several dates
+#'
+#' @description This function creates a patchwork picture composed of the
+#' nowcast plots as calculated in "real time". Individual panels correspond
+#' to different dates, when the nowcast is calculated.
+#'
+#' @param df_nowcast a list of data frames containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_50`
+#' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
+#' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
+#' dates), `nowcast_date` (when the nowcast was issued) and `delay` (nowcast
+#' horizon). The individual data frames in the list correspond to different
+#' dates, when the nowcast is calculated.
+#' @param df_total a list of data frames containing columns `date`, `counts` and
+#' `data`. The last column `data` is an indicator, whether the values in the
+#' `counts` column are the final sums of the counts, or the preliminary data
+#' version. Needed to plot the observations alongside the nowcasts. The
+#' individual data frames in the list correspond to different dates, when the
+#' nowcast is calculated.
+#' @param dates_to_show a selection of 4-6 consecutive dates for which we want
+#' to show the estimates.
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or whether the data correspond to the case study. Possible
+#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggplot2::ggsave()}
+#'
+#' @return a ggplot object, or NULL if \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#' @importFrom patchwork wrap_plots
+#'
+#' @export
 plot_nowcast_example <- function(
   df_nowcast,
   df_total,
