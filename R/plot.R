@@ -1706,8 +1706,9 @@ plot_nowcast_bands <- function(
         patches[[length(horizons)]],
         paste(plot_path, "delay0", sep = "_"),
         width = 11.5,
-        # Increase the height to make enough space for the axis labels
-        height = plot_height / length(horizons) + 1
+        # Increase the height to make enough space for the axis labels and
+        # legend items
+        height = plot_height / length(horizons) + 2
       )
     } else {
       save_figure(
