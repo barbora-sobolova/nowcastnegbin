@@ -94,6 +94,11 @@ sim_obs_model <- data.frame(
   model_obs = c("NegBinX", "NegBin2D", "NegBin1D"),
   model_number = c(1, 2, 3)
 )
+# Dates for which we want to show, what the nowcasts actually look like in the
+# simulation.
+sim_nowcast_example_dates <- as.Date(
+  c("2018-03-18", "2018-03-25", "2018-04-01", "2018-04-08")
+)
 # The GLM method often overestimates the mean process around season peaks.
 # We show this in a separate plot for the selected dates.
 glm_overshoot_dates <- as.Date(
@@ -518,7 +523,38 @@ list(
         # From which observation model we simulated the data
         data_origin = model_obs
       )
-    })
+    }),
+    # Extract the nowcasts from both fitting methods in the simulation study in
+    # order to show an example of nowcasts. We do it per branch here to avoid
+    # loading all fits at once when we want to plot only nowcasts for selected
+    # dates.
+    tar_target(
+      sim_df_nowcast_example,
+      filter_nowcast_example_dates(
+        sim_summarized_nowcast_mcmc,
+        sim_summarized_nowcast_glm,
+        sim_df_total,
+        dates_to_show = sim_nowcast_example_dates,
+        model_to_show = get_model_names()
+      ),
+      pattern = map(
+        sim_summarized_nowcast_mcmc,
+        sim_summarized_nowcast_glm,
+        sim_df_total
+      ),
+      iteration = "list"
+    ),
+    # Plot an example of nowcasts from all models (GLM & MCMC) in the
+    # simualation study for selected dates
+    tar_target(
+      sim_nowcast_plots,
+      plot_nowcast_example(
+        map(sim_df_nowcast_example, "nowcast"),
+        map(sim_df_nowcast_example, "total"),
+        sim_nowcast_example_dates,
+        data_origin = model_obs
+      )
+    )
   ),
   # Extract the estimate of the mean process from both fitting methods for
   # selected dates in the NegBinX simulation study in order to show the GLM
@@ -927,6 +963,9 @@ list(
       data_origin = "case_study"
     )
   }),
+  # Extract the nowcasts from both fitting methods in the case study in order to
+  # show an example of nowcasts. We do it per branch here to avoid loading all
+  # fits at once when we want to plot only nowcasts for selected dates.
   tar_target(
     df_nowcast_example,
     filter_nowcast_example_dates(
@@ -943,6 +982,8 @@ list(
     ),
     iteration = "list"
   ),
+  # Plot an example of nowcasts from all models (GLM & MCMC) in the case study
+  # for selected dates
   tar_target(
     nowcast_plots,
     plot_nowcast_example(
