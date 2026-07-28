@@ -63,6 +63,10 @@ skip_dates <- as.Date(
 # NegBinX and NegBin1D/2D models. We plot the posterior of the delay probability
 # for one rolling window as an example.
 delay_prob_example_date <- as.Date(c("2025-10-12"))
+# Dates for which we want to show, what the nowcasts actually look like.
+nowcast_example_dates <- as.Date(
+  c("2026-01-18", "2026-01-25", "2026-02-01", "2026-02-08")
+)
 
 # Where the beginning of the data used for the simulation study is. For the
 # simulation study, we take the total SARI counts from several years back,
@@ -523,12 +527,12 @@ list(
   # selected dates.
   tar_target(
     sim_lambda_overshoot,
-    filter_glm_overshoot_dates(
+    filter_nowcast_example_dates(
       sim_summarized_nowcast_mcmc_NegBinX,
       sim_summarized_nowcast_glm_NegBinX,
+      sim_df_total_NegBinX,
       sim_fitted_mcmc_NegBinX$lambda,
       sim_fitted_glm_NegBinX$lambda,
-      sim_df_total_NegBinX,
       dates_to_show = glm_overshoot_dates,
       model_to_show = "NegBinX"
     ),
@@ -923,6 +927,31 @@ list(
       data_origin = "case_study"
     )
   }),
+  tar_target(
+    df_nowcast_example,
+    filter_nowcast_example_dates(
+      summarized_nowcast_mcmc,
+      summarized_nowcast_glm,
+      df_total,
+      dates_to_show = nowcast_example_dates,
+      model_to_show = get_model_names()
+    ),
+    pattern = map(
+      summarized_nowcast_mcmc,
+      summarized_nowcast_glm,
+      df_total
+    ),
+    iteration = "list"
+  ),
+  tar_target(
+    nowcast_plots,
+    plot_nowcast_example(
+      map(df_nowcast_example, "nowcast"),
+      map(df_nowcast_example, "total"),
+      nowcast_example_dates,
+      data_origin = "case_study"
+    )
+  ),
   # Plot the whole incidence trajectory highlighting the first and the last
   # estimation windows
   tar_target(whole_trajectory_plot, {

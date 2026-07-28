@@ -178,7 +178,7 @@ filter_and_combine_methods <- function(
         df_mcmc,
         # Keep only rows with the desired date and observation model
         .data$nowcast_date %in% dates_to_show &
-          .data$Distribution == model_to_show
+          .data$Distribution %in% model_to_show
       ),
       method = "mcmc"
     ),
@@ -187,7 +187,7 @@ filter_and_combine_methods <- function(
         df_glm,
         # Keep only rows with the desired date and observation model
         .data$nowcast_date %in% dates_to_show &
-          .data$Distribution == model_to_show
+          .data$Distribution %in% model_to_show
       ),
       method = "glm"
     )
@@ -239,30 +239,42 @@ filter_and_combine_methods <- function(
 #' @import dplyr
 #'
 #' @export
-filter_glm_overshoot_dates <- function(
+filter_nowcast_example_dates <- function(
   df_nowcast_mcmc,
   df_nowcast_glm,
-  df_lambda_mcmc,
-  df_lambda_glm,
   df_total,
+  df_lambda_mcmc = NULL,
+  df_lambda_glm = NULL,
   dates_to_show = c("2019-03-24", "2019-03-31", "2019-04-07", "2019-04-14"),
-  model_to_show = "NegBinX"
+  model_to_show = c(
+    "Poisson",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBin2M",
+    "NegBin1M"
+  )
 ) {
   # We filter out all rolling windows we don't want to show. Since the function
   # is called for each dynamic branch, in most cases, the filtered data frame
   # will have 0 rows.
-  df_lambda <- filter_and_combine_methods(
-    df_lambda_mcmc,
-    df_lambda_glm,
-    dates_to_show,
-    model_to_show
-  )
   df_nowcast <- filter_and_combine_methods(
     df_nowcast_mcmc,
     df_nowcast_glm,
     dates_to_show,
     model_to_show
   )
+  if (!is.null(df_lambda_mcmc) && !is.null(df_lambda_glm)) {
+    df_lambda <- filter_and_combine_methods(
+      df_lambda_mcmc,
+      df_lambda_glm,
+      dates_to_show,
+      model_to_show
+    )
+  } else {
+    df_lambda <- NULL
+  }
+
   ret_list <- list(lambda = df_lambda, nowcast = df_nowcast)
   # We also select the data frame with the total counts only for the selected
   # dates. Otherwise we return NULL.

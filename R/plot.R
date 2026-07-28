@@ -36,11 +36,21 @@ plot_nowcast <- function(
   df_total,
   model_names,
   date_of_the_nowcast,
-  fitting_method = c("mcmc", "glm"),
+  fitting_method = c("mcmc", "glm", "both"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
+  axis_limits = list(x = c(NA, NA), y = c(NA, NA)),
   save_plot = TRUE
 ) {
+  fitting_method <- match.arg(fitting_method)
+  if (fitting_method == "both") {
+    model_colors <- get_interaction_colors()
+    color_variable <- "model_method_interact"
+  } else {
+    model_colors <- get_model_colors()[model_names]
+    color_variable <- "Distribution"
+  }
+
   df_total <- df_total |>
     mutate(data = factor(data, levels = c("Preliminary", "Final")))
   # Plot the nowcasts
@@ -61,7 +71,7 @@ plot_nowcast <- function(
       mapping = aes(
         x = .data$date,
         y = .data$quantile_50,
-        color = .data$Distribution,
+        color = .data[[color_variable]],
         linetype = "Nowcast"
       )
     ) +
@@ -72,7 +82,7 @@ plot_nowcast <- function(
         x = .data$date,
         ymin = .data$quantile_2.5,
         ymax = .data$quantile_97.5,
-        fill = .data$Distribution,
+        fill = .data[[color_variable]],
         alpha = "PI_95"
       )
     ) +
@@ -83,17 +93,13 @@ plot_nowcast <- function(
         x = .data$date,
         ymin = .data$quantile_25,
         ymax = .data$quantile_75,
-        fill = .data$Distribution,
+        fill = .data[[color_variable]],
         alpha = "PI_50"
       )
     ) +
     # Set the color of the models and the data versions
     scale_color_manual(
-      values = c(
-        get_model_colors()[model_names],
-        "Final" = "black",
-        "Preliminary" = "gray60"
-      ),
+      values = c(model_colors, "Final" = "black", "Preliminary" = "gray60"),
       guide = "none"
     ) +
     scale_linetype_manual(
@@ -122,9 +128,22 @@ plot_nowcast <- function(
       # of the layers.
       alpha = guide_legend(override.aes = list(alpha = c(0.4, 0.2)))
     ) +
-    scale_fill_manual(values = get_model_colors()[model_names]) +
-    labs(x = "Date", y = "Incidence") +
-    facet_wrap(~Distribution, nrow = 2)
+    scale_fill_manual(values = model_colors, name = "Model") +
+    labs(
+      x = "Date",
+      y = "Incidence",
+      title = paste0(
+        "Nowcasts on ",
+        format(as.Date(date_of_the_nowcast), "%d %b %Y")
+      )
+    ) +
+    xlim(as.Date(axis_limits$x)) +
+    ylim(as.numeric(axis_limits$y)) +
+    get_plot_theme() +
+    # The final plot will have 3 facets (GLM), 6 facets (MCMC), or 9 facets
+    # (both methods together). Dividing the length of the color vector by 3
+    # will result in an integer number of rows.
+    facet_wrap(~.data[[color_variable]], nrow = length(model_colors) / 3)
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
@@ -1140,6 +1159,7 @@ plot_per_window <- function(
       fitting_method,
       data_origin,
       scenario[k],
+      list(x = c(NA, NA), y = c(NA, NA)),
       save_plot
     )
     p_disp <- plot_disp_par(
@@ -1521,7 +1541,7 @@ plot_trajectory <- function(
       label = "Last\nwindow",
       label.size = 4.5
     ) +
-    labs(y = "Incidence") +
+    labs(y = "Incidence", x = "Date") +
     ylim(
       c(0, max(overall_max_cases, first_window_bracket_y) + 3 * bracket_offset)
     ) +
@@ -1908,7 +1928,6 @@ plot_nowcast_bands_per_horizon <- function(
     ) +
     get_plot_theme() +
     theme(
-      plot.title = element_text(hjust = 0.5),
       axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
     ) +
     # Plot 3 models per row, since `n_models` can be either 6, or 9
@@ -2010,6 +2029,78 @@ plot_mcmc_diagnostics <- function(
   ret
 }
 
+plot_nowcast_example <- function(
+  df_nowcast,
+  df_total,
+  dates_to_show,
+  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  save_plot = TRUE
+) {
+  df_total <- bind_rows(df_total)
+  df_nowcast <- bind_rows(df_nowcast) |>
+    mutate(
+      model_method_interact = factor(
+        interaction(.data$Distribution, .data$method),
+        levels = names(get_interaction_names(nowcast_bands_ordering = TRUE)),
+        labels = get_interaction_names(nowcast_bands_ordering = TRUE)
+      )
+    )
+  # Find the axis limits. X-axis limits are defined as the beginning of the
+  # first rolling window and the end of the last rolling window. Having fixed
+  # x-axis limits helps with collecting the axis via `plot_layout()`, which
+  # saves some vertical space, that would otherwise be occupied by x-axis
+  # labels. Y-axis labels are set for the patchwork plot to have consistent
+  # y-axis scale for all subplots.
+  axis_limits <- list(
+    x = range(df_total$date),
+    y = c(min(df_total$counts), max(df_nowcast$quantile_97.5))
+  )
+
+  # Loop over the dates, on which the nowcasts are calculated
+  patches <- vector("list", length(dates_to_show))
+  names(patches) <- dates_to_show
+  for (k in seq_along(patches)) {
+    df_nowcast_filtered <- df_nowcast |>
+      filter(.data$nowcast_date == dates_to_show[k])
+    df_total_filtered <- df_total |>
+      filter(.data$nowcast_date == dates_to_show[k])
+    patches[[k]] <- plot_nowcast(
+      df_nowcast_filtered,
+      df_total_filtered,
+      get_interaction_names(),
+      dates_to_show[k],
+      fitting_method = "both",
+      data_origin = "case_study",
+      sensitivity_sc = "",
+      axis_limits = axis_limits,
+      save_plot = FALSE
+    )
+  }
+  # Arrange all the patches
+  arranged <- patchwork::wrap_plots(
+    patches,
+    nrow = length(dates_to_show),
+    ncol = 1,
+    guides = "collect",
+    axes = "collect"
+  )
+  # Save the plot if required, the width, height and path are hard-coded here
+  if (save_plot) {
+    save_figure(
+      arranged,
+      paste0(
+        "inst/figure/nowcast_example_",
+        data_origin
+      ),
+      width = 11.5,
+      height = 19
+    )
+    ret <- NULL
+  } else {
+    ret <- arranged
+  }
+  ret
+}
 
 #' Plot the nowcasts, where the GLM method overshoots
 #'
