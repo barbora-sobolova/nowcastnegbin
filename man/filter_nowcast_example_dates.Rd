@@ -38,8 +38,8 @@ obtained from the GLM method}
 \item{dates_to_show}{a selection of 4-6 consecutive dates for which we want
 to show the estimates.}
 
-\item{model_to_show}{a string indicating an observation model, from which we
-want to show the estimates}
+\item{model_to_show}{a character vector indicating an observation models,
+from which we want to show the estimates}
 }
 \value{
 a list containing 3 data frames

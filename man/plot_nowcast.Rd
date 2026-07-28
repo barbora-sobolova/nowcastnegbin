@@ -32,8 +32,8 @@ plot.}
 \item{date_of_the_nowcast}{a date, when the nowcast is made to name the
 saved file correctly}
 
-\item{fitting_method}{a method used for fitting the nowcasting model, either
-"mcmc", or "glm"}
+\item{fitting_method}{a method used for fitting the nowcasting model: "mcmc",
+"glm", or "both", when we want to plot both methods next to each other}
 
 \item{data_origin}{a string indicating the data generating process of
 simulated data, or whether the data correspond to the case study. Possible

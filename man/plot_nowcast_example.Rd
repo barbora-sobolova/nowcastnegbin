@@ -39,7 +39,7 @@ values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
 \code{ggplot2::ggsave()}}
 }
 \value{
-a ggplot object, or NULL if \code{save_plot = TRUE}
+a patchwork plot, or NULL if \code{save_plot = TRUE}
 }
 \description{
 This function creates a patchwork picture composed of the

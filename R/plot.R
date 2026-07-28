@@ -15,8 +15,8 @@
 #' plot.
 #' @param date_of_the_nowcast a date, when the nowcast is made to name the
 #' saved file correctly
-#' @param fitting_method a method used for fitting the nowcasting model, either
-#' "mcmc", or "glm"
+#' @param fitting_method a method used for fitting the nowcasting model: "mcmc",
+#' "glm", or "both", when we want to plot both methods next to each other
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
 #' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
@@ -2057,7 +2057,7 @@ plot_mcmc_diagnostics <- function(
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
-#' @return a ggplot object, or NULL if \code{save_plot = TRUE}
+#' @return a patchwork plot, or NULL if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #' @importFrom patchwork wrap_plots

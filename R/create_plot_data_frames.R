@@ -217,8 +217,8 @@ filter_and_combine_methods <- function(
 #' obtained from the GLM method
 #' @param dates_to_show a selection of 4-6 consecutive dates for which we want
 #' to show the estimates.
-#' @param model_to_show a string indicating an observation model, from which we
-#' want to show the estimates
+#' @param model_to_show a character vector indicating an observation models,
+#' from which we want to show the estimates
 #'
 #' @return a list containing 3 data frames
 #' \describe{
