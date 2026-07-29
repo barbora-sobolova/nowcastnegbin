@@ -21,7 +21,9 @@ plot_nowcast(
 (containing the name of the observation model), \code{quantile_50}
 (the point nowcasts), \code{quantile_2.5}, \code{quantile_25}, \code{quantile_75},
 \code{quantile_97.5} (bounds of the prediction intervals) and \code{date} (x-axis
-dates)}
+dates). If we want to plot models fitted by both, the MCMC andthe  GLM method
+\cofe{fitting_method = "both"}, the data frame must contain an additional
+column \code{model_method_interact}.}
 
 \item{df_total}{a data frame with columns \code{date}, \code{counts} and \code{data}
 returned by the function \code{create_totals_data_frame()}}

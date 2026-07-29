@@ -8,7 +8,9 @@
 #' (containing the name of the observation model), `quantile_50`
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
 #' `quantile_97.5` (bounds of the prediction intervals) and `date` (x-axis
-#' dates)
+#' dates). If we want to plot models fitted by both, the MCMC andthe  GLM method
+#' \cofe{fitting_method = "both"}, the data frame must contain an additional
+#' column `model_method_interact`.
 #' @param df_total a data frame with columns `date`, `counts` and `data`
 #' returned by the function \code{create_totals_data_frame()}
 #' @param model_names a vector of names of the observation models, we wish to
