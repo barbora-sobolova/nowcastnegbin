@@ -152,6 +152,16 @@ plot_nowcast <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
+    # For the MCMC, we plot 6 models in 2 rows, for GLM only 3 models in a
+    # single row, for both methods we plot 9 models in 3 rows.
+    plot_height <- if (fitting_method == "mcmc") {
+      7
+    } else if (fitting_method == "glm") {
+      # The height for a single line plot is higher to fit all legend items
+      4.5
+    } else {
+      10.5
+    }
     save_figure(
       nowcasts_plot,
       path = paste0(
@@ -164,7 +174,8 @@ plot_nowcast <- function(
         sensitivity_sc
       ),
       width = 9,
-      height = 7
+      # Shorten the height based on the number of lines we have
+      height = plot_height
     )
     ret <- NULL
   } else {
