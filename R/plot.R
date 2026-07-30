@@ -1780,8 +1780,7 @@ plot_nowcast_bands_per_horizon <- function(
   start_date,
   end_date,
   skip_dates,
-  horizon,
-  model_names
+  horizon
 ) {
   if (length(true_data) != length(prelim_data)) {
     stop("The length of preliminary data 'prelim_data' to plot must be the same as the length of 'true_data'.")  # nolint
