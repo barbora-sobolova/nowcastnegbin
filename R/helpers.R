@@ -25,15 +25,15 @@ get_model_names <- function() {
 #' \code{interaction()} function
 get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
   ret <- c(
-    "NegBinX.glm" = "NegBinX_GAM",
-    "NegBin1D.glm" = "NegBin1D_GAM",
-    "Poisson.glm" = "Poisson_GAM",
-    "NegBinX.mcmc" = "NegBinX_HMC",
-    "NegBin2D.mcmc" = "NegBin2D_HMC",
-    "NegBin1D.mcmc" = "NegBin1D_HMC",
-    "NegBin2M.mcmc" = "NegBin2M_HMC",
-    "NegBin1M.mcmc" = "NegBin1M_HMC",
-    "Poisson.mcmc" = "Poisson_HMC"
+    "NegBinX.glm" = "NegBinX-GAM",
+    "NegBin1D.glm" = "NegBin1D-GAM",
+    "Poisson.glm" = "Poisson-GAM",
+    "NegBinX.mcmc" = "NegBinX-HMC",
+    "NegBin2D.mcmc" = "NegBin2D-HMC",
+    "NegBin1D.mcmc" = "NegBin1D-HMC",
+    "NegBin2M.mcmc" = "NegBin2M-HMC",
+    "NegBin1M.mcmc" = "NegBin1M-HMC",
+    "Poisson.mcmc" = "Poisson-HMC"
   )
   # For plotting the nowcasting bands, we need to change the ordering to have
   # the NegBin1M, NegBin2M and NegBin2D models, which don't have the GLM
@@ -67,15 +67,15 @@ get_model_colors <- function() {
 #' (6 for the MCMC method and 3 for the GLM method).
 get_interaction_colors <- function() {
   c(
-    "Poisson_HMC" = "#CC79A7",
-    "NegBinX_HMC" = "#D55E00",
-    "NegBin2D_HMC" = "#009E73",
-    "NegBin1D_HMC" = "#56B4E9",
-    "NegBin2M_HMC" = "#004282",
-    "NegBin1M_HMC" = "#F0E442",
-    "Poisson_GAM" = "#862D67",
-    "NegBinX_GAM" = "#993700",
-    "NegBin1D_GAM" = "#1D79B9"
+    "Poisson-HMC" = "#CC79A7",
+    "NegBinX-HMC" = "#D55E00",
+    "NegBin2D-HMC" = "#009E73",
+    "NegBin1D-HMC" = "#56B4E9",
+    "NegBin2M-HMC" = "#004282",
+    "NegBin1M-HMC" = "#F0E442",
+    "Poisson-GAM" = "#862D67",
+    "NegBinX-GAM" = "#993700",
+    "NegBin1D-GAM" = "#1D79B9"
   )
 }
 
