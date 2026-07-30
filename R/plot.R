@@ -305,11 +305,22 @@ plot_coverage <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
+    # If we plot the case study, we have the legend on the right, whereas for
+    # the simulation studies, it is located in the bottom right corner. For the
+    # plot areas to have approximately comparable size, we need to adjust the
+    # final plot dimensions differently.
+    if (data_origin == "case_study") {
+      plot_height <- 7
+      plot_width <- 10
+    } else {
+      plot_height <- 9
+      plot_width <- 9
+    }
     save_figure(
       coverage_plot,
       paste0("inst/figure/coverage_plot_", data_origin, sensitivity_sc),
-      width = 9,
-      height = 10.5
+      width = plot_width,
+      height = plot_height
     )
     ret <- NULL
   } else {
@@ -464,6 +475,17 @@ plot_crps_decomp <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
+    # If we plot the case study, we have the legend on the right, whereas for
+    # the simulation studies, it is located in the bottom right corner. For the
+    # plot areas to have approximately comparable size, we need to adjust the
+    # final plot dimensions differently.
+    if (data_origin == "case_study") {
+      plot_height <- 7
+      plot_width <- 10
+    } else {
+      plot_height <- 10.5
+      plot_width <- 9
+    }
     save_figure(
       crps_decomp_plot,
       paste0(
@@ -471,8 +493,8 @@ plot_crps_decomp <- function(
         data_origin,
         sensitivity_sc
       ),
-      width = 9,
-      height = 10.5
+      width = plot_width,
+      height = plot_height
     )
     ret <- NULL
   } else {
@@ -1446,8 +1468,8 @@ save_patchwork_plots <- function(plot_list) {
     save_figure(
       patchworked_list[[k]],
       paste0("inst/figure/", names(patchworked_list)[k]),
-      width = 15,
-      height = 7
+      width = 13,
+      height = 6
     )
   }
   NULL
@@ -2066,7 +2088,7 @@ plot_mcmc_diagnostics <- function(
 #' version. Needed to plot the observations alongside the nowcasts. The
 #' individual data frames in the list correspond to different dates, when the
 #' nowcast is calculated.
-#' @param dates_to_show a selection of 4-6 consecutive dates for which we want
+#' @param dates_to_show a selection of a few consecutive dates for which we want
 #' to show the estimates.
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or whether the data correspond to the case study. Possible
@@ -2149,7 +2171,7 @@ plot_nowcast_example <- function(
         data_origin
       ),
       width = 11.5,
-      height = 19
+      height = 15
     )
     ret <- NULL
   } else {
@@ -2177,7 +2199,7 @@ plot_nowcast_example <- function(
 #' The last column `data` is an indicator, whether the values in the `counts`
 #' column are the final sums of the counts, or the preliminary data version.
 #' Needed to plot the observations alongside the nowcasts.
-#' @param dates_to_show a selection of 4-6 consecutive dates for which we want
+#' @param dates_to_show a selection of a few consecutive dates for which we want
 #' to show the estimates.
 #' @param model_to_show a string indicating an observation model, from which we
 #' want to show th estimates

@@ -28,7 +28,7 @@ version. Needed to plot the observations alongside the nowcasts. The
 individual data frames in the list correspond to different dates, when the
 nowcast is calculated.}
 
-\item{dates_to_show}{a selection of 4-6 consecutive dates for which we want
+\item{dates_to_show}{a selection of a few consecutive dates for which we want
 to show the estimates.}
 
 \item{data_origin}{a string indicating the data generating process of

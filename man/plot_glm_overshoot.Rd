@@ -29,7 +29,7 @@ The last column \code{data} is an indicator, whether the values in the \code{cou
 column are the final sums of the counts, or the preliminary data version.
 Needed to plot the observations alongside the nowcasts.}
 
-\item{dates_to_show}{a selection of 4-6 consecutive dates for which we want
+\item{dates_to_show}{a selection of a few consecutive dates for which we want
 to show the estimates.}
 
 \item{model_to_show}{a string indicating an observation model, from which we

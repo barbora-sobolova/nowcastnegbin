@@ -65,7 +65,7 @@ skip_dates <- as.Date(
 delay_prob_example_date <- as.Date(c("2025-10-12"))
 # Dates for which we want to show, what the nowcasts actually look like.
 nowcast_example_dates <- as.Date(
-  c("2025-01-26", "2025-02-02", "2025-02-09", "2025-02-16")
+  c("2025-02-09", "2025-02-16", "2025-02-23")
 )
 
 # Where the beginning of the data used for the simulation study is. For the
@@ -97,7 +97,7 @@ sim_obs_model <- data.frame(
 # Dates for which we want to show, what the nowcasts actually look like in the
 # simulation.
 sim_nowcast_example_dates <- as.Date(
-  c("2018-03-18", "2018-03-25", "2018-04-01", "2018-04-08")
+  c("2018-03-25", "2018-04-01", "2018-04-08")
 )
 # The GLM method often overestimates the mean process around season peaks.
 # We show this in a separate plot for the selected dates.
