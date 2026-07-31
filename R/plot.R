@@ -218,6 +218,8 @@ plot_coverage <- function(
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
+  data_origin <- match.arg(data_origin)
+
   # Calculate the empirical coverage
   df_coverage <- df_summarized_nowcast |>
     group_by(.data$delay, .data$Distribution, .data$method) |>
@@ -361,6 +363,8 @@ plot_crps_decomp <- function(
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
+  data_origin <- match.arg(data_origin)
+
   # Calculate the decomposition of the average CRPS
   df_crps <- df_summarized_nowcast |>
     # Calculate the absolute error
