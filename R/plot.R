@@ -1786,8 +1786,6 @@ plot_nowcast_bands <- function(
 #' \code{skip_dates = NULL} if no gaps are to be plotted.
 #' @param horizon integer, the data up to this reporting delay are included in
 #' the preliminary data
-#' @param model_names a vector of names of the observation models, we wish to
-#' plot.
 #'
 #' @return a ggplot object
 #'

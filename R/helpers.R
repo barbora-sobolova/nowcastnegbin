@@ -36,7 +36,7 @@ get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
     "Poisson.mcmc" = "Poisson-HMC"
   )
   # For plotting the nowcasting bands, we need to change the ordering to have
-  # the NegBin1M, NegBin2M and NegBin2D models, which don't have the GLM
+  # the NegBin2M, NegBin1M and NegBin2D models, which don't have the GLM
   # alternative in one row, Poisson, NegBinX and NegBin1D in another row and
   # GAM models in the last row
   if (nowcast_bands_ordering) {
