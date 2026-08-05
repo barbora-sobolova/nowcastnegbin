@@ -6,8 +6,6 @@
 \usage{
 plot_crps_decomp(
   df_summarized_nowcast,
-  model_names,
-  fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   save_plot = TRUE
@@ -18,12 +16,6 @@ plot_crps_decomp(
 (containing the name of the observation model), \code{dispersion},
 \code{underprediction}, \code{overprediction}, \code{delay} (the nowcasting horizon),
 \code{quantile_50} and \code{true_val} (to calculate the mean absolute error).}
-
-\item{model_names}{a vector of names of the observation models, we wish to
-plot.}
-
-\item{fitting_method}{a method used for fitting the nowcasting model, either
-"mcmc", or "glm"}
 
 \item{data_origin}{a string indicating the data generating process of
 simulated data, or whether the data correspond to the case study. Possible

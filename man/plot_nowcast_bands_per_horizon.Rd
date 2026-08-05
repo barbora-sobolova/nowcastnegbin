@@ -11,8 +11,7 @@ plot_nowcast_bands_per_horizon(
   start_date,
   end_date,
   skip_dates,
-  horizon,
-  model_names
+  horizon
 )
 }
 \arguments{
@@ -39,9 +38,6 @@ where we should leave gaps in the plot of the nowcasts.
 
 \item{horizon}{integer, the data up to this reporting delay are included in
 the preliminary data}
-
-\item{model_names}{a vector of names of the observation models, we wish to
-plot.}
 }
 \value{
 a ggplot object
