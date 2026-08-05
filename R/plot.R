@@ -117,11 +117,11 @@ plot_nowcast <- function(
         "Nowcast" = "dashed"
       ),
     ) +
-    # Set the transparency of the prediction intervals. The transparency is the
-    # same value for both prediction intervals, since the 50% interval is inside
+    # Set the transparency of the prediction intervals. The step between the
+    # transparency values is rather moderate, since the 50% interval is inside
     # the 95% one. Hence, the transparency adds up.
     scale_alpha_manual(
-      values = c("PI_50" = 0.2, "PI_95" = 0.2),
+      values = c("PI_50" = 0.5, "PI_95" = 0.2),
       labels = c("50%", "95%"),
       name = "Prediction interval"
     ) +
@@ -131,9 +131,9 @@ plot_nowcast <- function(
         override.aes = list(color = c("gray60", "black", "black"))
       ),
       # Customize the legend of the confidence interval transparency, which for
-      # the reader appear to be 0.4 for the 95% interval due to the "stacking"
+      # the reader appear to be 0.6 for the 50% interval due to the "stacking"
       # of the layers.
-      alpha = guide_legend(override.aes = list(alpha = c(0.4, 0.2)))
+      alpha = guide_legend(override.aes = list(alpha = c(0.7, 0.2)))
     ) +
     scale_fill_manual(values = model_colors, name = "Model") +
     labs(
@@ -1900,7 +1900,7 @@ plot_nowcast_bands_per_horizon <- function(
           color = .data$model_method_interact,
           linetype = "Nowcast"
         ),
-        linewidth = 0.15
+        linewidth = 0.25
       ) +
       # 95 % prediction interval
       geom_ribbon(
@@ -1945,11 +1945,11 @@ plot_nowcast_bands_per_horizon <- function(
       ),
     ) +
     scale_fill_manual(values = get_interaction_colors(), name = "Model") +
-    # Set the transparency of the prediction intervals. The transparency is the
-    # same value for both prediction intervals, since the 50% interval is inside
+    # Set the transparency of the prediction intervals. The step between the
+    # transparency values is rather moderate, since the 50% interval is inside
     # the 95% one. Hence, the transparency adds up.
     scale_alpha_manual(
-      values = c("PI_50" = 0.2, "PI_95" = 0.2),
+      values = c("PI_50" = 0.5, "PI_95" = 0.2),
       labels = c("50%", "95%"),
       name = "Prediction\ninterval"
     ) +
@@ -1961,7 +1961,7 @@ plot_nowcast_bands_per_horizon <- function(
       # Customize the legend of the confidence interval transparency, which for
       # the reader appear to be 0.4 for the 95% interval due to the "stacking"
       # of the layers.
-      alpha = guide_legend(override.aes = list(alpha = c(0.4, 0.2)))
+      alpha = guide_legend(override.aes = list(alpha = c(0.7, 0.2)))
     ) +
     labs(
       x = "Date",
