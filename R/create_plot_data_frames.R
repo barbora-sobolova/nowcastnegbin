@@ -40,6 +40,8 @@ create_totals_data_frame <- function(
 #' @param df_total a data frame containing columns `date`, `counts` and `data`.
 #' The last column `data` is an indicator, whether the values in the `counts`
 #' column are the final sums of the counts, or the preliminary data version.
+#' @param fitting_method a method used for fitting the nowcasting model, either
+#' "mcmc", or "glm"
 #'
 #' @return a data frame with columns
 #' \describe{
@@ -65,8 +67,11 @@ create_totals_data_frame <- function(
 #' @export
 summarize_nowcast <- function(
   df_nowcast,
-  df_total
+  df_total,
+  fitting_method = c("mcmc", "glm")
 ) {
+  fitting_method <- match.arg(fitting_method)
+
   # Recover the beginning of the estimation window from the total
   # counts
   start_date <- min(df_total$date)
@@ -130,7 +135,8 @@ summarize_nowcast <- function(
       delay = factor(as.numeric(date - .data$nowcast_date) / 7),
       # Convert to factor to make sure, the plotting order of the models is
       # consistent.
-      Distribution = factor(.data$Distribution, levels = get_model_names())
+      Distribution = factor(.data$Distribution, levels = get_model_names()),
+      method = fitting_method
     )
   # Rename the quantile columns to have nicer names
   cols_to_rename <- colnames(df_nowcast_plot) %in% paste0(quantiles_to_get, "%")
@@ -172,7 +178,7 @@ filter_and_combine_methods <- function(
         df_mcmc,
         # Keep only rows with the desired date and observation model
         .data$nowcast_date %in% dates_to_show &
-          .data$Distribution == model_to_show
+          .data$Distribution %in% model_to_show
       ),
       method = "mcmc"
     ),
@@ -181,7 +187,7 @@ filter_and_combine_methods <- function(
         df_glm,
         # Keep only rows with the desired date and observation model
         .data$nowcast_date %in% dates_to_show &
-          .data$Distribution == model_to_show
+          .data$Distribution %in% model_to_show
       ),
       method = "glm"
     )
@@ -199,19 +205,20 @@ filter_and_combine_methods <- function(
 #' distribution of the nowcast obtained from the MCMC method in a sample format
 #' @param df_nowcast_glm same as \code{df_nowcast_mcmc} but the results are
 #' obtained from the GLM method
-#' @param df_lambda_mcmc a data frame with columns `week`, `.value`,
-#' `Distribution` and `nowcast_date`, that contains the distribution of the mean
-#' process obtained from the MCMC method in a sample format
-#' @param df_lambda_glm same as \code{df_lambda_mcmc} but the results are
-#' obtained from the GLM method
 #' @param df_total a data frame containing columns `date`, `counts` and `data`.
 #' The last column `data` is an indicator, whether the values in the `counts`
 #' column are the final sums of the counts, or the preliminary data version.
 #' Needed to plot the observations alongside the nowcasts.
+#' @param df_lambda_mcmc a data frame with columns `week`, `.value`,
+#' `Distribution` and `nowcast_date`, that contains the distribution of the mean
+#' process obtained from the MCMC method in a sample format. If NULL, the
+#' distribution of the mean process is ignored.
+#' @param df_lambda_glm same as \code{df_lambda_mcmc} but the results are
+#' obtained from the GLM method
 #' @param dates_to_show a selection of 4-6 consecutive dates for which we want
 #' to show the estimates.
-#' @param model_to_show a string indicating an observation model, from which we
-#' want to show the estimates
+#' @param model_to_show a character vector indicating an observation models,
+#' from which we want to show the estimates
 #'
 #' @return a list containing 3 data frames
 #' \describe{
@@ -233,30 +240,42 @@ filter_and_combine_methods <- function(
 #' @import dplyr
 #'
 #' @export
-filter_glm_overshoot_dates <- function(
+filter_nowcast_example_dates <- function(
   df_nowcast_mcmc,
   df_nowcast_glm,
-  df_lambda_mcmc,
-  df_lambda_glm,
   df_total,
+  df_lambda_mcmc = NULL,
+  df_lambda_glm = NULL,
   dates_to_show = c("2019-03-24", "2019-03-31", "2019-04-07", "2019-04-14"),
-  model_to_show = "NegBinX"
+  model_to_show = c(
+    "Poisson",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBin2M",
+    "NegBin1M"
+  )
 ) {
   # We filter out all rolling windows we don't want to show. Since the function
   # is called for each dynamic branch, in most cases, the filtered data frame
   # will have 0 rows.
-  df_lambda <- filter_and_combine_methods(
-    df_lambda_mcmc,
-    df_lambda_glm,
-    dates_to_show,
-    model_to_show
-  )
   df_nowcast <- filter_and_combine_methods(
     df_nowcast_mcmc,
     df_nowcast_glm,
     dates_to_show,
     model_to_show
   )
+  if (!is.null(df_lambda_mcmc) && !is.null(df_lambda_glm)) {
+    df_lambda <- filter_and_combine_methods(
+      df_lambda_mcmc,
+      df_lambda_glm,
+      dates_to_show,
+      model_to_show
+    )
+  } else {
+    df_lambda <- NULL
+  }
+
   ret_list <- list(lambda = df_lambda, nowcast = df_nowcast)
   # We also select the data frame with the total counts only for the selected
   # dates. Otherwise we return NULL.

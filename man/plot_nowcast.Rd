@@ -9,9 +9,10 @@ plot_nowcast(
   df_total,
   model_names,
   date_of_the_nowcast,
-  fitting_method = c("mcmc", "glm"),
+  fitting_method = c("mcmc", "glm", "both"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
+  axis_limits = list(x = c(NA, NA), y = c(NA, NA)),
   save_plot = TRUE
 )
 }
@@ -20,7 +21,9 @@ plot_nowcast(
 (containing the name of the observation model), \code{quantile_50}
 (the point nowcasts), \code{quantile_2.5}, \code{quantile_25}, \code{quantile_75},
 \code{quantile_97.5} (bounds of the prediction intervals) and \code{date} (x-axis
-dates)}
+dates). If we want to plot models fitted by both, the MCMC andthe  GLM method
+\cofe{fitting_method = "both"}, the data frame must contain an additional
+column \code{model_method_interact}.}
 
 \item{df_total}{a data frame with columns \code{date}, \code{counts} and \code{data}
 returned by the function \code{create_totals_data_frame()}}
@@ -31,8 +34,8 @@ plot.}
 \item{date_of_the_nowcast}{a date, when the nowcast is made to name the
 saved file correctly}
 
-\item{fitting_method}{a method used for fitting the nowcasting model, either
-"mcmc", or "glm"}
+\item{fitting_method}{a method used for fitting the nowcasting model: "mcmc",
+"glm", or "both", when we want to plot both methods next to each other}
 
 \item{data_origin}{a string indicating the data generating process of
 simulated data, or whether the data correspond to the case study. Possible
@@ -40,6 +43,12 @@ values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{sensitivity_sc}{a string indicating the sensitivity analysis scenario
 of the MCMC method. Empty string "" indicates the main analysis.}
+
+\item{axis_limits}{a list with 2 elements named \code{x} and \code{y}. Each element
+is a vector of length 2 indicating the lower and upper limit of the
+corresponding plot axis. \code{x} should be a date, or a string convertible to
+date. \code{y} should be numeric. For no automatic axis limits, supply a
+\code{c(NA, NA)} vector.}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}

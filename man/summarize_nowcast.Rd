@@ -4,7 +4,7 @@
 \alias{summarize_nowcast}
 \title{Summarize the sample from the predictive distribution of the nowcasts}
 \usage{
-summarize_nowcast(df_nowcast, df_total)
+summarize_nowcast(df_nowcast, df_total, fitting_method = c("mcmc", "glm"))
 }
 \arguments{
 \item{df_nowcast}{a data frame with columns \code{week}, \code{.value}, \code{Distribution}}
@@ -12,6 +12,9 @@ summarize_nowcast(df_nowcast, df_total)
 \item{df_total}{a data frame containing columns \code{date}, \code{counts} and \code{data}.
 The last column \code{data} is an indicator, whether the values in the \code{counts}
 column are the final sums of the counts, or the preliminary data version.}
+
+\item{fitting_method}{a method used for fitting the nowcasting model, either
+"mcmc", or "glm"}
 }
 \value{
 a data frame with columns

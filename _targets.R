@@ -63,6 +63,10 @@ skip_dates <- as.Date(
 # NegBinX and NegBin1D/2D models. We plot the posterior of the delay probability
 # for one rolling window as an example.
 delay_prob_example_date <- as.Date(c("2025-10-12"))
+# Dates for which we want to show, what the nowcasts actually look like.
+nowcast_example_dates <- as.Date(
+  c("2025-02-09", "2025-02-16", "2025-02-23")
+)
 
 # Where the beginning of the data used for the simulation study is. For the
 # simulation study, we take the total SARI counts from several years back,
@@ -89,6 +93,11 @@ sim_disp_par <- c("NegBinX" = 0.04, "NegBin2D" = 0.01, "NegBin1D" = 100)
 sim_obs_model <- data.frame(
   model_obs = c("NegBinX", "NegBin2D", "NegBin1D"),
   model_number = c(1, 2, 3)
+)
+# Dates for which we want to show, what the nowcasts actually look like in the
+# simulation.
+sim_nowcast_example_dates <- as.Date(
+  c("2018-03-25", "2018-04-01", "2018-04-08")
 )
 # The GLM method often overestimates the mean process around season peaks.
 # We show this in a separate plot for the selected dates.
@@ -413,24 +422,6 @@ list(
       ),
       iteration = "list"
     ),
-    # Create plots of aggregated results from the simulation study for the MCMC
-    # method. We plot:
-    # - the coverage of nowcasts,
-    # - the crps decomposition.
-    tar_target(sim_aggreg_plots_mcmc, {
-      plot_aggregated(
-        bind_rows(sim_summarized_nowcast_mcmc),
-        sim_full_data,
-        # What observation models we fitted
-        obs_model,
-        # There is no Christmas break in the simulated data, so we don't skip
-        # any dates.
-        skip_dates = NULL,
-        fitting_method = "mcmc",
-        # From which observation model we simulated the data
-        data_origin = model_obs
-      )
-    }),
     # Extract the diagnostic summaries for the MCMC models in the simulation
     # study. We do it per branch to avoid loading all fits at once when we want
     # to plot the diagnostics into a single plot.
@@ -473,7 +464,7 @@ list(
     # obtained by the GLM method
     tar_target(
       sim_summarized_nowcast_glm,
-      summarize_nowcast(sim_fitted_glm$nowcast, df_total = sim_df_total),
+      summarize_nowcast(sim_fitted_glm$nowcast, sim_df_total, "glm"),
       pattern = map(sim_fitted_glm, sim_df_total),
       iteration = "list"
     ),
@@ -515,24 +506,55 @@ list(
       ),
       iteration = "list"
     ),
-    # Create plots of aggregated results from the simulation study for the GLM
-    # method. We plot:
+    # Create plots of aggregated results from the simulation study. We plot:
     # - the coverage of nowcasts,
-    # - the crps decomposition.
-    tar_target(sim_aggreg_plots_glm, {
+    # - the crps decomposition,
+    # - the prediction intervals as bands around the data for each horizon
+    tar_target(sim_aggreg_plots, {
       plot_aggregated(
-        bind_rows(sim_summarized_nowcast_glm),
+        bind_rows(
+          bind_rows(sim_summarized_nowcast_mcmc),
+          bind_rows(sim_summarized_nowcast_glm)
+        ),
         sim_full_data,
-        # What observation models we fitted
-        obs_model_glm,
         # There is no Christmas break in the simulated data, so we don't skip
         # any dates.
         skip_dates = NULL,
-        fitting_method = "glm",
         # From which observation model we simulated the data
         data_origin = model_obs
       )
-    })
+    }),
+    # Extract the nowcasts from both fitting methods in the simulation study in
+    # order to show an example of nowcasts. We do it per branch here to avoid
+    # loading all fits at once when we want to plot only nowcasts for selected
+    # dates.
+    tar_target(
+      sim_df_nowcast_example,
+      filter_nowcast_example_dates(
+        sim_summarized_nowcast_mcmc,
+        sim_summarized_nowcast_glm,
+        sim_df_total,
+        dates_to_show = sim_nowcast_example_dates,
+        model_to_show = get_model_names()
+      ),
+      pattern = map(
+        sim_summarized_nowcast_mcmc,
+        sim_summarized_nowcast_glm,
+        sim_df_total
+      ),
+      iteration = "list"
+    ),
+    # Plot an example of nowcasts from all models (GLM & MCMC) in the
+    # simualation study for selected dates
+    tar_target(
+      sim_nowcast_plots,
+      plot_nowcast_example(
+        map(sim_df_nowcast_example, "nowcast"),
+        map(sim_df_nowcast_example, "total"),
+        sim_nowcast_example_dates,
+        data_origin = model_obs
+      )
+    )
   ),
   # Extract the estimate of the mean process from both fitting methods for
   # selected dates in the NegBinX simulation study in order to show the GLM
@@ -541,12 +563,12 @@ list(
   # selected dates.
   tar_target(
     sim_lambda_overshoot,
-    filter_glm_overshoot_dates(
+    filter_nowcast_example_dates(
       sim_summarized_nowcast_mcmc_NegBinX,
       sim_summarized_nowcast_glm_NegBinX,
+      sim_df_total_NegBinX,
       sim_fitted_mcmc_NegBinX$lambda,
       sim_fitted_glm_NegBinX$lambda,
-      sim_df_total_NegBinX,
       dates_to_show = glm_overshoot_dates,
       model_to_show = "NegBinX"
     ),
@@ -795,7 +817,7 @@ list(
   ),
   # Calculate the quantiles and CRPS of the nowcasts obtained by the MCMC method
   tar_target(summarized_nowcast_mcmc, {
-    summarize_nowcast(fitted_mcmc$nowcast, df_total = df_total)
+    summarize_nowcast(fitted_mcmc$nowcast, df_total, "mcmc")
   },
   pattern = map(fitted_mcmc, df_total),
   iteration = "list"
@@ -842,19 +864,6 @@ list(
     n = 15
   ),
   iteration = "list"),
-  # Create plots of aggregated results from the MCMC method. We plot:
-  # - the coverage of nowcasts,
-  # - the crps decomposition.
-  tar_target(aggreg_plots_mcmc, {
-    plot_aggregated(
-      bind_rows(summarized_nowcast_mcmc),
-      full_data,
-      obs_model,
-      skip_dates,
-      fitting_method = "mcmc",
-      data_origin = "case_study"
-    )
-  }),
   # Extract the diagnostic summaries for the MCMC models. We do it per branch to
   # avoid loading all fits at once when we want to plot the diagnostics into a
   # single plot.
@@ -908,7 +917,7 @@ list(
   ),
   # Calculate the quantiles and CRPS of the nowcasts obtained by the GLM method
   tar_target(summarized_nowcast_glm, {
-    summarize_nowcast(fitted_glm$nowcast, df_total = df_total)
+    summarize_nowcast(fitted_glm$nowcast, df_total, "glm")
   },
   pattern = map(fitted_glm, df_total),
   iteration = "list"
@@ -939,19 +948,51 @@ list(
     n = 15
   ),
   iteration = "list"),
-  # Create plots of aggregated results from the GLM method. We plot:
+  # Create plots of aggregated results. We plot:
   # - the coverage of nowcasts,
   # - the crps decomposition.
-  tar_target(aggreg_plots_glm, {
+  # - the prediction intervals as bands around the data for each horizon
+  tar_target(aggreg_plots, {
     plot_aggregated(
-      bind_rows(summarized_nowcast_glm),
+      bind_rows(
+        bind_rows(summarized_nowcast_mcmc),
+        bind_rows(summarized_nowcast_glm)
+      ),
       full_data,
-      obs_model_glm,
       skip_dates,
-      fitting_method = "glm",
       data_origin = "case_study"
     )
   }),
+  # Extract the nowcasts from both fitting methods in the case study in order to
+  # show an example of nowcasts. We do it per branch here to avoid loading all
+  # fits at once when we want to plot only nowcasts for selected dates.
+  tar_target(
+    df_nowcast_example,
+    filter_nowcast_example_dates(
+      summarized_nowcast_mcmc,
+      summarized_nowcast_glm,
+      df_total,
+      dates_to_show = nowcast_example_dates,
+      model_to_show = get_model_names()
+    ),
+    pattern = map(
+      summarized_nowcast_mcmc,
+      summarized_nowcast_glm,
+      df_total
+    ),
+    iteration = "list"
+  ),
+  # Plot an example of nowcasts from all models (GLM & MCMC) in the case study
+  # for selected dates
+  tar_target(
+    nowcast_plots,
+    plot_nowcast_example(
+      map(df_nowcast_example, "nowcast"),
+      map(df_nowcast_example, "total"),
+      nowcast_example_dates,
+      data_origin = "case_study"
+    )
+  ),
   # Plot the whole incidence trajectory highlighting the first and the last
   # estimation windows
   tar_target(whole_trajectory_plot, {
