@@ -6,8 +6,6 @@
 \usage{
 plot_coverage(
   df_summarized_nowcast,
-  model_names,
-  fitting_method = c("mcmc", "glm"),
   data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   save_plot = TRUE
@@ -19,12 +17,6 @@ plot_coverage(
 \code{quantile_25}, \code{quantile_75}, \code{quantile_97.5} (bounds of the prediction
 intervals), \code{delay} (the nowcasting horizon) and the true value of the
 prediction target \code{true_val}}
-
-\item{model_names}{a vector of names of the observation models, we wish to
-plot.}
-
-\item{fitting_method}{a method used for fitting the nowcasting model, either
-"mcmc", or "glm"}
 
 \item{data_origin}{a string indicating the data generating process of
 simulated data, or whether the data correspond to the case study. Possible

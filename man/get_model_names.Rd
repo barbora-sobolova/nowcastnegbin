@@ -7,7 +7,7 @@
 get_model_names()
 }
 \value{
-a character vector containing the names of the 6 observational
+a character vector containing the names of the 6 observation
 models. They are ordered the same way as in the STAN implementation.
 }
 \description{

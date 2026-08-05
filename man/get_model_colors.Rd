@@ -7,7 +7,7 @@
 get_model_colors()
 }
 \value{
-a named character vector containing the colors of the 6 observational
+a named character vector containing the colors of the 6 observation
 models. They are ordered the same way as in the STAN implementation.
 }
 \description{
