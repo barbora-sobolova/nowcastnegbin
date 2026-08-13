@@ -1527,7 +1527,7 @@ save_patchwork_plots <- function(plot_list) {
       patchwork::plot_spacer() |
       (plot_list$prob_low$crps_decomp + p_theme_chunk_stronger)
   ) + p_layout
-  # CRPS plot for scenarios modifying the dispersion of the dispersion parameter
+  # CRPS plot for scenarios modifying the scale of the dispersion parameter
   # prior
   patchworked_list[[4]] <- (
     (plot_list$disp_high$crps_decomp + p_theme_chunk_weaker) |
