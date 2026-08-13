@@ -220,6 +220,9 @@ plot_coverage <- function(
 ) {
   data_origin <- match.arg(data_origin)
 
+  # Highlight the model aligned with the true data generating process if known.
+  model_y_labels <- get_y_axis_model_labels(data_origin)
+
   # Calculate the empirical coverage
   df_coverage <- df_summarized_nowcast |>
     group_by(.data$delay, .data$Distribution, .data$method) |>
@@ -282,6 +285,7 @@ plot_coverage <- function(
       breaks = seq(0, 1, by = 0.25),
       labels = c("0", "0.25", "0.5", "0.75", "1")
     ) +
+    scale_y_discrete(labels = model_y_labels) +
     labs(x = "Empirical coverage", y = "Model") +
     # By default, the colors in the legend show up in the reverse order
     # compared to the barplot
@@ -364,6 +368,9 @@ plot_crps_decomp <- function(
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
+
+  # Highlight the model aligned with the true data generating process if known.
+  model_y_labels <- get_y_axis_model_labels(data_origin)
 
   # Calculate the decomposition of the average CRPS
   df_crps <- df_summarized_nowcast |>
@@ -455,6 +462,7 @@ plot_crps_decomp <- function(
       mapping = aes(x = .data$MAE, y = .data$model_method_interact)
     ) +
     scale_fill_manual(values = get_interaction_colors(), name = "Model") +
+    scale_y_discrete(labels = model_y_labels) +
     labs(x = "Mean CRPS/AE", y = "Model") +
     # By default, the colors in the legend show up in the reverse order
     # compared to the barplot

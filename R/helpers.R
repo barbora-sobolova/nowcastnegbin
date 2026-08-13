@@ -45,6 +45,36 @@ get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
   ret
 }
 
+#' Get the model y-axis labels as formatted expressions
+#'
+#' This function takes the internal name of the data generating process and
+#' creates a list of labels for the ggplot y-axis, where the true data
+#' generating process is highlighted in bold.
+#'
+#' @param data_origin string indicating the data generating process
+#' @return a list of 9 elements containing the model labels to show as ticks on
+#' the ggplot y-axis. If the data origin is not the case study, the true data
+#' generating process is known and we show the model labels aligned with it in
+#' bold. For the NegBinX and NegBin1D models, we fit the models with both
+#' methods (GLM and MCMC), so 2 labels will be highlighted in these cases.
+get_y_axis_model_labels <- function(data_origin) {
+  model_y_labels <- get_interaction_names()
+  if (data_origin != "case_study") {
+    which_to_highlight <- grepl(data_origin, names(model_y_labels))
+    # Make the selected labels in the ggplot in bold
+    model_y_labels <- lapply(
+      seq_along(which_to_highlight),
+      function(ind) {
+        if (which_to_highlight[ind]) {
+          bquote(bold(.(model_y_labels[ind])))
+        } else {
+          bquote(.(model_y_labels[ind]))
+        }
+      }
+    )
+  }
+  model_y_labels
+}
 #' Get the colors of the observation models for the plots
 #'
 #' @return a named character vector containing the colors of the 6 observation
