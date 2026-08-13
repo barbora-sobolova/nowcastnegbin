@@ -374,7 +374,7 @@ plot_crps_decomp <- function(
       # Mean absolute error
       MAE = mean(.data$AE),
       # CRPS components
-      Spread = mean(.data$dispersion),
+      Dispersion = mean(.data$dispersion),
       Underprediction = mean(.data$underprediction),
       Overprediction = mean(.data$overprediction),
       Total = mean(.data$crps),
@@ -413,7 +413,7 @@ plot_crps_decomp <- function(
   df_crps_decomp <- df_crps |>
     # Pivot for easier definition of the alpha aesthetic
     tidyr::pivot_longer(
-      cols = c("Spread", "Overprediction", "Underprediction"),
+      cols = c("Dispersion", "Overprediction", "Underprediction"),
       names_to = "Component",
       values_to = "CRPS"
     )
@@ -443,8 +443,12 @@ plot_crps_decomp <- function(
       hjust = 0
     ) +
     scale_alpha_manual(
-      values = c("Underprediction" = 1, "Spread" = 0.4, "Overprediction" = 0.7),
-      name = "CRPS component"
+      values = c(
+        "Underprediction" = 1,
+        "Dispersion" = 0.4,
+        "Overprediction" = 0.7
+      ),
+      name = "Component"
     ) +
     geom_point(
       df_crps_decomp,
