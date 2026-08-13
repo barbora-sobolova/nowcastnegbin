@@ -594,6 +594,27 @@ list(
       "NegBinX"
     )
   ),
+  tar_target(
+    sim_summarized_nowcast_list,
+    list(
+      NegBinX = bind_rows(
+        bind_rows(sim_summarized_nowcast_mcmc_NegBinX),
+        bind_rows(sim_summarized_nowcast_glm_NegBinX)
+      ),
+      NegBin1D = bind_rows(
+        bind_rows(sim_summarized_nowcast_mcmc_NegBin1D),
+        bind_rows(sim_summarized_nowcast_glm_NegBin1D)
+      ),
+      NegBin2D = bind_rows(
+        bind_rows(sim_summarized_nowcast_mcmc_NegBin2D),
+        bind_rows(sim_summarized_nowcast_glm_NegBin2D)
+      )
+    )
+  ),
+  tar_target(
+    sim_results_plot,
+    patchwork_sim_results(sim_summarized_nowcast_list)
+  ),
 
   # Case study =================================================================
 
