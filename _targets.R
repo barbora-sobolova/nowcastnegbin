@@ -418,8 +418,9 @@ list(
           sim_summarized_nowcast_mcmc,
           sim_mean_process_tail
         ),
-        n = 15
+        n = 1
       ),
+      cue = tar_cue("never"),
       iteration = "list"
     ),
     # Extract the diagnostic summaries for the MCMC models in the simulation
@@ -502,8 +503,9 @@ list(
           sim_summarized_nowcast_glm,
           sim_mean_process_tail
         ),
-        n = 15
+        n = 1
       ),
+      cue = tar_cue("never"),
       iteration = "list"
     ),
     # Create plots of aggregated results from the simulation study. We plot:
@@ -861,8 +863,9 @@ list(
       summarized_nowcast_mcmc,
       branches_mcmc
     ),
-    n = 15
+    n = 1
   ),
+  cue = tar_cue("never"),
   iteration = "list"),
   # Extract the diagnostic summaries for the MCMC models. We do it per branch to
   # avoid loading all fits at once when we want to plot the diagnostics into a
@@ -945,8 +948,9 @@ list(
   },
   pattern = sample(
     map(fitted_glm, time_horizons, df_total, summarized_nowcast_glm),
-    n = 15
+    n = 1
   ),
+  cue = tar_cue("never"),
   iteration = "list"),
   # Create plots of aggregated results. We plot:
   # - the coverage of nowcasts,
