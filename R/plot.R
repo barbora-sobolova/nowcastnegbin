@@ -443,7 +443,7 @@ plot_crps_decomp <- function(
     ) |>
     mutate(
       Component = factor(
-        Component,
+        .data$Component,
         levels = c("Overprediction", "Dispersion", "Underprediction")
       )
     )
