@@ -220,6 +220,9 @@ plot_coverage <- function(
 ) {
   data_origin <- match.arg(data_origin)
 
+  # Highlight the model aligned with the true data generating process if known.
+  model_y_labels <- get_y_axis_model_labels(data_origin)
+
   # Calculate the empirical coverage
   df_coverage <- df_summarized_nowcast |>
     group_by(.data$delay, .data$Distribution, .data$method) |>
@@ -245,12 +248,25 @@ plot_coverage <- function(
         interaction(.data$Distribution, .data$method),
         levels = names(get_interaction_names()),
         labels = get_interaction_names()
-      )
+      ),
+      # Reverse the levels of the delay factor to show the nowcasting horizon 0
+      # on the left and the past horizons more to the right
+      delay = factor(.data$delay, levels = rev(levels(.data$delay)))
     )
 
   # Grab the maximum delay in order to label the plot facets according to the
   # corresponding delay
   max_lag <- length(unique(df_coverage$delay))
+  # Set the number of rows for `facet_wrap`. For the case study, we always have
+  # a 2x2 grid. For the simulation study, we can decide, whether we want to plot
+  # the coverage for each data generating process individually, or patchwork
+  # them into a single plot. In the latter case, the individual plots must have
+  # only one row to fit.
+  n_rows <- if (data_origin == "case_study") {
+    2
+  } else {
+    1
+  }
   # Grab the number of models in order to set the height of the plot
   # accordingly. We plot only the 6 MCMC-based models for the scenarios of the
   # sensitivity analysis. Otherwise we plot 9 models (6  MCMC, and 3 GLM).
@@ -282,6 +298,7 @@ plot_coverage <- function(
       breaks = seq(0, 1, by = 0.25),
       labels = c("0", "0.25", "0.5", "0.75", "1")
     ) +
+    scale_y_discrete(labels = model_y_labels) +
     labs(x = "Empirical coverage", y = "Model") +
     # By default, the colors in the legend show up in the reverse order
     # compared to the barplot
@@ -290,39 +307,30 @@ plot_coverage <- function(
     theme(legend.background = element_blank()) +
     facet_wrap(
       ~delay,
-      nrow = 2,
+      nrow = n_rows,
       labeller = as_labeller(label_horizon_facet(max_lag))
     )
 
-  # If we plot the results of the simulation study, we have only 3 nowcasting
-  # horizons, but the plot facets are arranged in 2 times 2 grid, leaving
-  # one tile empty. In this case, we will move the plot legend there to make the
-  # figure more space effective.
+  # If we intend to plot results from a simulation, we display all simulations
+  # together. For this reason we have to add the name of the data generating
+  # process and place the legend to the bottom in a way it fits.
   if (data_origin != "case_study") {
-    plot_legend <- patchwork::wrap_elements(ggpubr::get_legend(coverage_plot)) &
-      theme(plot.background = element_blank())
-    coverage_plot <- coverage_plot + theme(legend.position = "none")
-    coverage_plot <- coverage_plot + inset_element(plot_legend, 0.6, 1, 1, -0.5)
+    coverage_plot <- coverage_plot +
+      labs(title = get_dgp_title(data_origin)) +
+      guides(alpha = guide_legend(nrow = 2), fill = guide_legend(nrow = 3)) +
+      theme(legend.position = "bottom")
   }
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
-    # If we plot the case study, we have the legend on the right, whereas for
-    # the simulation studies, it is located in the bottom right corner. For the
-    # plot areas to have approximately comparable size, we need to adjust the
-    # final plot dimensions differently.
-    if (data_origin == "case_study") {
-      plot_height <- 7
-      plot_width <- 10
-    } else {
-      plot_height <- 9
-      plot_width <- 9
+    if (data_origin != "case_study") {
+      warning("Trying to save the coverage plot for a simulation scenario. The plot size might not be optimal.")  # nolint
     }
     save_figure(
       coverage_plot,
       paste0("inst/figure/coverage_plot_", data_origin, sensitivity_sc),
-      width = plot_width,
-      height = plot_height
+      width = 10,
+      height = 7
     )
     ret <- NULL
   } else {
@@ -365,6 +373,9 @@ plot_crps_decomp <- function(
 ) {
   data_origin <- match.arg(data_origin)
 
+  # Highlight the model aligned with the true data generating process if known.
+  model_y_labels <- get_y_axis_model_labels(data_origin)
+
   # Calculate the decomposition of the average CRPS
   df_crps <- df_summarized_nowcast |>
     # Calculate the absolute error
@@ -374,7 +385,7 @@ plot_crps_decomp <- function(
       # Mean absolute error
       MAE = mean(.data$AE),
       # CRPS components
-      Spread = mean(.data$dispersion),
+      Dispersion = mean(.data$dispersion),
       Underprediction = mean(.data$underprediction),
       Overprediction = mean(.data$overprediction),
       Total = mean(.data$crps),
@@ -396,12 +407,25 @@ plot_crps_decomp <- function(
         interaction(.data$Distribution, .data$method),
         levels = names(get_interaction_names()),
         labels = get_interaction_names()
-      )
+      ),
+      # Reverse the levels of the delay factor to show the nowcasting horizon 0
+      # on the left and the past horizons more to the right
+      delay = factor(.data$delay, levels = rev(levels(.data$delay)))
     )
 
   # Grab the maximum delay in order to label the facets according to the
   # corresponding delay
   max_lag <- length(unique(df_crps$delay))
+  # Set the number of rows for `facet_wrap`. For the case study, we always have
+  # a 2x2 grid. For the simulation study, we can decide, whether we want to plot
+  # the coverage for each data generating process individually, or patchwork
+  # them into a single plot. In the latter case, the individual plots must have
+  # only one row to fit.
+  n_rows <- if (data_origin == "case_study") {
+    2
+  } else {
+    1
+  }
   # Grab the number of models in order to set the height of the plot
   # accordingly. We plot only the 6 MCMC-based models for the scenarios of the
   # sensitivity analysis. Otherwise we plot 9 models (6  MCMC, and 3 GLM).
@@ -413,9 +437,15 @@ plot_crps_decomp <- function(
   df_crps_decomp <- df_crps |>
     # Pivot for easier definition of the alpha aesthetic
     tidyr::pivot_longer(
-      cols = c("Spread", "Overprediction", "Underprediction"),
+      cols = c("Dispersion", "Overprediction", "Underprediction"),
       names_to = "Component",
       values_to = "CRPS"
+    ) |>
+    mutate(
+      Component = factor(
+        .data$Component,
+        levels = c("Overprediction", "Dispersion", "Underprediction")
+      )
     )
 
   # Plot the CRPS as horizontal bars
@@ -443,14 +473,19 @@ plot_crps_decomp <- function(
       hjust = 0
     ) +
     scale_alpha_manual(
-      values = c("Underprediction" = 1, "Spread" = 0.4, "Overprediction" = 0.7),
-      name = "CRPS component"
+      values = c(
+        "Underprediction" = 1,
+        "Dispersion" = 0.4,
+        "Overprediction" = 0.7
+      ),
+      name = "Component"
     ) +
     geom_point(
       df_crps_decomp,
       mapping = aes(x = .data$MAE, y = .data$model_method_interact)
     ) +
     scale_fill_manual(values = get_interaction_colors(), name = "Model") +
+    scale_y_discrete(labels = model_y_labels) +
     labs(x = "Mean CRPS/AE", y = "Model") +
     # By default, the colors in the legend show up in the reverse order
     # compared to the barplot
@@ -459,36 +494,24 @@ plot_crps_decomp <- function(
     theme(legend.background = element_blank()) +
     facet_wrap(
       ~delay,
-      nrow = 2,
+      nrow = n_rows,
       labeller = as_labeller(label_horizon_facet(max_lag))
     )
 
-  # If we plot the results of the simulation study, we have only 3 nowcasting
-  # horizons, but the plot facets are arranged in 2 times 2 grid, leaving
-  # one tile empty. In this case, we will move the plot legend there to make the
-  # figure more space effective.
+  # If we intend to plot results from a simulation, we display all simulations
+  # together. For this reason we have to add the name of the data generating
+  # process and place the legend to the bottom in a way it fits.
   if (data_origin != "case_study") {
-    plot_legend <- patchwork::wrap_elements(
-      ggpubr::get_legend(crps_decomp_plot)
-    ) &
-      theme(plot.background = element_blank())
-    crps_decomp_plot <- crps_decomp_plot + theme(legend.position = "none")
     crps_decomp_plot <- crps_decomp_plot +
-      inset_element(plot_legend, 0.6, 1, 1, -0.5)
+      labs(title = get_dgp_title(data_origin)) +
+      guides(alpha = guide_legend(nrow = 3), fill = guide_legend(nrow = 3)) +
+      theme(legend.position = "bottom")
   }
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
-    # If we plot the case study, we have the legend on the right, whereas for
-    # the simulation studies, it is located in the bottom right corner. For the
-    # plot areas to have approximately comparable size, we need to adjust the
-    # final plot dimensions differently.
-    if (data_origin == "case_study") {
-      plot_height <- 7
-      plot_width <- 10
-    } else {
-      plot_height <- 10.5
-      plot_width <- 9
+    if (data_origin != "case_study") {
+      warning("Trying to save the CRPS plot for a simulation scenario. The plot size might not be optimal.")  # nolint
     }
     save_figure(
       crps_decomp_plot,
@@ -497,12 +520,56 @@ plot_crps_decomp <- function(
         data_origin,
         sensitivity_sc
       ),
-      width = plot_width,
-      height = plot_height
+      width = 10,
+      height = 7
     )
     ret <- NULL
   } else {
     ret <- crps_decomp_plot
+  }
+  ret
+}
+
+patchwork_sim_results <- function(summarized_nowcast_list, save_plot = TRUE) {
+  data_origin <- names(summarized_nowcast_list)
+  plot_list <- replicate(
+    2,
+    setNames(vector("list", length(data_origin)), data_origin),
+    simplify = FALSE
+  )
+  names(plot_list) <- c("coverage", "crps")
+  # Loop over the data generating processes
+  for (dgp in data_origin) {
+    plot_list$coverage[[dgp]] <- plot_coverage(
+      summarized_nowcast_list[[dgp]],
+      data_origin = dgp,
+      sensitivity_sc = "",
+      save_plot = FALSE
+    )
+    plot_list$crps[[dgp]] <- plot_crps_decomp(
+      summarized_nowcast_list[[dgp]],
+      data_origin = dgp,
+      sensitivity_sc = "",
+      save_plot = FALSE
+    )
+  }
+  coverage_plot <- wrap_plots(plot_list$coverage, nrow = 3) +
+    plot_layout(axes = "collect", guides = "collect") &
+    theme(legend.position = "bottom", legend.justification = "right")
+  crps_plot <- wrap_plots(plot_list$crps, nrow = 3) +
+    plot_layout(axes = "collect", guides = "collect") &
+    theme(legend.position = "bottom", legend.justification = "right")
+  if (save_plot) {
+    save_figure(coverage_plot, "inst/figure/coverage_plot_simulation", 9, 10)
+    save_figure(
+      crps_plot,
+      "inst/figure/crps_decomposition_plot_simulation",
+      width = 10,
+      height = 14
+    )
+    ret <- vector("list", 2)
+  } else {
+    ret <- list(coverage = coverage_plot, crps = crps_plot)
   }
   ret
 }
@@ -1288,7 +1355,10 @@ plot_per_window <- function(
 #' results: \code{plot_coverage()}, \code{plot_crps_decomp()} and
 #' \code{plot_nowcast_bands()}. For the MCMC method, we run 4 additional
 #' scenarios as a robustness check. For these scenarios, the coverage and CRPS
-#' plots are saved as glued together by pairs.
+#' plots are saved as glued together by pairs. For the simulations, we don't
+#' create the coverage and CRPS. This is done in the
+#' \code{patchwork_sim_results} function, where we merge together results from
+#' all simulation study scenarios.
 #'
 #' @param df_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `quantile_50`
@@ -1311,7 +1381,9 @@ plot_per_window <- function(
 #' @param save_plot logical indicator, whether to save the plots using
 #' \code{ggsave()}
 #'
-#' @return a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}
+#' @return a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}.
+#' For the simulation study, (i.e. \code{data_origin} other than "case_study"),
+#' there is always NULL for the CRPS and coverage plot.
 #'
 #' @import dplyr ggplot2
 #' @importFrom patchwork plot_layout plot_spacer wrap_elements
@@ -1340,20 +1412,25 @@ plot_aggregated <- function(
     # CRPS plots individually. Rather, we glue them together using patchwork to
     # fit better on page of the manuscript.
     main_scenario <- scenario[k] == ""
-    p_coverage <- plot_coverage(
-      filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
-      data_origin,
-      scenario[k],
-      # Avoid saving the individual plot for other scenarios than the main one
-      save_plot && main_scenario
-    )
-    p_crps_decomp <- plot_crps_decomp(
-      filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
-      data_origin,
-      scenario[k],
-      # Avoid saving the individual plot for other scenarios than the main one
-      save_plot && main_scenario
-    )
+    if (data_origin == "case_study") {
+      p_coverage <- plot_coverage(
+        filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
+        data_origin,
+        scenario[k],
+        # Avoid saving the individual plot for other scenarios than the main one
+        save_plot && main_scenario
+      )
+      p_crps_decomp <- plot_crps_decomp(
+        filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
+        data_origin,
+        scenario[k],
+        # Avoid saving the individual plot for other scenarios than the main one
+        save_plot && main_scenario
+      )
+    } else {
+      p_coverage <- NULL
+      p_crps_decomp <- NULL
+    }
     p_nowcast_bands <- plot_nowcast_bands(
       full_data,
       filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
@@ -1460,7 +1537,7 @@ save_patchwork_plots <- function(plot_list) {
       patchwork::plot_spacer() |
       (plot_list$prob_low$crps_decomp + p_theme_chunk_stronger)
   ) + p_layout
-  # CRPS plot for scenarios modifying the dispersion of the dispersion parameter
+  # CRPS plot for scenarios modifying the scale of the dispersion parameter
   # prior
   patchworked_list[[4]] <- (
     (plot_list$disp_high$crps_decomp + p_theme_chunk_weaker) |
@@ -1658,19 +1735,13 @@ plot_nowcast_bands <- function(
     filter(.data$date >= start_date & .data$date < end_date) |>
     select(starts_with("value_"))
   true_data <- full_filtered |> as.matrix() |> rowSums()
-  # Loop over the nowcasting horizons sorted from -3 to 0
+  # Loop over the nowcasting horizons sorted from 0 to -3
   horizons <- unique(df_nowcast$delay)
-  horizons <- horizons[order(as.numeric(as.character(horizons)))]
+  horizons <- rev(horizons[order(as.numeric(as.character(horizons)))])
   patches <- vector("list", length(horizons))
   for (k in seq_along(horizons)) {
-    # Which columns of the full data to sum
-    value_colnames <- paste0(
-      "value_",
-      # The nowcsting horizon is a negative number, but the delay starts from
-      # zero to the maximum delay, which we need to account for
-      seq_len(length(horizons) - k + 1) - 1,
-      "w"
-    )
+    # Which columns of the full data to sum. The delay is indexed from zero
+    value_colnames <- paste0("value_", seq_len(k) - 1, "w")
     prelim_data <- full_filtered |>
       select(any_of(value_colnames)) |>
       as.matrix() |>
@@ -1695,13 +1766,12 @@ plot_nowcast_bands <- function(
   # - the case study fitted using the GLM method
   # - the NegBinX simulation study fitted using the MCMC method
   # - the NegBinX simulation study fitted using the GLM method
-  split_figures <- (data_origin %in% c("case_study", "NegBinX")) &&
-    sensitivity_sc == ""
+  split_figures <- data_origin == "case_study" && sensitivity_sc == ""
   if (split_figures) {
     # Arrange all the patches
     arranged <- patchwork::wrap_plots(
-      # The last patch corresponds to delay zero, which is plotted separately
-      patches[seq_len(length(horizons) - 1)],
+      # The first patch corresponds to delay zero, which is plotted separately
+      tail(patches, -1),
       nrow = length(horizons) - 1,
       ncol = 1,
       guides = "collect",
@@ -1709,7 +1779,7 @@ plot_nowcast_bands <- function(
     )
     ret <- list(
       arranged_plot = arranged,
-      separated_plot = patches[[length(horizons)]]
+      separated_plot = patches[[1]]
     )
   } else {
     # Arrange all the patches
@@ -1747,7 +1817,7 @@ plot_nowcast_bands <- function(
         height = plot_height * (length(horizons) - 1) / length(horizons)
       )
       save_figure(
-        patches[[length(horizons)]],
+        patches[[1]],
         paste(plot_path, "delay0", sep = "_"),
         width = 11.5,
         # Increase the height to make enough space for the axis labels and
@@ -1833,8 +1903,8 @@ plot_nowcast_bands_per_horizon <- function(
     mutate(
       type = factor(
         .data$type,
-        levels = c("true_data", "prelim_data"),
-        labels = c("Final", "Preliminary")
+        levels = c("prelim_data", "true_data"),
+        labels = c("Preliminary", "Final")
       )
     )
   # Grab the number of models in order to set the height of the plot
@@ -2133,7 +2203,10 @@ plot_nowcast_example <- function(
   # y-axis scale for all subplots.
   axis_limits <- list(
     x = range(df_total$date),
-    y = c(min(df_total$counts), max(df_nowcast$quantile_97.5))
+    y = c(
+      min(df_total$counts),
+      max(c(df_nowcast$quantile_97.5, df_total$counts))
+    )
   )
 
   # Loop over the dates, on which the nowcasts are calculated
@@ -2173,7 +2246,7 @@ plot_nowcast_example <- function(
         data_origin
       ),
       width = 11.5,
-      height = 15
+      height = 7
     )
     ret <- NULL
   } else {
