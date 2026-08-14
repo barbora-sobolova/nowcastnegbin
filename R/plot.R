@@ -440,6 +440,12 @@ plot_crps_decomp <- function(
       cols = c("Dispersion", "Overprediction", "Underprediction"),
       names_to = "Component",
       values_to = "CRPS"
+    ) |>
+    mutate(
+      Component = factor(
+        Component,
+        levels = c("Overprediction", "Dispersion", "Underprediction")
+      )
     )
 
   # Plot the CRPS as horizontal bars
