@@ -1898,8 +1898,8 @@ plot_nowcast_bands_per_horizon <- function(
     mutate(
       type = factor(
         .data$type,
-        levels = c("true_data", "prelim_data"),
-        labels = c("Final", "Preliminary")
+        levels = c("prelim_data", "true_data"),
+        labels = c("Preliminary", "Final")
       )
     )
   # Grab the number of models in order to set the height of the plot
