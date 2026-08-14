@@ -11,7 +11,9 @@ get_model_names <- function() {
 #'
 #' @description This function creates a named vector that controls the names
 #' and ordering of the observation models as they appear in the aggregated
-#' plots.
+#' plots. We change the model labels for the plots. NegBin1 changes to
+#' to NegBin-L to indicate the linear mean-variance relationship. NegBin2
+#' is replaced by NegBin-Q to indicate the quadratic mean-variance relationship.
 #'
 #' @param nowcast_bands_ordering logical indicator switching between different
 #' vector orderings. If \code{nowcast_bands_ordering = FALSE}, the ordering
@@ -25,15 +27,15 @@ get_model_names <- function() {
 #' \code{interaction()} function
 get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
   ret <- c(
-    "NegBinX.glm" = "NegBinX-GAM",
-    "NegBin1D.glm" = "NegBin1D-GAM",
+    "NegBinX.glm" = "NegBin-X-GAM",
+    "NegBin1D.glm" = "NegBin-LD-GAM",
     "Poisson.glm" = "Poisson-GAM",
-    "NegBinX.mcmc" = "NegBinX-HMC",
-    "NegBin2D.mcmc" = "NegBin2D-HMC",
-    "NegBin1D.mcmc" = "NegBin1D-HMC",
-    "NegBin2M.mcmc" = "NegBin2M-HMC",
-    "NegBin1M.mcmc" = "NegBin1M-HMC",
-    "Poisson.mcmc" = "Poisson-HMC"
+    "NegBinX.mcmc" = "NegBin-X-HMM",
+    "NegBin2D.mcmc" = "NegBin-QD-HMM",
+    "NegBin1D.mcmc" = "NegBin-LD-HMM",
+    "NegBin2M.mcmc" = "NegBin-QM-HMM",
+    "NegBin1M.mcmc" = "NegBin-LM-HMM",
+    "Poisson.mcmc" = "Poisson-HMM"
   )
   # For plotting the nowcasting bands, we need to change the ordering to have
   # the NegBin2M, NegBin1M and NegBin2D models, which don't have the GLM
@@ -43,6 +45,57 @@ get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
     ret <- ret[c(7, 8, 5, 9, 4, 6, 3, 1, 2)]
   }
   ret
+}
+
+#' Get the model y-axis labels as formatted expressions
+#'
+#' This function takes the internal name of the data generating process and
+#' creates a list of labels for the ggplot y-axis, where the true data
+#' generating process is highlighted in bold.
+#'
+#' @param data_origin string indicating the data generating process
+#' @return a list of 9 elements containing the model labels to show as ticks on
+#' the ggplot y-axis. If the data origin is not the case study, the true data
+#' generating process is known and we show the model labels aligned with it in
+#' bold. For the NegBinX and NegBin1D models, we fit the models with both
+#' methods (GLM and MCMC), so 2 labels will be highlighted in these cases.
+get_y_axis_model_labels <- function(data_origin) {
+  model_y_labels <- get_interaction_names()
+  if (data_origin != "case_study") {
+    which_to_highlight <- grepl(data_origin, names(model_y_labels))
+    # Make the selected labels in the ggplot in bold
+    model_y_labels <- lapply(
+      seq_along(which_to_highlight),
+      function(ind) {
+        if (which_to_highlight[ind]) {
+          bquote(bold(.(model_y_labels[ind])))
+        } else {
+          bquote(.(model_y_labels[ind]))
+        }
+      }
+    )
+  }
+  model_y_labels
+}
+
+#' Get the plot title stating the data generating process
+#'
+#' This function takes the internal name of the data generating process and
+#' converts it to a label consistent with the manuscript. This function is
+#' needed to create the subplot titles of the CRPS and coverage plots for the
+#' simulation study.
+#'
+#' @param data_origin string indicating the data generating process
+#' @return a string to use as a ggplot title
+get_dgp_title <- function(data_origin) {
+  formatted_data_origin <- switch(
+    data_origin,
+    # We use only these three as a data generating process in the simulations
+    NegBinX = "NegBin-X",
+    NegBin1D = "NegBin-LD",
+    NegBin2D = "NegBin-QD"
+  )
+  paste0(formatted_data_origin, " data generating process")
 }
 
 #' Get the colors of the observation models for the plots
@@ -67,15 +120,15 @@ get_model_colors <- function() {
 #' (6 for the MCMC method and 3 for the GLM method).
 get_interaction_colors <- function() {
   c(
-    "Poisson-HMC" = "#CC79A7",
-    "NegBinX-HMC" = "#D55E00",
-    "NegBin2D-HMC" = "#009E73",
-    "NegBin1D-HMC" = "#56B4E9",
-    "NegBin2M-HMC" = "#004282",
-    "NegBin1M-HMC" = "#F0E442",
+    "Poisson-HMM" = "#CC79A7",
+    "NegBin-X-HMM" = "#D55E00",
+    "NegBin-QD-HMM" = "#009E73",
+    "NegBin-LD-HMM" = "#56B4E9",
+    "NegBin-QM-HMM" = "#004282",
+    "NegBin-LM-HMM" = "#F0E442",
     "Poisson-GAM" = "#862D67",
-    "NegBinX-GAM" = "#993700",
-    "NegBin1D-GAM" = "#1D79B9"
+    "NegBin-X-GAM" = "#993700",
+    "NegBin-LD-GAM" = "#1D79B9"
   )
 }
 
