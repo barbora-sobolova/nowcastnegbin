@@ -248,7 +248,10 @@ plot_coverage <- function(
         interaction(.data$Distribution, .data$method),
         levels = names(get_interaction_names()),
         labels = get_interaction_names()
-      )
+      ),
+      # Reverse the levels of the delay factor to show the nowcasting horizon 0
+      # on the left and the past horizons more to the right
+      delay = factor(.data$delay, levels = rev(levels(.data$delay)))
     )
 
   # Grab the maximum delay in order to label the plot facets according to the
@@ -404,7 +407,10 @@ plot_crps_decomp <- function(
         interaction(.data$Distribution, .data$method),
         levels = names(get_interaction_names()),
         labels = get_interaction_names()
-      )
+      ),
+      # Reverse the levels of the delay factor to show the nowcasting horizon 0
+      # on the left and the past horizons more to the right
+      delay = factor(.data$delay, levels = rev(levels(.data$delay)))
     )
 
   # Grab the maximum delay in order to label the facets according to the
@@ -1723,19 +1729,13 @@ plot_nowcast_bands <- function(
     filter(.data$date >= start_date & .data$date < end_date) |>
     select(starts_with("value_"))
   true_data <- full_filtered |> as.matrix() |> rowSums()
-  # Loop over the nowcasting horizons sorted from -3 to 0
+  # Loop over the nowcasting horizons sorted from 0 to -3
   horizons <- unique(df_nowcast$delay)
-  horizons <- horizons[order(as.numeric(as.character(horizons)))]
+  horizons <- rev(horizons[order(as.numeric(as.character(horizons)))])
   patches <- vector("list", length(horizons))
   for (k in seq_along(horizons)) {
-    # Which columns of the full data to sum
-    value_colnames <- paste0(
-      "value_",
-      # The nowcsting horizon is a negative number, but the delay starts from
-      # zero to the maximum delay, which we need to account for
-      seq_len(length(horizons) - k + 1) - 1,
-      "w"
-    )
+    # Which columns of the full data to sum. The delay is indexed from zero
+    value_colnames <- paste0("value_", seq_len(k) - 1, "w")
     prelim_data <- full_filtered |>
       select(any_of(value_colnames)) |>
       as.matrix() |>
@@ -1765,8 +1765,8 @@ plot_nowcast_bands <- function(
   if (split_figures) {
     # Arrange all the patches
     arranged <- patchwork::wrap_plots(
-      # The last patch corresponds to delay zero, which is plotted separately
-      patches[seq_len(length(horizons) - 1)],
+      # The first patch corresponds to delay zero, which is plotted separately
+      tail(patches, -1),
       nrow = length(horizons) - 1,
       ncol = 1,
       guides = "collect",
@@ -1774,7 +1774,7 @@ plot_nowcast_bands <- function(
     )
     ret <- list(
       arranged_plot = arranged,
-      separated_plot = patches[[length(horizons)]]
+      separated_plot = patches[[1]]
     )
   } else {
     # Arrange all the patches
@@ -1812,7 +1812,7 @@ plot_nowcast_bands <- function(
         height = plot_height * (length(horizons) - 1) / length(horizons)
       )
       save_figure(
-        patches[[length(horizons)]],
+        patches[[1]],
         paste(plot_path, "delay0", sep = "_"),
         width = 11.5,
         # Increase the height to make enough space for the axis labels and
