@@ -2198,7 +2198,10 @@ plot_nowcast_example <- function(
   # y-axis scale for all subplots.
   axis_limits <- list(
     x = range(df_total$date),
-    y = c(min(df_total$counts), max(df_nowcast$quantile_97.5))
+    y = c(
+      min(df_total$counts),
+      max(c(df_nowcast$quantile_97.5, df_total$counts))
+    )
   )
 
   # Loop over the dates, on which the nowcasts are calculated
