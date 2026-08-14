@@ -1760,8 +1760,7 @@ plot_nowcast_bands <- function(
   # - the case study fitted using the GLM method
   # - the NegBinX simulation study fitted using the MCMC method
   # - the NegBinX simulation study fitted using the GLM method
-  split_figures <- (data_origin %in% c("case_study", "NegBinX")) &&
-    sensitivity_sc == ""
+  split_figures <- data_origin == "case_study" && sensitivity_sc == ""
   if (split_figures) {
     # Arrange all the patches
     arranged <- patchwork::wrap_plots(
