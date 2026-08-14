@@ -62,7 +62,7 @@ skip_dates <- as.Date(
 # The posterior for the delay probability often quite differs between the
 # NegBinX and NegBin1D/2D models. We plot the posterior of the delay probability
 # for one rolling window as an example.
-delay_prob_example_date <- as.Date(c("2025-10-12"))
+delay_prob_example_date <- as.Date("2025-10-12")
 # Dates for which we want to show, what the nowcasts actually look like.
 nowcast_example_dates <- as.Date(
   c("2025-02-09", "2025-02-16", "2025-02-23")
