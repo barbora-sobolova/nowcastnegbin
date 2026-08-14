@@ -2238,7 +2238,7 @@ plot_nowcast_example <- function(
         data_origin
       ),
       width = 11.5,
-      height = 15
+      height = 7
     )
     ret <- NULL
   } else {

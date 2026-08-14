@@ -64,9 +64,7 @@ skip_dates <- as.Date(
 # for one rolling window as an example.
 delay_prob_example_date <- as.Date("2025-10-12")
 # Dates for which we want to show, what the nowcasts actually look like.
-nowcast_example_dates <- as.Date(
-  c("2025-02-09", "2025-02-16", "2025-02-23")
-)
+nowcast_example_dates <- as.Date("2025-02-16")
 
 # Where the beginning of the data used for the simulation study is. For the
 # simulation study, we take the total SARI counts from several years back,
@@ -94,11 +92,9 @@ sim_obs_model <- data.frame(
   model_obs = c("NegBinX", "NegBin2D", "NegBin1D"),
   model_number = c(1, 2, 3)
 )
-# Dates for which we want to show, what the nowcasts actually look like in the
+# Date for which we want to show, what the nowcasts actually look like in the
 # simulation.
-sim_nowcast_example_dates <- as.Date(
-  c("2018-03-25", "2018-04-01", "2018-04-08")
-)
+sim_nowcast_example_dates <- as.Date("2018-04-01")
 # The GLM method often overestimates the mean process around season peaks.
 # We show this in a separate plot for the selected dates.
 glm_overshoot_dates <- as.Date(
