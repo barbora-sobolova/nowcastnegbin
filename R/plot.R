@@ -1405,7 +1405,6 @@ plot_aggregated <- function(
         filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
         data_origin,
         scenario[k],
-        FALSE,
         # Avoid saving the individual plot for other scenarios than the main one
         save_plot && main_scenario
       )
@@ -1413,7 +1412,6 @@ plot_aggregated <- function(
         filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
         data_origin,
         scenario[k],
-        FALSE,
         # Avoid saving the individual plot for other scenarios than the main one
         save_plot && main_scenario
       )
