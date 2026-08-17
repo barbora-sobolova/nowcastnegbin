@@ -23,5 +23,9 @@ correspond to the model names as they are created by the
 \description{
 This function creates a named vector that controls the names
 and ordering of the observation models as they appear in the aggregated
-plots.
+plots. We change the model labels for the plots. NegBin1 changes to NegBin-L
+to indicate the linear mean-variance relationship. NegBin2 is replaced by
+NegBin-Q to indicate the quadratic mean-variance relationship. "M" still
+denotes the multinomial splitting distribution, while "D" denotes the
+Dirichlet-Multinomial splitting.
 }

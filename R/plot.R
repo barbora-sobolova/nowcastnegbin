@@ -1381,9 +1381,12 @@ plot_per_window <- function(
 #' @param save_plot logical indicator, whether to save the plots using
 #' \code{ggsave()}
 #'
-#' @return a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}.
-#' For the simulation study, (i.e. \code{data_origin} other than "case_study"),
-#' there is always NULL for the CRPS and coverage plot.
+#' @return a nested list of ggplot objects or NULLs if \code{save_plot = TRUE}.
+#' There is one list element per sensitivity analysis scenario, each list
+#' element contains 3 more elements (reserved for the coverage plot, CRPS plot
+#' and prediction interval bands). For the simulation study,
+#' (i.e. \code{data_origin} other than "case_study"), there is always NULL for
+#' the CRPS and coverage plot.
 #'
 #' @import dplyr ggplot2
 #' @importFrom patchwork plot_layout plot_spacer wrap_elements
