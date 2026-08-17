@@ -11,9 +11,11 @@ get_model_names <- function() {
 #'
 #' @description This function creates a named vector that controls the names
 #' and ordering of the observation models as they appear in the aggregated
-#' plots. We change the model labels for the plots. NegBin1 changes to
-#' to NegBin-L to indicate the linear mean-variance relationship. NegBin2
-#' is replaced by NegBin-Q to indicate the quadratic mean-variance relationship.
+#' plots. We change the model labels for the plots. NegBin1 changes to NegBin-L
+#' to indicate the linear mean-variance relationship. NegBin2 is replaced by
+#' NegBin-Q to indicate the quadratic mean-variance relationship. "M" still
+#' denotes the multinomial splitting distribution, while "D" denotes the
+#' Dirichlet-Multinomial splitting.
 #'
 #' @param nowcast_bands_ordering logical indicator switching between different
 #' vector orderings. If \code{nowcast_bands_ordering = FALSE}, the ordering
@@ -54,11 +56,13 @@ get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
 #' generating process is highlighted in bold.
 #'
 #' @param data_origin string indicating the data generating process
-#' @return a list of 9 elements containing the model labels to show as ticks on
-#' the ggplot y-axis. If the data origin is not the case study, the true data
-#' generating process is known and we show the model labels aligned with it in
-#' bold. For the NegBinX and NegBin1D models, we fit the models with both
-#' methods (GLM and MCMC), so 2 labels will be highlighted in these cases.
+#' @return a named list or vector of 9 elements containing the model labels to
+#' show as ticks on the ggplot y-axis. If the \code{data_origin = "case_study"}
+#' the function returns the same named vector the \code{get_y_axis_model_labels}
+#' fuction would return. If the data generating process is known, the return
+#' object is a list and we show the model labels aligned with it in bold. For
+#' the NegBinX and NegBin1D models, we fit the models with both methods (GLM and
+#' MCMC), so 2 labels will be highlighted in these cases.
 get_y_axis_model_labels <- function(data_origin) {
   model_y_labels <- get_interaction_names()
   if (data_origin != "case_study") {
