@@ -10,11 +10,13 @@ get_y_axis_model_labels(data_origin)
 \item{data_origin}{string indicating the data generating process}
 }
 \value{
-a list of 9 elements containing the model labels to show as ticks on
-the ggplot y-axis. If the data origin is not the case study, the true data
-generating process is known and we show the model labels aligned with it in
-bold. For the NegBinX and NegBin1D models, we fit the models with both
-methods (GLM and MCMC), so 2 labels will be highlighted in these cases.
+a named list or vector of 9 elements containing the model labels to
+show as ticks on the ggplot y-axis. If the \code{data_origin = "case_study"}
+the function returns the same named vector the \code{get_y_axis_model_labels}
+fuction would return. If the data generating process is known, the return
+object is a list and we show the model labels aligned with it in bold. For
+the NegBinX and NegBin1D models, we fit the models with both methods (GLM and
+MCMC), so 2 labels will be highlighted in these cases.
 }
 \description{
 This function takes the internal name of the data generating process and

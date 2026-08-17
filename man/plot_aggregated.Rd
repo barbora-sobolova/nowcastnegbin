@@ -39,9 +39,12 @@ values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
 \code{ggsave()}}
 }
 \value{
-a list of ggplot objects or list of NULLs if \code{save_plot = TRUE}.
-For the simulation study, (i.e. \code{data_origin} other than "case_study"),
-there is always NULL for the CRPS and coverage plot.
+a nested list of ggplot objects or NULLs if \code{save_plot = TRUE}.
+There is one list element per sensitivity analysis scenario, each list
+element contains 3 more elements (reserved for the coverage plot, CRPS plot
+and prediction interval bands). For the simulation study,
+(i.e. \code{data_origin} other than "case_study"), there is always NULL for
+the CRPS and coverage plot.
 }
 \description{
 This is a wrapper around functions that plot the aggregated
