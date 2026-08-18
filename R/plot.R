@@ -1640,7 +1640,7 @@ plot_trajectory <- function(
     first_window_bracket_y <- first_window_max_cases + bracket_offset
   } else {
     figure_path <- paste0("inst/figure/", data_origin, "_simulation_trajectory")
-    first_window_bracket_y <- first_window_max_cases + 5 * bracket_offset
+    first_window_bracket_y <- first_window_max_cases + 7 * bracket_offset
   }
 
   p_trajectory <- ggplot(totals, aes(x = .data$date, y = .data$counts)) +
@@ -1650,7 +1650,7 @@ plot_trajectory <- function(
       xmin = aux_study_start,
       xmax = aux_study_end,
       y.position = first_window_max_cases + bracket_offset,
-      label = "Data used to\ndetermine priors",
+      label = "Data to\ninform priors",
       label.size = 4.5
     ) +
     # Highlight the first window of training data including the nowcasting
@@ -1672,7 +1672,7 @@ plot_trajectory <- function(
     ) +
     labs(y = "Incidence", x = "Date") +
     ylim(
-      c(0, max(overall_max_cases, first_window_bracket_y) + 3 * bracket_offset)
+      c(0, max(overall_max_cases, first_window_bracket_y) + 6 * bracket_offset)
     ) +
     get_plot_theme()
 
