@@ -1638,7 +1638,7 @@ plot_trajectory <- function(
     first_window_bracket_y <- first_window_max_cases + 5 * bracket_offset
   }
 
-  trajectory_plot <- ggplot(totals, aes(x = .data$date, y = .data$counts)) +
+  p_trajectory <- ggplot(totals, aes(x = .data$date, y = .data$counts)) +
     geom_line() +
     # Highlight the period used for determining the priors
     ggpubr::geom_bracket(
@@ -1671,10 +1671,59 @@ plot_trajectory <- function(
     ) +
     get_plot_theme()
 
+  # If we plot the data trajectory used in the case study, we add the plot of
+  # proportions of cases reported for each delay
+  if (data_origin == "case_study") {
+    df_prop_reported <- full_data |>
+      mutate(total = rowSums(across(starts_with("value_")))) |>
+      pivot_longer(
+        starts_with("value_"),
+        names_to = "delay",
+        values_to = "counts"
+      ) |>
+      mutate(
+        # Extract the reporting delay from the former string of column names
+        # and reverse the factor to plot the 0-delay on the bottom.
+        delay = factor(
+          gsub("[^0-9]", "", .data$delay),
+          levels = rev(seq_len(max_lag) - 1)
+        )
+      ) |>
+      # Calculate the proportions for each date
+      group_by(.data$date) |>
+      mutate(prop_reported = .data$counts / .data$total) |>
+      ungroup()
+    # Plot the proportions
+    p_prop_reported <- ggplot(
+      df_prop_reported,
+      aes(x = .data$date, y = .data$prop_reported, fill = .data$delay)
+    ) +
+      geom_area() +
+      labs(
+        y = "Fraction of final report",
+        fill = "Delay in\nweeks",
+        x = "Date"
+      ) +
+      scale_fill_viridis_d(direction = -1) +
+      get_plot_theme()
+    # Glue together the trajectory and the proportions
+    trajectory_plot <- wrap_plots(p_trajectory, p_prop_reported, nrow = 2) +
+      plot_layout(axes = "collect")
+    # Adjust the plot height
+    plot_height <- 6
+    plot_width <- 9
+  } else {
+    # For the simulations, we plot only the trajectory, so the final plot is not
+    # so high
+    trajectory_plot <- p_trajectory
+    plot_height <- 3.5
+    plot_width <- 9
+  }
+
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
-    save_figure(trajectory_plot, figure_path, width = 9, height = 6)
+    save_figure(trajectory_plot, figure_path, plot_width, plot_height)
     ret <- NULL
   } else {
     ret <- trajectory_plot
