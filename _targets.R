@@ -51,6 +51,9 @@ aux_analysis_start_date <- analysis_start_date -
 # window of the train data to include a new week of observations mimicking a
 # real-time analysis.
 timesteps_to_fit <- 104
+# Where the end of the data used for the case study is
+analysis_end_date <- analysis_start_date +
+  (length_of_train_data + timesteps_to_fit - 2) * 7
 # What dates shall be skipped due to the Christmas break. These dates indicate
 # two things:
 #  1. No nowcast will be produced on these days
@@ -81,6 +84,9 @@ aux_sim_start_date <- sim_start_date -
 ma_degree <- 3
 # For how many rolling windows we want to do the fitting.
 sim_timesteps_to_fit <- 500
+# Where the end of the data used for the case study is
+sim_end_date <- sim_start_date +
+  (length_of_train_data + sim_timesteps_to_fit - 2) * 7
 # Delay probabilities used in the simulation.
 sim_delay_prob <- c(0.5, 0.3, 0.2, 0.1)
 # Dispersion parameter of the negative binomial distribution used in the
@@ -439,6 +445,7 @@ list(
       plot_trajectory(
         sim_full_data,
         sim_start_date,
+        sim_end_date,
         length_of_train_data,
         length(sim_delay_prob),
         aux_sim_start_date,
@@ -1020,6 +1027,7 @@ list(
     plot_trajectory(
       full_data,
       analysis_start_date,
+      analysis_end_date,
       length_of_train_data,
       max_lag,
       aux_analysis_start_date,

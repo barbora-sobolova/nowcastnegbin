@@ -1569,6 +1569,8 @@ save_patchwork_plots <- function(plot_list) {
 #' `date` and columns `value_0w`, `value_1w`, etc. until `max_lag - 1`.
 #' @param start_date a date (indeed in the date format), where the training data
 #' start. The starting point will be included.
+#' @param end_date a date (in the date format), where the training data end. The
+#' endpoint will be included.
 #' @param length_of_train_data a number, the length of the estimation window
 #' (endpoints included)
 #' @param max_lag maximum reporting delay represented by the number of columns
@@ -1591,6 +1593,7 @@ save_patchwork_plots <- function(plot_list) {
 plot_trajectory <- function(
   full_data,
   start_date,
+  end_date,
   length_of_train_data,
   max_lag,
   aux_study_start,
@@ -1600,6 +1603,8 @@ plot_trajectory <- function(
   data_origin <- match.arg(data_origin)
   # The auxiliary analysis ends exactly one week before the main analysis
   aux_study_end <- start_date - 7
+  # Filter the full data to contain only the selected time period
+  full_data <- full_data |> filter(date >= aux_study_start, date <= end_date)
   # Arrange the whole trajectory into a data frame for plotting
   totals <- full_data |>
     dplyr::select(paste0("value_", 1:max_lag - 1, "w")) |>
