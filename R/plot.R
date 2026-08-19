@@ -1615,13 +1615,10 @@ plot_trajectory <- function(
     # final and the preliminary state of the data. For plotting the whole
     # trajectory we are interested only in the final values.
     dplyr::filter(data == "Final")
-  # The end point of the first estimation window and the beginning of the last
-  # estimation window to be highlighted in the plot.
+  # The end point of the first estimation window to be highlighted in the plot.
   # The estimation windows will be highlighted by braces drawn by
   # `ggpubr::geom_bracket()`.
   first_window_end <- start_date + (length_of_train_data - 1) * 7
-  last_window_beg <- aux_study_start +
-    (nrow(totals) - length_of_train_data - 1) * 7
   # We need to find the maximum number of cases in the first and last estimation
   # window in order to place the brace correctly above them.
   first_window_max_cases <- totals |>
@@ -1666,8 +1663,8 @@ plot_trajectory <- function(
     ) +
     # Highlight the last window of training data including the nowcasting part
     ggpubr::geom_bracket(
-      xmin = last_window_beg,
-      xmax = last_window_beg + length_of_train_data * 7,
+      xmin = end_date - (length_of_train_data - 1) * 7,
+      xmax = end_date,
       y.position = overall_max_cases + bracket_offset,
       label = "Last\nwindow",
       label.size = 4
