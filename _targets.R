@@ -438,20 +438,6 @@ list(
       sim_plot_diagnostics,
       plot_mcmc_diagnostics(sim_diagnostics, obs_model, data_origin = model_obs)
     ),
-    # Plot the whole incidence trajectory highlighting the first and the last
-    # estimation windows
-    tar_target(
-      sim_whole_trajectory_plot,
-      plot_trajectory(
-        sim_full_data,
-        sim_start_date,
-        sim_end_date,
-        length_of_train_data,
-        length(sim_delay_prob),
-        aux_sim_start_date,
-        data_origin = model_obs
-      )
-    ),
     # Fit each observational model to each rolling window of the simulation
     # study using the GLM method.
     tar_target(
@@ -617,6 +603,22 @@ list(
   tar_target(
     sim_results_plot,
     patchwork_sim_results(sim_summarized_nowcast_list)
+  ),
+  tar_target(
+    sim_all_trajectories,
+    plot_all_sim_trajectories(
+      bind_rows(
+        sim_full_data_NegBinX,
+        sim_full_data_NegBin1D,
+        sim_full_data_NegBin2D
+      ),
+      sim_start_date,
+      sim_end_date,
+      length_of_train_data,
+      length(sim_delay_prob),
+      aux_sim_start_date,
+      save_plot = TRUE
+    )
   ),
 
   # Case study =================================================================
