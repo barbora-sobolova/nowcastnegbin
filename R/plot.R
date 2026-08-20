@@ -784,14 +784,25 @@ plot_delay_prob <- function(
   example = FALSE,
   save_plot = TRUE
 ) {
+  # Grab the maximum delay
   max_lag <- max(df_delay_prob$delay)
-
   df_delay_prob <- df_delay_prob |>
-    # Turn the delay into a factor to allow for easier faceting
-    mutate(delay = factor(.data$delay))
+    mutate(
+      # Turn the delay into a factor to allow for easier faceting
+      delay = factor(.data$delay),
+      # Turn the distribution into a factor make the color scling easier
+      Distribution = factor(
+        paste(.data$Distribution, fitting_method, sep = "."),
+        levels = names(get_interaction_names()),
+        labels = get_interaction_names()
+      )
+    )
+  # Append the fitting method to the names of selected models to match the
+  # plot colors correctly
+  model_names <- paste(model_names, fitting_method, sep = ".")
 
   facet_titles <- rlang::set_names(
-    paste0("Delay: ", seq_len(max_lag), " weeks"),
+    paste0("Delay: ", seq_len(max_lag) - 1, " weeks"),
     seq_len(max_lag)
   )
 
@@ -806,7 +817,7 @@ plot_delay_prob <- function(
       ),
       stat = "density", alpha = 0.6
     ) +
-    scale_color_manual(values = get_model_colors()[model_names]) +
+    scale_color_manual(values = get_interaction_colors(), name = "Model") +
     labs(x = "delay probability", y = "density") +
     coord_cartesian(ylim = c(0, 80)) +
     facet_wrap(
@@ -887,7 +898,7 @@ plot_delay_prob <- function(
     # Show only selected models
     delay_prob_plot$layers[[1]]$data <- filter(
       delay_prob_plot$layers[[1]]$data,
-      .data$Distribution %in% model_names
+      .data$Distribution %in% get_interaction_names()[model_names]
     )
     # Add a new faceting specification to make all scales varying
     delay_prob_plot <- delay_prob_plot +
