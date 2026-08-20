@@ -1697,7 +1697,9 @@ plot_trajectory <- function(
     ) |>
     # Calculate the proportions for each date
     group_by(.data$date) |>
-    mutate(prop_reported = .data$counts / .data$total) |>
+    mutate(
+      prop_reported = ifelse(.data$total > 0, .data$counts / .data$total, 0)
+    ) |>
     ungroup()
   # Plot the proportions
   p_prop_reported <- ggplot(
