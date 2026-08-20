@@ -132,7 +132,8 @@ simulate_full_data <- function(
     as.data.frame() |>
     dplyr::mutate(
       date = tail(df_series$date, lgt),
-      mean_proc = mean_proc
+      mean_proc = mean_proc,
+      Distribution = model
     )
   reporting_table
 }

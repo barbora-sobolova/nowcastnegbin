@@ -7,6 +7,7 @@
 plot_trajectory(
   full_data,
   start_date,
+  end_date,
   length_of_train_data,
   max_lag,
   aux_study_start,
@@ -20,6 +21,9 @@ plot_trajectory(
 
 \item{start_date}{a date (indeed in the date format), where the training data
 start. The starting point will be included.}
+
+\item{end_date}{a date (in the date format), where the training data end. The
+endpoint will be included.}
 
 \item{length_of_train_data}{a number, the length of the estimation window
 (endpoints included)}
@@ -39,10 +43,12 @@ values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
 \code{ggplot2::ggsave()}}
 }
 \value{
-a ggplot object, or NULL if \code{save_plot = TRUE}
+a patchwork plot, or NULL if \code{save_plot = TRUE}
 }
 \description{
-This function plots and possibly saves the incidence trajectory
-used for the case study. The first and the last estimation windows will be
-highlighted to see the chunk of the data we use for model training.
+This function plots and possibly saves an incidence trajectory.
+The first and the last estimation windows will be highlighted to see the
+chunk of the data we use for model training. The final plot has two
+panels - the trajectory (top) and the proportion of reports per
+delay (bottom).
 }
