@@ -1561,14 +1561,18 @@ save_patchwork_plots <- function(plot_list) {
 
 #' Plot the whole incidence trajectory
 #'
-#' @description This function plots and possibly saves the incidence trajectory
-#' used for the case study. The first and the last estimation windows will be
-#' highlighted to see the chunk of the data we use for model training.
+#' @description This function plots and possibly saves an incidence trajectory.
+#' The first and the last estimation windows will be highlighted to see the
+#' chunk of the data we use for model training. The final plot has two
+#' panels - the trajectory (top) and the proportion of reports per
+#' delay (bottom).
 #'
 #' @param full_data a data frame of the whole trajectory containing columns
 #' `date` and columns `value_0w`, `value_1w`, etc. until `max_lag - 1`.
 #' @param start_date a date (indeed in the date format), where the training data
 #' start. The starting point will be included.
+#' @param end_date a date (in the date format), where the training data end. The
+#' endpoint will be included.
 #' @param length_of_train_data a number, the length of the estimation window
 #' (endpoints included)
 #' @param max_lag maximum reporting delay represented by the number of columns
@@ -1582,7 +1586,7 @@ save_patchwork_plots <- function(plot_list) {
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
-#' @return a ggplot object, or NULL if \code{save_plot = TRUE}
+#' @return a patchwork plot, or NULL if \code{save_plot = TRUE}
 #'
 #' @import dplyr ggplot2
 #' @importFrom ggpubr geom_bracket
@@ -1591,6 +1595,7 @@ save_patchwork_plots <- function(plot_list) {
 plot_trajectory <- function(
   full_data,
   start_date,
+  end_date,
   length_of_train_data,
   max_lag,
   aux_study_start,
@@ -1600,6 +1605,8 @@ plot_trajectory <- function(
   data_origin <- match.arg(data_origin)
   # The auxiliary analysis ends exactly one week before the main analysis
   aux_study_end <- start_date - 7
+  # Filter the full data to contain only the selected time period
+  full_data <- full_data |> filter(date >= aux_study_start, date <= end_date)
   # Arrange the whole trajectory into a data frame for plotting
   totals <- full_data |>
     dplyr::select(paste0("value_", 1:max_lag - 1, "w")) |>
@@ -1608,13 +1615,10 @@ plot_trajectory <- function(
     # final and the preliminary state of the data. For plotting the whole
     # trajectory we are interested only in the final values.
     dplyr::filter(data == "Final")
-  # The end point of the first estimation window and the beginning of the last
-  # estimation window to be highlighted in the plot.
+  # The end point of the first estimation window to be highlighted in the plot.
   # The estimation windows will be highlighted by braces drawn by
   # `ggpubr::geom_bracket()`.
   first_window_end <- start_date + (length_of_train_data - 1) * 7
-  last_window_beg <- aux_study_start +
-    (nrow(totals) - length_of_train_data - 1) * 7
   # We need to find the maximum number of cases in the first and last estimation
   # window in order to place the brace correctly above them.
   first_window_max_cases <- totals |>
@@ -1627,7 +1631,7 @@ plot_trajectory <- function(
     pull(.data$counts) |>
     max(na.rm = TRUE)
   # 5% offset of the braces to avoid overplotting the trajectory
-  bracket_offset <- first_window_max_cases * 0.05
+  bracket_offset <- first_window_max_cases * 0.1
   # For the simulation study, place the bracket indicating the first window a
   # little bit higher, since it is located near a season peak.
   if (data_origin == "case_study") {
@@ -1635,18 +1639,18 @@ plot_trajectory <- function(
     first_window_bracket_y <- first_window_max_cases + bracket_offset
   } else {
     figure_path <- paste0("inst/figure/", data_origin, "_simulation_trajectory")
-    first_window_bracket_y <- first_window_max_cases + 5 * bracket_offset
+    first_window_bracket_y <- first_window_max_cases + 7 * bracket_offset
   }
 
-  trajectory_plot <- ggplot(totals, aes(x = .data$date, y = .data$counts)) +
+  p_trajectory <- ggplot(totals, aes(x = .data$date, y = .data$counts)) +
     geom_line() +
     # Highlight the period used for determining the priors
     ggpubr::geom_bracket(
       xmin = aux_study_start,
       xmax = aux_study_end,
       y.position = first_window_max_cases + bracket_offset,
-      label = "Data used to\ndetermine priors",
-      label.size = 4.5
+      label = "Data to\ninform priors",
+      label.size = 4
     ) +
     # Highlight the first window of training data including the nowcasting
     # part
@@ -1655,29 +1659,168 @@ plot_trajectory <- function(
       xmax = first_window_end,
       y.position = first_window_bracket_y,
       label = "First\nwindow",
-      label.size = 4.5
+      label.size = 4
     ) +
     # Highlight the last window of training data including the nowcasting part
     ggpubr::geom_bracket(
-      xmin = last_window_beg,
-      xmax = last_window_beg + length_of_train_data * 7,
+      xmin = end_date - (length_of_train_data - 1) * 7,
+      xmax = end_date,
       y.position = overall_max_cases + bracket_offset,
       label = "Last\nwindow",
-      label.size = 4.5
+      label.size = 4
     ) +
     labs(y = "Incidence", x = "Date") +
     ylim(
-      c(0, max(overall_max_cases, first_window_bracket_y) + 3 * bracket_offset)
+      c(0, max(overall_max_cases, first_window_bracket_y) + 4 * bracket_offset)
     ) +
     get_plot_theme()
+
+  if (data_origin != "case_study") {
+    p_trajectory <- p_trajectory + labs(title = get_dgp_title(data_origin))
+  }
+
+  # We add the plot of proportions of cases reported for each delay
+  df_prop_reported <- full_data |>
+    mutate(total = rowSums(across(starts_with("value_")))) |>
+    pivot_longer(
+      starts_with("value_"),
+      names_to = "delay",
+      values_to = "counts"
+    ) |>
+    mutate(
+      # Extract the reporting delay from the former string of column names
+      # and reverse the factor to plot the 0-delay on the bottom.
+      delay = factor(
+        gsub("[^0-9]", "", .data$delay),
+        levels = rev(seq_len(max_lag) - 1)
+      )
+    ) |>
+    # Calculate the proportions for each date
+    group_by(.data$date) |>
+    mutate(
+      prop_reported = ifelse(.data$total > 0, .data$counts / .data$total, 0)
+    ) |>
+    ungroup()
+  # Plot the proportions
+  p_prop_reported <- ggplot(
+    df_prop_reported,
+    aes(x = .data$date, y = .data$prop_reported, fill = .data$delay)
+  ) +
+    geom_area() +
+    labs(
+      y = "Fraction of\nfinal reports",
+      fill = "Delay in\nweeks",
+      x = "Date"
+    ) +
+    scale_fill_viridis_d(direction = -1) +
+    get_plot_theme() +
+    theme(axis.title.y = element_text(hjust = 0))
+  # Glue together the trajectory and the proportions
+  trajectory_plot <- patchwork::wrap_plots(
+    p_trajectory,
+    p_prop_reported,
+    nrow = 2,
+    axes = "collect",
+    heights = c(5, 3)
+  )
 
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
-    save_figure(trajectory_plot, figure_path, width = 9, height = 6)
+    save_figure(trajectory_plot, figure_path, width = 9, height = 5)
     ret <- NULL
   } else {
     ret <- trajectory_plot
+  }
+  ret
+}
+
+#' Plot the incidence trajectory for all simulation scenarios
+#'
+#' @description A wrapper around \code{plot_trajectory}. This function plots and
+#' possibly saves the incidence trajectory used in the simulation study. The
+#' first and the last estimation windows will be highlighted to see the chunk of
+#' the data we use for model training. Each trajectory is accompanied by a plot
+#' of proportions of cases per delay. The plots corresponding to different
+#' data-generating processes are placed on top of each other.
+#'
+#' @param full_data a data frame of the whole trajectory containing columns
+#' `date`, `Distribution` (the data-generating process) and columns `value_0w`,
+#' `value_1w`, etc. until `max_lag - 1`.
+#' @param start_date a date (indeed in the date format), where the training data
+#' start. The starting point will be included.
+#' @param end_date a date (in the date format), where the training data end. The
+#' endpoint will be included.
+#' @param length_of_train_data a number, the length of the estimation window
+#' (endpoints included)
+#' @param max_lag maximum reporting delay represented by the number of columns
+#' of the reporting table. In this way, the 0-th lag counts as the first, 1-st
+#' lag as the second and so on.
+#' @param aux_study_start a date (indeed in the date format), where the
+#' auxiliary case study period used for determining the priors starts.
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggplot2::ggsave()}
+#'
+#' @return a patchwork, or NULL if \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#' @importFrom ggpubr geom_bracket
+#' @importFrom patchwork wrap_plots
+#'
+#' @export
+plot_all_sim_trajectories <- function(
+  full_data,
+  start_date,
+  end_date,
+  length_of_train_data,
+  max_lag,
+  aux_study_start,
+  save_plot = TRUE
+) {
+  data_origin <- unique(full_data$Distribution)
+  # Loop over the data generating processes
+  trajectory_patches <- vector("list", length(data_origin))
+  names(trajectory_patches) <- data_origin
+  for (dgp in data_origin) {
+    full_data_filtered <- full_data |> filter(.data$Distribution == dgp)
+    trajectory_patches[[dgp]] <- plot_trajectory(
+      full_data_filtered,
+      start_date,
+      end_date,
+      length_of_train_data,
+      max_lag,
+      aux_study_start,
+      data_origin = dgp,
+      save_plot = FALSE
+    )
+    # In the end, we will get a patchwork plot with a nested layou, where it's
+    # not possible anymore to collect the x-axis guide. Therefore, we remove it
+    # manually for all plots except for the last one.
+    if (dgp != tail(data_origin, 1)) {
+      trajectory_patches[[dgp]] <- trajectory_patches[[dgp]] &
+        theme(
+          axis.title.x = element_blank(),
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank()
+        )
+    }
+  }
+  # Put the patchwork plot together
+  arranged <- patchwork::wrap_plots(
+    trajectory_patches,
+    nrow = 3,
+    guides = "collect"
+  )
+  if (save_plot) {
+    ret <- NULL
+    save_figure(
+      arranged,
+      "inst/figure/sim_trajectory",
+      width = 9,
+      height = 11
+    )
+  } else {
+    ret <- arranged
   }
   ret
 }
