@@ -2483,7 +2483,7 @@ plot_glm_overshoot <- function(
   # Set the colors and labels for the GLM and MCMC method in the plot of lambda
   # and the nowcasts
   method_colors <- c("glm" = "sienna3", "mcmc" = "turquoise3")
-  method_labels <- c("glm" = "GAM", "mcmc" = "HMC")
+  method_labels <- c("glm" = "GAM", "mcmc" = "random\nwalk")
   # Set the x-axis breaks
   x_axis_dates <- as.Date(sort(unique(df_total$date)))
   x_axis_breaks <- x_axis_dates[seq(1, length(x_axis_dates), by = 6)]
