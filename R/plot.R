@@ -304,7 +304,10 @@ plot_coverage <- function(
     # compared to the barplot
     guides(fill = guide_legend(reverse = TRUE)) +
     get_plot_theme() +
-    theme(legend.background = element_blank()) +
+    theme(
+      legend.background = element_blank(),
+      axis.text.y = element_text(color = "black")
+    ) +
     facet_wrap(
       ~delay,
       nrow = n_rows,
@@ -491,7 +494,10 @@ plot_crps_decomp <- function(
     # compared to the barplot
     guides(fill = guide_legend(reverse = TRUE)) +
     get_plot_theme() +
-    theme(legend.background = element_blank()) +
+    theme(
+      legend.background = element_blank(),
+      axis.text.y = element_text(color = "black")
+    ) +
     facet_wrap(
       ~delay,
       nrow = n_rows,
