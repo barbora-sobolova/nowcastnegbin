@@ -2539,6 +2539,7 @@ plot_glm_overshoot <- function(
       labeller = as_labeller(facet_titles),
       nrow = 2
     ) +
+    get_plot_theme() +
     theme(plot.title = element_text(hjust = 0.5))
   # Plot the mean process estimates faceted by different rolling windows
   p_lambda <- ggplot() +
@@ -2574,6 +2575,7 @@ plot_glm_overshoot <- function(
       labeller = as_labeller(facet_titles),
       nrow = 2
     ) +
+    get_plot_theme() +
     theme(plot.title = element_text(hjust = 0.5))
   # Compose the plots vertically
   p_combined <- (p_nowcast / p_lambda) +
@@ -2583,7 +2585,7 @@ plot_glm_overshoot <- function(
     save_figure(
       p_combined,
       paste("inst/figure/glm_overshoot", model_to_show, sep = "_"),
-      width = 7,
+      width = 9,
       height = 8
     )
     ret <- NULL
