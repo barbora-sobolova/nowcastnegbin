@@ -9,7 +9,7 @@
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
 #' `quantile_97.5` (bounds of the prediction intervals) and `date` (x-axis
 #' dates). If we want to plot models fitted by both, the MCMC andthe  GLM method
-#' \cofe{fitting_method = "both"}, the data frame must contain an additional
+#' \code{fitting_method = "both"}, the data frame must contain an additional
 #' column `model_method_interact`.
 #' @param df_total a data frame with columns `date`, `counts` and `data`
 #' returned by the function \code{create_totals_data_frame()}
@@ -304,7 +304,10 @@ plot_coverage <- function(
     # compared to the barplot
     guides(fill = guide_legend(reverse = TRUE)) +
     get_plot_theme() +
-    theme(legend.background = element_blank()) +
+    theme(
+      legend.background = element_blank(),
+      axis.text.y = element_text(color = "black")
+    ) +
     facet_wrap(
       ~delay,
       nrow = n_rows,
@@ -491,7 +494,10 @@ plot_crps_decomp <- function(
     # compared to the barplot
     guides(fill = guide_legend(reverse = TRUE)) +
     get_plot_theme() +
-    theme(legend.background = element_blank()) +
+    theme(
+      legend.background = element_blank(),
+      axis.text.y = element_text(color = "black")
+    ) +
     facet_wrap(
       ~delay,
       nrow = n_rows,
@@ -784,14 +790,25 @@ plot_delay_prob <- function(
   example = FALSE,
   save_plot = TRUE
 ) {
+  # Grab the maximum delay
   max_lag <- max(df_delay_prob$delay)
-
   df_delay_prob <- df_delay_prob |>
-    # Turn the delay into a factor to allow for easier faceting
-    mutate(delay = factor(.data$delay))
+    mutate(
+      # Turn the delay into a factor to allow for easier faceting
+      delay = factor(.data$delay),
+      # Turn the distribution into a factor make the color scling easier
+      Distribution = factor(
+        paste(.data$Distribution, fitting_method, sep = "."),
+        levels = names(get_interaction_names()),
+        labels = get_interaction_names()
+      )
+    )
+  # Append the fitting method to the names of selected models to match the
+  # plot colors correctly
+  model_names <- paste(model_names, fitting_method, sep = ".")
 
   facet_titles <- rlang::set_names(
-    paste0("Delay: ", seq_len(max_lag), " weeks"),
+    paste0("Delay: ", seq_len(max_lag) - 1, " weeks"),
     seq_len(max_lag)
   )
 
@@ -806,7 +823,7 @@ plot_delay_prob <- function(
       ),
       stat = "density", alpha = 0.6
     ) +
-    scale_color_manual(values = get_model_colors()[model_names]) +
+    scale_color_manual(values = get_interaction_colors(), name = "Model") +
     labs(x = "delay probability", y = "density") +
     coord_cartesian(ylim = c(0, 80)) +
     facet_wrap(
@@ -887,7 +904,7 @@ plot_delay_prob <- function(
     # Show only selected models
     delay_prob_plot$layers[[1]]$data <- filter(
       delay_prob_plot$layers[[1]]$data,
-      .data$Distribution %in% model_names
+      .data$Distribution %in% get_interaction_names()[model_names]
     )
     # Add a new faceting specification to make all scales varying
     delay_prob_plot <- delay_prob_plot +
@@ -2466,7 +2483,7 @@ plot_glm_overshoot <- function(
   # Set the colors and labels for the GLM and MCMC method in the plot of lambda
   # and the nowcasts
   method_colors <- c("glm" = "sienna3", "mcmc" = "turquoise3")
-  method_labels <- c("glm" = "GAM", "mcmc" = "HMC")
+  method_labels <- c("glm" = "GAM", "mcmc" = "random\nwalk")
   # Set the x-axis breaks
   x_axis_dates <- as.Date(sort(unique(df_total$date)))
   x_axis_breaks <- x_axis_dates[seq(1, length(x_axis_dates), by = 6)]
@@ -2522,6 +2539,7 @@ plot_glm_overshoot <- function(
       labeller = as_labeller(facet_titles),
       nrow = 2
     ) +
+    get_plot_theme() +
     theme(plot.title = element_text(hjust = 0.5))
   # Plot the mean process estimates faceted by different rolling windows
   p_lambda <- ggplot() +
@@ -2557,6 +2575,7 @@ plot_glm_overshoot <- function(
       labeller = as_labeller(facet_titles),
       nrow = 2
     ) +
+    get_plot_theme() +
     theme(plot.title = element_text(hjust = 0.5))
   # Compose the plots vertically
   p_combined <- (p_nowcast / p_lambda) +
@@ -2566,7 +2585,7 @@ plot_glm_overshoot <- function(
     save_figure(
       p_combined,
       paste("inst/figure/glm_overshoot", model_to_show, sep = "_"),
-      width = 7,
+      width = 9,
       height = 8
     )
     ret <- NULL

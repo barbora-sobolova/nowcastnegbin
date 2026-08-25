@@ -35,7 +35,7 @@ Imports:
   tidybayes,
   tidyselect,
   tidyr
-Remotes: gamlss-dev/gamlss2
+Remotes: gamlss-dev/gamlss2@3a13e3defd728a9d18afb85623095cb9e619fe16
 Suggests:
   qs2,
   testthat (>= 3.1.9)
