@@ -20,6 +20,9 @@ column are the final sums of the counts, or the preliminary data version.}
 
 \item{fitting_method}{a method used for fitting the nowcasting model, either
 "mcmc", or "glm"}
+
+\item{time_step}{an integer indicating the time resolution of the data. The
+default \code{time_step = 7} imply weekly data resolution}
 }
 \value{
 a data frame with columns

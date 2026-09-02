@@ -10,6 +10,8 @@
 #' @param length_of_train_data the size of one estimation window.
 #' @param skip_dates a date vector containing the dates, where we don't wish to
 #' calculate the nowcast
+#' @param time_step an integer indicating the time resolution of the data. The
+#' default \code{time_step = 7} imply weekly data resolution
 #'
 #' @return a data frame containing columns `train_data_begin`, with the
 #' estimation window starts in the date format, and `nowcast_date`, where the

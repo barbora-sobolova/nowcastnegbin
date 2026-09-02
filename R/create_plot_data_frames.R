@@ -5,6 +5,8 @@
 #'
 #' @param train_data the reporting table in a matrix format
 #' @param start_date date (in a date format) when the incidence begins
+#' @param time_step an integer indicating the time resolution of the data. The
+#' default \code{time_step = 7} imply weekly data resolution
 #'
 #' @return a data frame with columns `counts` and `date`. The data frame is in a
 #' long format. Its first half contains the complete total incidence. The second
@@ -43,6 +45,8 @@ create_totals_data_frame <- function(
 #' column are the final sums of the counts, or the preliminary data version.
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
+#' @param time_step an integer indicating the time resolution of the data. The
+#' default \code{time_step = 7} imply weekly data resolution
 #'
 #' @return a data frame with columns
 #' \describe{
