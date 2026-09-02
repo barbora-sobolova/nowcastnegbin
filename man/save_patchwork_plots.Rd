@@ -4,7 +4,7 @@
 \alias{save_patchwork_plots}
 \title{Arrange and save figures from the robustness check}
 \usage{
-save_patchwork_plots(plot_list)
+save_patchwork_plots(plot_list, data_origin)
 }
 \arguments{
 \item{plot_list}{a list containing the individual plots from the 4

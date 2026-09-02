@@ -7,7 +7,7 @@
 plot_mcmc_diagnostics(
   df_diagnostics,
   model_names,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 )
 }
@@ -20,8 +20,8 @@ each model and each run (timesteps). It contains columns \code{num_divergent},
 plot.}
 
 \item{data_origin}{a string indicating the data generating process of
-simulated data, or whether the data correspond to the case study. Possible
-values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
+simulated data, or the corresponding case study. Possible
+values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}

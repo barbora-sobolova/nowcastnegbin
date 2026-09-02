@@ -7,8 +7,8 @@
 plot_aggregated(
   df_nowcast,
   full_data,
-  skip_dates,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  skip_dates = NULL,
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 )
 }
@@ -32,8 +32,8 @@ where we should leave gaps in the plot of the nowcasts.
 \code{skip_dates = NULL} if no gaps are to be plotted.}
 
 \item{data_origin}{a string indicating the data generating process of
-simulated data, or whether the data correspond to the case study. Possible
-values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
+simulated data, or the corresponding case study. Possible
+values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{save_plot}{logical indicator, whether to save the plots using
 \code{ggsave()}}

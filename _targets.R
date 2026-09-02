@@ -35,8 +35,10 @@ ggplot2::theme_set(ggplot2::theme_bw())
 
 # Set the global objects =======================================================
 
-max_lag <- 5
+# Global object related to the SARI dataset ------------------------------------
 
+# How many columns of the reporting triangle there is.
+max_lag <- 5
 # Where the beginning of the data used for the case study is
 analysis_start_date <- as.Date("2023-12-24")
 # How many weeks we want to include as "training" data.
@@ -49,7 +51,8 @@ aux_analysis_start_date <- analysis_start_date -
   (aux_timesteps_to_fit + length_of_train_data - 1) * 7
 # For how many dates we want to do the fitting. For each time step, we shift the
 # window of the train data to include a new week of observations mimicking a
-# real-time analysis.
+# real-time analysis. We skip 4 rolling windows, which gives 100 rolling windows
+# in total.
 timesteps_to_fit <- 104
 # Where the end of the data used for the case study is
 analysis_end_date <- analysis_start_date +
@@ -68,6 +71,38 @@ skip_dates <- as.Date(
 delay_prob_example_date <- as.Date("2025-10-12")
 # Dates for which we want to show, what the nowcasts actually look like.
 nowcast_example_dates <- as.Date("2025-02-16")
+
+# Global object related to the ILI dataset -------------------------------------
+
+# Parameters identical to the SARI analysis:
+# - number of the rolling windows
+# - number of windows used for the auxiliary study to determine the priors
+# - length of the training data, i.e. the size of the rolling window
+
+# How many columns of the reporting triangle there is.
+ili_max_lag <- 6
+# Where the beginning of the data used for the case study is
+ili_analysis_start_date <- as.Date("2015-06-22")
+# We run an auxiliary case study of 11 time windows before the actual one to
+# determine the prior distributions. The proportion of the length of the
+# auxiliary vs. main analysis is similar to the SARI data
+ili_aux_analysis_start_date <- ili_analysis_start_date -
+  (aux_timesteps_to_fit + length_of_train_data - 1) * 7
+# Where the end of the data used for the case study is
+ili_analysis_end_date <- ili_analysis_start_date +
+  (length_of_train_data + timesteps_to_fit - 2) * 7
+# For how many dates we want to do the fitting. For each time step, we shift the
+# window of the train data to include a new week of observations mimicking a
+# real-time analysis. We don't skip any rolling windows.
+ili_timesteps_to_fit <- 100
+# Dates for which we want to show, what the nowcasts actually look like.
+ili_nowcast_example_dates <- as.Date("2015-12-28")
+
+# Global object related to the simulations -------------------------------------
+
+# Parameters identical to the SARI analysis:
+# - length of the training data, i.e. the size of the rolling window
+# - number of windows used for the auxiliary study to determine the priors
 
 # Where the beginning of the data used for the simulation study is. For the
 # simulation study, we take the total SARI counts from several years back,
@@ -621,7 +656,7 @@ list(
     )
   ),
 
-  # Case study =================================================================
+  # SARI hospitalizations case study ===========================================
 
   # Load the case study data ---------------------------------------------------
 
@@ -878,7 +913,7 @@ list(
         branches_mcmc,
         c("model_name", "mean_log", "sd_log", "scenario_name")
       ),
-      data_origin = "case_study"
+      data_origin = "SARI"
     )
   },
   pattern = sample(
@@ -902,7 +937,7 @@ list(
     plot_mcmc_diagnostics(
       diagnostics,
       obs_model,
-      data_origin = "case_study"
+      data_origin = "SARI"
     )
   }),
   tar_target(delay_prob_example, {
@@ -926,7 +961,7 @@ list(
         ),
         mode = "numeric"
       ),
-      data_origin = "case_study",
+      data_origin = "SARI",
       sensitivity_sc = "",
       true_value = NULL,
       example = TRUE,
@@ -969,7 +1004,7 @@ list(
       obs_model_glm,
       time_horizons$nowcast_date,
       fitting_method = "glm",
-      data_origin = "case_study"
+      data_origin = "SARI"
     )
   },
   pattern = sample(
@@ -990,7 +1025,7 @@ list(
       ),
       full_data,
       skip_dates,
-      data_origin = "case_study"
+      data_origin = "SARI"
     )
   }),
   # Extract the nowcasts from both fitting methods in the case study in order to
@@ -1020,7 +1055,7 @@ list(
       map(df_nowcast_example, "nowcast"),
       map(df_nowcast_example, "total"),
       nowcast_example_dates,
-      data_origin = "case_study"
+      data_origin = "SARI"
     )
   ),
   # Plot the whole incidence trajectory highlighting the first and the last
@@ -1033,7 +1068,370 @@ list(
       length_of_train_data,
       max_lag,
       aux_analysis_start_date,
-      data_origin = "case_study"
+      data_origin = "SARI"
     )
-  })
+  }),
+
+  # ILI incidence case study ===================================================
+
+  # Download and process the data available from the Delphi API to the format
+  # used by our functions. The dataset is stored as a CSV file analogous to
+  # the SARI reporting triangle. We load the data later from the local disc,
+  # so this target does not need to be rerun.
+  tar_target(
+    download_ili_data,
+    process_ili_data(
+      ili_analysis_start_date,
+      timesteps_to_fit,
+      aux_timesteps_to_fit,
+      length_of_train_data,
+      max_lag = ili_max_lag
+    ),
+    cue = tar_cue("never")
+  ),
+  # Load the preprocessed ILI data.
+  tar_target(
+    ili_full_data,
+    load_preprocessed_data(
+      here::here("inst", "extdata", "fluview_ili.csv"),
+      start_date = ili_aux_analysis_start_date,
+      num_of_weeks = aux_timesteps_to_fit +
+        2 * length_of_train_data + ili_timesteps_to_fit - 1
+    )
+  ),
+
+  # Fit the GLM models to the previous year to obtain the priors ---------------
+
+  # Data frame storing the beginning and end points of the training data for the
+  # auxiliary analysis to keep track of the rolling windows
+  tar_target(
+    ili_time_horizons_aux,
+    get_time_horizons(
+      ili_aux_analysis_start_date,
+      aux_timesteps_to_fit,
+      length_of_train_data
+    )
+  ),
+  # Create a matrix containing the training data for each date in the auxiliary
+  # analysis. This matrix contains all observations. To obtain the triangular
+  # form, latest observations will be masked by the `get_stan_data()` function
+  # further downstream.
+  tar_target(
+    ili_train_data_aux,
+    filter_train_period(
+      ili_full_data,
+      start_date = ili_time_horizons_aux$train_data_begin,
+      end_date = ili_time_horizons_aux$nowcast_date,
+      max_lag = ili_max_lag
+    ),
+    pattern = map(ili_time_horizons_aux),
+    iteration = "list"
+  ),
+  # Create the list of data and parameters that we would pass to the STAN
+  # model. In the auxiliary analysis, the list will be passed to the GLM model
+  # only.
+  tar_target(
+    ili_stan_data_aux,
+    get_stan_data(ili_train_data_aux$train_data),
+    pattern = map(ili_time_horizons_aux, ili_train_data_aux),
+    iteration = "list"
+  ),
+  # Fit the GLM models to the auxiliary data.
+  tar_target(
+    ili_fitted_glm_aux,
+    fit_glm_model(
+      stan_data = ili_stan_data_aux,
+      date_of_the_nowcast = ili_time_horizons_aux$nowcast_date,
+      model_name = obs_model_glm_for_auxiliary
+    ),
+    pattern = cross(
+      map(ili_stan_data_aux, ili_time_horizons_aux),
+      obs_model_glm_for_auxiliary
+    ),
+    iteration = "list"
+  ),
+  # Extract the dispersion parameter estimates from the fit
+  tar_target(
+    ili_glm_log_disp_par_aux,
+    ili_fitted_glm_aux$log_disp_coeff,
+    pattern = map(ili_fitted_glm_aux)
+  ),
+  # Determine the sensitivity analysis scenario. For the first pass, we do only
+  # the main analysis.
+  tar_target(ili_sensitivity_scenarios, {
+    data.frame(
+      scenario_name = c(""),
+      delay_prob_factor = c(4),
+      disp_par_factor = c(3)
+    )
+  }),
+  # Calculate the prior parameters based on the estimates of the dispersion
+  # parameter
+  tar_target(
+    ili_disp_par_prior,
+    calc_disp_par_prior(
+      ili_glm_log_disp_par_aux,
+      # Sensitivity scenarios are the same as in the main analysis
+      ili_sensitivity_scenarios$disp_par_factor
+    ),
+    pattern = map(ili_sensitivity_scenarios)
+  ),
+  # Calculate the parameters of the Dirichlet prior from the auxiliary data
+  # only, without looking at the GLM estimates.
+  tar_target(
+    ili_prior_delay_param,
+    calc_delay_prob_prior(
+      ili_full_data,
+      ili_aux_analysis_start_date,
+      ili_aux_analysis_start_date + length_of_train_data +
+        aux_timesteps_to_fit,
+      unique(ili_sensitivity_scenarios$delay_prob_factor)
+    )
+  ),
+
+  # Main part of the case study ------------------------------------------------
+
+  # Data frame storing the beginning and end points of the training data to
+  # keep track of the rolling windows
+  tar_target(
+    ili_time_horizons,
+    get_time_horizons(
+      ili_analysis_start_date,
+      ili_timesteps_to_fit,
+      length_of_train_data
+    )
+  ),
+  # Create grouped data frames to group targets by date. As a result, the models
+  # will be stored and subsequently loaded in bundles of 4 (for GLM), or 6
+  # (for MCMC)
+  tar_group_by(
+    ili_branches_mcmc,
+    group_branches(
+      ili_time_horizons,
+      ili_disp_par_prior,
+      ili_prior_delay_param,
+      fitting_method = "mcmc",
+      sensitivity_scenarios = ili_sensitivity_scenarios
+    ),
+    train_data_begin,
+    nowcast_date
+  ),
+  tar_group_by(
+    ili_branches_glm,
+    group_branches(
+      ili_time_horizons,
+      obs_model_glm = obs_model_glm,
+      fitting_method = "glm"
+    ),
+    train_data_begin,
+    nowcast_date
+  ),
+  # Create a matrix containing the training data for each date. This matrix
+  # contains all observations. To obtain the triangular form, latest
+  # observations will be masked by the `get_stan_data()` function further
+  # downstream.
+  tar_target(
+    ili_train_data,
+    filter_train_period(
+      ili_full_data,
+      start_date = ili_time_horizons$train_data_begin,
+      end_date = ili_time_horizons$nowcast_date,
+      max_lag = ili_max_lag
+    ),
+    pattern = map(ili_time_horizons),
+    iteration = "list"
+  ),
+  # Create the list of data and parameters to pass to the STAN model
+  tar_target(
+    ili_stan_data,
+    get_stan_data(
+      ili_train_data$train_data,
+      ili_train_data$skip_rows
+    ),
+    pattern = map(ili_train_data),
+    iteration = "list"
+  ),
+  # Calculate the reporting table rowsums and partial rowsums for each date.
+  # The total sum (final counts) is used for plotting and evaluating the
+  # prediction. The partial sums are used only for plotting.
+  tar_target(
+    ili_df_total,
+    create_totals_data_frame(
+      ili_train_data$train_data,
+      ili_time_horizons$train_data_begin
+    ),
+    pattern = map(ili_time_horizons, ili_train_data),
+    iteration = "list"
+  ),
+  # Fitting of all models using dynamic branching over the rolling windows
+  # which are defined as groups of `ili_branches_mcmc`
+  tar_target(
+    ili_fitted_mcmc,
+    fit_all_stan_models(
+      compiled_model$sample,
+      stan_data = ili_stan_data,
+      model_obs = ili_branches_mcmc$model_code,
+      date_of_the_nowcast = ili_branches_mcmc$nowcast_date,
+      prior_delay_param = select(ili_branches_mcmc, starts_with("delay_")),
+      mean_log = ili_branches_mcmc$mean_log,
+      sd_log = ili_branches_mcmc$sd_log,
+      stan_settings = stan_settings,
+      sensitivity_scenario_name = ili_branches_mcmc$scenario_name
+    ),
+    pattern = map(ili_branches_mcmc, ili_stan_data),
+    iteration = "list"
+  ),
+  # Calculate the quantiles and CRPS of the nowcasts obtained by the MCMC method
+  tar_target(
+    ili_summarized_nowcast_mcmc,
+    summarize_nowcast(
+      ili_fitted_mcmc$nowcast,
+      ili_df_total,
+      "mcmc"
+    ),
+    pattern = map(ili_fitted_mcmc, ili_df_total),
+    iteration = "list"
+  ),
+  # Create plots for each rolling window. For the MCMC procedure we plot:
+  # - the nowcast,
+  # - posterior density of the delay probability,
+  # - posterior density of the dispersion parameter on a scale, where 0 means
+  #   the Poisson model and higher values indicate more dispersion,
+  # - posterior density of the mean process for the weeks, where we perform
+  #   nowcasting
+  # - the scatter plot of the dispersion parameter against the standard
+  #   deviation of the random walk.
+  tar_target(
+    ili_rolling_plots_mcmc,
+    plot_per_window(
+      ili_summarized_nowcast_mcmc,
+      ili_fitted_mcmc$delay_prob,
+      ili_fitted_mcmc$nb_size,
+      ili_fitted_mcmc$lambda,
+      ili_fitted_mcmc$rw_sd,
+      ili_df_total,
+      obs_model,
+      ili_time_horizons$nowcast_date,
+      fitting_method = "mcmc",
+      prob_prior_pars = select(
+        ili_branches_mcmc,
+        c("model_name", "scenario_name", paste0("delay_", seq_len(ili_max_lag) - 1))
+      ),
+      disp_prior_pars = select(
+        ili_branches_mcmc,
+        c("model_name", "mean_log", "sd_log", "scenario_name")
+      ),
+      data_origin = "ILI"
+    ),
+    pattern = sample(
+      map(
+        ili_fitted_mcmc,
+        ili_time_horizons,
+        ili_df_total,
+        ili_summarized_nowcast_mcmc,
+        ili_branches_mcmc
+      ),
+      n = 1
+    ),
+    # cue = tar_cue("never"),
+    iteration = "list"
+  ),
+  # Extract the diagnostic summaries for the MCMC models. We do it per branch to
+  # avoid loading all fits at once when we want to plot the diagnostics into a
+  # single plot.
+  tar_target(
+    ili_diagnostics,
+    ili_fitted_mcmc$diagnostics,
+    pattern = map(ili_fitted_mcmc)
+  ),
+  # Plot the diagnostic summaries for the MCMC models
+  tar_target(
+    ili_plot_diagnostics,
+    plot_mcmc_diagnostics(
+      ili_diagnostics,
+      obs_model,
+      data_origin = "ILI"
+    )
+  ),
+  # Fit the gamlss models
+  tar_target(
+    ili_fitted_glm,
+    fit_all_glm_models(
+      stan_data = ili_stan_data,
+      date_of_the_nowcast = ili_branches_glm$nowcast_date,
+      model_name = ili_branches_glm$model_name
+    ),
+    pattern = map(ili_branches_glm, ili_stan_data),
+    iteration = "list"
+  ),
+  # Calculate the quantiles and CRPS of the nowcasts obtained by the GLM method
+  tar_target(
+    ili_summarized_nowcast_glm,
+    summarize_nowcast(
+      ili_fitted_glm$nowcast,
+      ili_df_total,
+      "glm"
+    ),
+    pattern = map(ili_fitted_glm, ili_df_total),
+    iteration = "list"
+  ),
+  # Create plots of aggregated results. We plot:
+  # - the coverage of nowcasts,
+  # - the crps decomposition.
+  # - the prediction intervals as bands around the data for each horizon
+  tar_target(
+    ili_aggreg_plots,
+    plot_aggregated(
+      bind_rows(
+        bind_rows(ili_summarized_nowcast_mcmc),
+        bind_rows(ili_summarized_nowcast_glm)
+      ),
+      ili_full_data,
+      data_origin = "ILI"
+    )
+  ),
+  # Extract the nowcasts from both fitting methods in the case study in order to
+  # show an example of nowcasts. We do it per branch here to avoid loading all
+  # fits at once when we want to plot only nowcasts for selected dates.
+  tar_target(
+    ili_df_nowcast_example,
+    filter_nowcast_example_dates(
+      ili_summarized_nowcast_mcmc,
+      ili_summarized_nowcast_glm,
+      ili_df_total,
+      dates_to_show = ili_nowcast_example_dates,
+      model_to_show = get_model_names()
+    ),
+    pattern = map(
+      ili_summarized_nowcast_mcmc,
+      ili_summarized_nowcast_glm,
+      ili_df_total
+    ),
+    iteration = "list"
+  ),
+  # Plot an example of nowcasts from all models (GLM & MCMC) in the case study
+  # for selected dates
+  tar_target(
+    ili_nowcast_plots,
+    plot_nowcast_example(
+      map(ili_df_nowcast_example, "nowcast"),
+      map(ili_df_nowcast_example, "total"),
+      ili_nowcast_example_dates,
+      data_origin = "ILI"
+    )
+  ),
+  # Plot the whole incidence trajectory highlighting the first and the last
+  # estimation windows
+  tar_target(
+    ili_whole_trajectory_plot,
+    plot_trajectory(
+      ili_full_data,
+      ili_analysis_start_date,
+      ili_analysis_end_date,
+      length_of_train_data,
+      ili_max_lag,
+      ili_aux_analysis_start_date,
+      data_origin = "ILI"
+    )
+  )
 )
