@@ -22,13 +22,15 @@ get_time_horizons <- function(
   start_date,
   timesteps_to_fit,
   length_of_train_data,
+  time_step = 7,
   skip_dates = NULL
 ) {
   data.frame(
-    train_data_begin = start_date + (seq_len(timesteps_to_fit) - 1) * 7
+    train_data_begin = start_date + (seq_len(timesteps_to_fit) - 1) * time_step
   ) |>
     mutate(
-      nowcast_date = .data$train_data_begin + (length_of_train_data - 1) * 7
+      nowcast_date = .data$train_data_begin +
+        (length_of_train_data - 1) * time_step
     ) |>
     filter(!(.data$nowcast_date %in% skip_dates))
 }

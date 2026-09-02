@@ -14,7 +14,8 @@
 #' @export
 create_totals_data_frame <- function(
   train_data,
-  start_date
+  start_date,
+  time_step = 7
 ) {
   # Data frame to plot the observations - final counts and counts available at
   # the time of creating the nowcast
@@ -23,7 +24,7 @@ create_totals_data_frame <- function(
       rowSums(train_data),
       rowSums(mock_unobserved(train_data), na.rm = TRUE)
     ),
-    date = rep(start_date + (seq_len(nrow(train_data)) - 1) * 7, 2),
+    date = rep(start_date + (seq_len(nrow(train_data)) - 1) * time_step, 2),
     data = rep(c("Final", "Preliminary"), each = nrow(train_data))
   )
 }
@@ -68,7 +69,8 @@ create_totals_data_frame <- function(
 summarize_nowcast <- function(
   df_nowcast,
   df_total,
-  fitting_method = c("mcmc", "glm")
+  fitting_method = c("mcmc", "glm"),
+  time_step = 7
 ) {
   fitting_method <- match.arg(fitting_method)
 
@@ -87,7 +89,7 @@ summarize_nowcast <- function(
   # Reformat the `week` column of the data frame with the nowcasts, so that it's
   # aligned with the actual date
   df_nowcast <- df_nowcast |>
-    mutate(date = start_date + (.data$week - 1) * 7) |>
+    mutate(date = start_date + (.data$week - 1) * time_step) |>
     # Remove the, now redundant, week column
     dplyr::select(-"week")
   # Quantiles of the sampled nowcasts to calculate - 5 % to 95 % quantiles with
@@ -132,7 +134,7 @@ summarize_nowcast <- function(
     mutate(
       # Calculate the nowcasting horizon and save it as a factor for easier
       # plotting
-      delay = factor(as.numeric(date - .data$nowcast_date) / 7),
+      delay = factor(as.numeric(date - .data$nowcast_date) / time_step),
       # Convert to factor to make sure, the plotting order of the models is
       # consistent.
       Distribution = factor(.data$Distribution, levels = get_model_names()),

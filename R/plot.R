@@ -1620,14 +1620,17 @@ plot_trajectory <- function(
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
-  # The auxiliary analysis ends exactly one week before the main analysis
-  aux_study_end <- start_date - 7
+  # Find a time step for calculating the x-axis coordinates based on the data
+  # resolution.
+  time_step <- as.numeric(full_data$date[2] - full_data$date[1])
+  # The auxiliary analysis ends exactly one week/day before the main analysis
+  aux_study_end <- start_date - time_step
   # Filter the full data to contain only the selected time period
   full_data <- full_data |> filter(date >= aux_study_start, date <= end_date)
   # Arrange the whole trajectory into a data frame for plotting
   totals <- full_data |>
     dplyr::select(paste0("value_", 1:max_lag - 1, "w")) |>
-    create_totals_data_frame(aux_study_start) |>
+    create_totals_data_frame(aux_study_start, time_step) |>
     # `create_totals_data_frame()` returns a long data frame containing the
     # final and the preliminary state of the data. For plotting the whole
     # trajectory we are interested only in the final values.
@@ -1635,7 +1638,7 @@ plot_trajectory <- function(
   # The end point of the first estimation window to be highlighted in the plot.
   # The estimation windows will be highlighted by braces drawn by
   # `ggpubr::geom_bracket()`.
-  first_window_end <- start_date + (length_of_train_data - 1) * 7
+  first_window_end <- start_date + (length_of_train_data - 1) * time_step
   # We need to find the maximum number of cases in the first and last estimation
   # window in order to place the brace correctly above them.
   first_window_max_cases <- totals |>
@@ -1680,7 +1683,7 @@ plot_trajectory <- function(
     ) +
     # Highlight the last window of training data including the nowcasting part
     ggpubr::geom_bracket(
-      xmin = end_date - (length_of_train_data - 1) * 7,
+      xmin = end_date - (length_of_train_data - 1) * time_step,
       xmax = end_date,
       y.position = overall_max_cases + bracket_offset,
       label = "Last\nwindow",
@@ -1885,14 +1888,15 @@ plot_nowcast_bands <- function(
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
-
+  # Calculate the time resolution of the data
+  time_step <- full_data$date[2] - full_data$date[1]
   # End points of the trajectory is recovered from the data frame containing the
   # nowcasting results. In case we begin or end with skipped dates (Christmas),
   # we might need to adjust this.
   start_date <- min(df_nowcast$date)
   # In case we display a long trajectory like in the simulation study,
   # we will show only the first 150 weeks
-  end_date <- min(max(df_nowcast$date), start_date + 150 * 7)
+  end_date <- min(max(df_nowcast$date), start_date + 150 * time_step)
 
   full_filtered <- full_data |>
     filter(.data$date >= start_date & .data$date < end_date) |>
@@ -2051,10 +2055,13 @@ plot_nowcast_bands_per_horizon <- function(
         labels = get_interaction_names(nowcast_bands_ordering = TRUE)
       )
     )
+  # Find the time resolution of the data
+  dates <- sort(unique(df_nowcast$date))
+  time_step <- dates[2] - dates[1]
 
   # Arrange the whole trajectory into a data frame for plotting
   totals <- data.frame(
-    date = start_date + (seq_along(true_data) - 1) * 7,
+    date = start_date + (seq_along(true_data) - 1) * time_step,
     true_data = true_data,
     prelim_data = prelim_data
   ) |>
