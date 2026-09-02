@@ -58,8 +58,8 @@ get_time_horizons <- function(
 #' `value_1w`, etc. until `max_lag - 1`. The same data frame is saved onto the
 #' disc in the CSV format.
 #'
-#' @import dplyr mutate
-#' @import tidyr pivot_wider
+#' @importFrom dplyr mutate
+#' @importFrom tidyr pivot_wider
 #' @importFrom epidatr pub_fluview epirange
 #' @importFrom readr write_csv
 #'
@@ -238,6 +238,7 @@ simulate_full_data <- function(
     nb_size = nb_size,
     model = model,
     fixed_lambda = mean_proc,
+    switch_last_cols_prob = switch_last_cols_prob,
     seed = seed
   )$reports
   # Coerce the matrix to a data frame and name the columns appropriately
