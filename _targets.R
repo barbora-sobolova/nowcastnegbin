@@ -82,7 +82,7 @@ nowcast_example_dates <- as.Date("2025-02-16")
 # How many columns of the reporting triangle there is.
 ili_max_lag <- 6
 # Where the beginning of the data used for the case study is
-ili_analysis_start_date <- as.Date("2015-06-22")
+ili_analysis_start_date <- as.Date("2015-06-15")
 # We run an auxiliary case study of 11 time windows before the actual one to
 # determine the prior distributions. The proportion of the length of the
 # auxiliary vs. main analysis is similar to the SARI data
@@ -1076,10 +1076,9 @@ list(
 
   # Download and process the data available from the Delphi API to the format
   # used by our functions. The dataset is stored as a CSV file analogous to
-  # the SARI reporting triangle. We load the data later from the local disc,
-  # so this target does not need to be rerun.
+  # the SARI reporting triangle.
   tar_target(
-    download_ili_data,
+    ili_full_data,
     process_ili_data(
       ili_analysis_start_date,
       timesteps_to_fit,
@@ -1088,16 +1087,6 @@ list(
       max_lag = ili_max_lag
     ),
     cue = tar_cue("never")
-  ),
-  # Load the preprocessed ILI data.
-  tar_target(
-    ili_full_data,
-    load_preprocessed_data(
-      here::here("inst", "extdata", "fluview_ili.csv"),
-      start_date = ili_aux_analysis_start_date,
-      num_of_weeks = aux_timesteps_to_fit +
-        2 * length_of_train_data + ili_timesteps_to_fit - 1
-    )
   ),
 
   # Fit the GLM models to the previous year to obtain the priors ---------------

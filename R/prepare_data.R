@@ -54,9 +54,9 @@ get_time_horizons <- function(
 #' main and auxiliary analysis
 #' @param max_lag integer, the number of columns of the reporting triangle
 #'
-#' @return a NULL value. During the run of the function, a data frame containing
-#' columns `date` and columns `value_0w`, `value_1w`, etc. until `max_lag - 1`
-#' is saved onto the disc in the CSV format.
+#' @return a data frame containing columns `date` and columns `value_0w`,
+#' `value_1w`, etc. until `max_lag - 1`. The same data frame is saved onto the
+#' disc in the CSV format.
 #'
 #' @import dplyr mutate
 #' @import tidyr pivot_wider
@@ -116,7 +116,7 @@ process_ili_data <- function(
     group_by(date) |>
     # Calculate the weekly increments. They occasionally become negative, which
     # we replace by 0.
-    mutate(counts = pmax(0, diff(c(0, .data$num_ili)))) |>
+    mutate(counts = diff(c(0, .data$num_ili))) |>
     ungroup() |>
     select(c("date", "counts", "delay", "dummy_col_name")) |>
     # Pivot the data to obtain a reporting triangle same as in the SARI case
@@ -130,11 +130,21 @@ process_ili_data <- function(
     mutate(age_group = "00+") |>
     # Adjust the column names with the reported counts by adding the "w" letter
     rename_with(~paste0(.x, "w"), starts_with("value"))
+  # Some negative values occur in the reporting table. When that happens, we
+  # subtract the corresponding number of counts from the last positive column to
+  # the left.
+  subtract <- rep(0, nrow(ili_processed))
+  for (k in rev(seq_len(max_lag) - 1)) {
+    col_name <- paste0("value_", k, "w")
+    ili_processed[, col_name] <- ili_processed[, col_name] + subtract
+    subtract <- pmin(0, ili_processed[, col_name][[1]])
+    ili_processed[, col_name] <- pmax(0, ili_processed[, col_name][[1]])
+  }
 
   # Save as a CSV file
   readr::write_csv(ili_processed, "inst/extdata/fluview_ili.csv")
-  # Return NULL, as the main job of saving the data is done
-  NULL
+  # Return the processed data frame
+  ili_processed
 }
 
 #' Load the data in the reporting triangle format
