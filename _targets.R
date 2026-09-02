@@ -1145,15 +1145,6 @@ list(
     ili_fitted_glm_aux$log_disp_coeff,
     pattern = map(ili_fitted_glm_aux)
   ),
-  # Determine the sensitivity analysis scenario. For the first pass, we do only
-  # the main analysis.
-  tar_target(ili_sensitivity_scenarios, {
-    data.frame(
-      scenario_name = c(""),
-      delay_prob_factor = c(4),
-      disp_par_factor = c(3)
-    )
-  }),
   # Calculate the prior parameters based on the estimates of the dispersion
   # parameter
   tar_target(
@@ -1161,9 +1152,9 @@ list(
     calc_disp_par_prior(
       ili_glm_log_disp_par_aux,
       # Sensitivity scenarios are the same as in the main analysis
-      ili_sensitivity_scenarios$disp_par_factor
+      sensitivity_scenarios$disp_par_factor
     ),
-    pattern = map(ili_sensitivity_scenarios)
+    pattern = map(sensitivity_scenarios)
   ),
   # Calculate the parameters of the Dirichlet prior from the auxiliary data
   # only, without looking at the GLM estimates.
@@ -1174,7 +1165,7 @@ list(
       ili_aux_analysis_start_date,
       ili_aux_analysis_start_date + length_of_train_data +
         aux_timesteps_to_fit,
-      unique(ili_sensitivity_scenarios$delay_prob_factor)
+      unique(sensitivity_scenarios$delay_prob_factor)
     )
   ),
 
@@ -1200,7 +1191,7 @@ list(
       ili_disp_par_prior,
       ili_prior_delay_param,
       fitting_method = "mcmc",
-      sensitivity_scenarios = ili_sensitivity_scenarios
+      sensitivity_scenarios = sensitivity_scenarios
     ),
     train_data_begin,
     nowcast_date
