@@ -10,7 +10,7 @@ plot_delay_prob(
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   true_value = NULL,
   example = FALSE,
@@ -36,14 +36,15 @@ saved file correctly}
 delay probability distribution}
 
 \item{data_origin}{a string indicating the data generating process of
-simulated data, or whether the data correspond to the case study. Possible
-values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
+simulated data, or the corresponding case study. Possible
+values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{sensitivity_sc}{a string indicating the sensitivity analysis scenario
 of the MCMC method. Empty string "" indicates the main analysis.}
 
-\item{true_value}{NULL for \code{data_origin = "case_study"}, otherwise the
-true value of the delay probability vector used to generate the data}
+\item{true_value}{NULL for \code{data_origin} equal "SARI", or "ILI",
+otherwise the true value of the delay probability vector used to generate the
+data}
 
 \item{example}{logical indicator, whether we want to point out the plot as
 an example of different posteriors between the NegBinX and NegBin2D/1D

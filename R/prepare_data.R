@@ -10,6 +10,8 @@
 #' @param length_of_train_data the size of one estimation window.
 #' @param skip_dates a date vector containing the dates, where we don't wish to
 #' calculate the nowcast
+#' @param time_step an integer indicating the time resolution of the data. The
+#' default \code{time_step = 7} imply weekly data resolution
 #'
 #' @return a data frame containing columns `train_data_begin`, with the
 #' estimation window starts in the date format, and `nowcast_date`, where the
@@ -22,15 +24,128 @@ get_time_horizons <- function(
   start_date,
   timesteps_to_fit,
   length_of_train_data,
+  time_step = 7,
   skip_dates = NULL
 ) {
   data.frame(
-    train_data_begin = start_date + (seq_len(timesteps_to_fit) - 1) * 7
+    train_data_begin = start_date + (seq_len(timesteps_to_fit) - 1) * time_step
   ) |>
     mutate(
-      nowcast_date = .data$train_data_begin + (length_of_train_data - 1) * 7
+      nowcast_date = .data$train_data_begin +
+        (length_of_train_data - 1) * time_step
     ) |>
     filter(!(.data$nowcast_date %in% skip_dates))
+}
+
+#' Download and save the ILI data
+#'
+#' @description This function downloads the ILI data from the Fluview project
+#' using the DELPHI epidemiological data API and converts it to the same format
+#' as the SARI data.
+#'
+#' @param start_date a date in the date format, the starting date of the first
+#' rolling window of the main analysis. This date is used to pivot around when
+#' determining the data points used for the main and the auxiliary analysis.
+#' @param timesteps_to_fit the number of rolling estimation windows in the main
+#' analysis.
+#' @param aux_timesteps_to_fit the number of rolling estimation windows in the
+#' auxiliary analysis.
+#' @param length_of_train_data the size of one estimation window, same for the
+#' main and auxiliary analysis
+#' @param max_lag integer, the number of columns of the reporting triangle
+#'
+#' @return a data frame containing columns `date` and columns `value_0w`,
+#' `value_1w`, etc. until `max_lag - 1`. The same data frame is saved onto the
+#' disc in the CSV format.
+#'
+#' @importFrom dplyr mutate
+#' @importFrom tidyr pivot_wider
+#' @importFrom epidatr pub_fluview epirange
+#' @importFrom readr write_csv
+#'
+#' @export
+process_ili_data <- function(
+  start_date,
+  timesteps_to_fit,
+  aux_timesteps_to_fit,
+  length_of_train_data,
+  max_lag = 6
+) {
+  # Last point of the last rolling window
+  analysis_end_date <- start_date +
+    (timesteps_to_fit + length_of_train_data - 2) * 7
+  # Find the start of the data to be downloaded. Before the first window begins,
+  # we need enough data to determine priors.
+  download_start <- start_date -
+    (aux_timesteps_to_fit + length_of_train_data - 1) * 7
+  # Download snapshots from some weeks after the analysis ends to consolidate
+  # the final data.
+  download_end <- analysis_end_date + (max_lag - 1) * 7
+
+  # Download the data using the Delphi API. The data are in a snapshot format.
+  ili_all <- epidatr::pub_fluview(
+    regions = "nat",
+    # Weeks we want to download
+    epiweeks = epidatr::epirange(
+      # Convert the date to the Year-week format readable by `epirange()`
+      format(download_start, "%Y%W"),
+      format(analysis_end_date, "%Y%W")
+    ),
+    # Which data versions to download.
+    issues = epidatr::epirange(
+      format(download_start, "%Y%W"),
+      format(download_end, "%Y%W")
+    )
+  ) |>
+    # The dates are shifted by one day in comparison to the McGough analysis.
+    # We shift them back to be compatible with the paper and with the SARI data,
+    # which assume Monday to be the reference day.
+    mutate(nowcast_date = .data$issue + 1, date = .data$epiweek + 1) |>
+    select(c("nowcast_date", "date", "num_ili"))
+  # Process the snapshots to the reporting triangle format
+  ili_processed <- ili_all |>
+    mutate(
+      delay = as.numeric((.data$nowcast_date - .data$date) / 7),
+      dummy_col_name = "value"
+    ) |>
+    # Truncate the data at the maximum lag. The truncated data becomes our
+    # underlying truth.
+    filter(.data$delay < max_lag) |>
+    # Arrange by date to calculate the increments from the cumulative data.
+    arrange(.data$date, .data$nowcast_date) |>
+    group_by(date) |>
+    # Calculate the weekly increments. They occasionally become negative, which
+    # we replace by 0.
+    mutate(counts = diff(c(0, .data$num_ili))) |>
+    ungroup() |>
+    select(c("date", "counts", "delay", "dummy_col_name")) |>
+    # Pivot the data to obtain a reporting triangle same as in the SARI case
+    # study
+    tidyr::pivot_wider(
+      id_cols = "date",
+      names_from = c("dummy_col_name", "delay"),
+      values_from = "counts"
+    ) |>
+    # Add a dummy age group column to match the SARI data
+    mutate(age_group = "00+") |>
+    # Adjust the column names with the reported counts by adding the "w" letter
+    rename_with(~paste0(.x, "w"), starts_with("value"))
+  # Some negative values occur in the reporting table. When that happens, we
+  # subtract the corresponding number of counts from the last positive column to
+  # the left.
+  subtract <- rep(0, nrow(ili_processed))
+  for (k in rev(seq_len(max_lag) - 1)) {
+    col_name <- paste0("value_", k, "w")
+    ili_processed[, col_name] <- ili_processed[, col_name] + subtract
+    subtract <- pmin(0, ili_processed[, col_name][[1]])
+    ili_processed[, col_name] <- pmax(0, ili_processed[, col_name][[1]])
+  }
+
+  # Save as a CSV file
+  readr::write_csv(ili_processed, "inst/extdata/fluview_ili.csv")
+  # Return the NULL value. To retrieve the data, they must be loaded from the
+  # disc
+  NULL
 }
 
 #' Load the data in the reporting triangle format

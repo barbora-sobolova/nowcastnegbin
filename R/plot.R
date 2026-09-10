@@ -20,8 +20,8 @@
 #' @param fitting_method a method used for fitting the nowcasting model: "mcmc",
 #' "glm", or "both", when we want to plot both methods next to each other
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param axis_limits a list with 2 elements named `x` and `y`. Each element
@@ -44,7 +44,7 @@ plot_nowcast <- function(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm", "both"),
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   axis_limits = list(x = c(NA, NA), y = c(NA, NA)),
   save_plot = TRUE
@@ -197,8 +197,8 @@ plot_nowcast <- function(
 #' intervals), `delay` (the nowcasting horizon) and the true value of the
 #' prediction target `true_val`
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param save_plot logical indicator, whether to save the plot using
@@ -214,7 +214,7 @@ plot_nowcast <- function(
 #' @export
 plot_coverage <- function(
   df_summarized_nowcast,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
@@ -262,7 +262,9 @@ plot_coverage <- function(
   # the coverage for each data generating process individually, or patchwork
   # them into a single plot. In the latter case, the individual plots must have
   # only one row to fit.
-  n_rows <- if (data_origin == "case_study") {
+  n_rows <- if (data_origin == "ILI") {
+    3
+  } else if (data_origin == "SARI") {
     2
   } else {
     1
@@ -317,7 +319,7 @@ plot_coverage <- function(
   # If we intend to plot results from a simulation, we display all simulations
   # together. For this reason we have to add the name of the data generating
   # process and place the legend to the bottom in a way it fits.
-  if (data_origin != "case_study") {
+  if (!(data_origin %in% c("SARI", "ILI"))) {
     coverage_plot <- coverage_plot +
       labs(title = get_dgp_title(data_origin)) +
       guides(alpha = guide_legend(nrow = 2), fill = guide_legend(nrow = 3)) +
@@ -326,14 +328,20 @@ plot_coverage <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
-    if (data_origin != "case_study") {
-      warning("Trying to save the coverage plot for a simulation scenario. The plot size might not be optimal.")  # nolint
+    if (data_origin == "ILI") {
+      plot_height <- 10
+    } else {
+      plot_height <- 7
+      if (data_origin != "SARI") {
+        warning("Trying to save the coverage plot for a simulation scenario. The plot size might not be optimal.")  # nolint
+      }
     }
+
     save_figure(
       coverage_plot,
       paste0("inst/figure/coverage_plot_", data_origin, sensitivity_sc),
       width = 10,
-      height = 7
+      height = plot_height
     )
     ret <- NULL
   } else {
@@ -353,8 +361,8 @@ plot_coverage <- function(
 #' `underprediction`, `overprediction`, `delay` (the nowcasting horizon),
 #' `quantile_50` and `true_val` (to calculate the mean absolute error).
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param save_plot logical indicator, whether to save the plot using
@@ -370,7 +378,7 @@ plot_coverage <- function(
 #' @export
 plot_crps_decomp <- function(
   df_summarized_nowcast,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
@@ -424,7 +432,9 @@ plot_crps_decomp <- function(
   # the coverage for each data generating process individually, or patchwork
   # them into a single plot. In the latter case, the individual plots must have
   # only one row to fit.
-  n_rows <- if (data_origin == "case_study") {
+  n_rows <- if (data_origin == "ILI") {
+    3
+  } else if (data_origin == "SARI") {
     2
   } else {
     1
@@ -507,7 +517,7 @@ plot_crps_decomp <- function(
   # If we intend to plot results from a simulation, we display all simulations
   # together. For this reason we have to add the name of the data generating
   # process and place the legend to the bottom in a way it fits.
-  if (data_origin != "case_study") {
+  if (!(data_origin %in% c("SARI", "ILI"))) {
     crps_decomp_plot <- crps_decomp_plot +
       labs(title = get_dgp_title(data_origin)) +
       guides(alpha = guide_legend(nrow = 3), fill = guide_legend(nrow = 3)) +
@@ -516,8 +526,13 @@ plot_crps_decomp <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
-    if (data_origin != "case_study") {
-      warning("Trying to save the CRPS plot for a simulation scenario. The plot size might not be optimal.")  # nolint
+    if (data_origin == "ILI") {
+      plot_height <- 10
+    } else {
+      plot_height <- 7
+      if (data_origin != "SARI") {
+        warning("Trying to save the coverage plot for a simulation scenario. The plot size might not be optimal.")  # nolint
+      }
     }
     save_figure(
       crps_decomp_plot,
@@ -527,7 +542,7 @@ plot_crps_decomp <- function(
         sensitivity_sc
       ),
       width = 10,
-      height = 7
+      height = plot_height
     )
     ret <- NULL
   } else {
@@ -602,12 +617,13 @@ patchwork_sim_results <- function(summarized_nowcast_list, save_plot = TRUE) {
 #' NegBin2M shares the prior with NegBinX and NegBin1M has the same prior as
 #' NegBin1D.
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
-#' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
-#' true value of the dispersion parameter used to generate the data
+#' @param true_value NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise the true value of the dispersion parameter used to generate the
+#' data
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -624,7 +640,7 @@ plot_disp_par <- function(
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   disp_prior_pars = NULL,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   true_value = NULL,
   save_plot = TRUE
@@ -712,7 +728,7 @@ plot_disp_par <- function(
 
   # If the data comes from a simulation, we will also plot the true parameter
   # value
-  if (data_origin != "case_study") {
+  if (!(data_origin %in% c("SARI", "ILI"))) {
     disp_par_plot <- disp_par_plot +
       geom_vline(aes(xintercept = true_value), linetype = "dashed")
   }
@@ -759,12 +775,13 @@ plot_disp_par <- function(
 #' @param prob_prior_pars a vector of the prior parameters of the Dirichlet
 #' delay probability distribution
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
-#' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
-#' true value of the delay probability vector used to generate the data
+#' @param true_value NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise the true value of the delay probability vector used to generate the
+#' data
 #' @param example logical indicator, whether we want to point out the plot as
 #' an example of different posteriors between the NegBinX and NegBin2D/1D
 #' models. If \code{example = TRUE}, than we plot/save a version of the plot
@@ -784,7 +801,7 @@ plot_delay_prob <- function(
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   true_value = NULL,
   example = FALSE,
@@ -884,7 +901,7 @@ plot_delay_prob <- function(
       labs(title = "Delay probability asymptotic distribution")
   }
 
-  if (data_origin != "case_study") {
+  if (!(data_origin %in% c("SARI", "ILI"))) {
     df_true_value <- data.frame(
       true_value = true_value,
       delay = factor(seq_along(true_value))
@@ -979,13 +996,13 @@ plot_delay_prob <- function(
 #' @param fitting_method a method used for fitting the nowcasting model, either
 #' "mcmc", or "glm"
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
-#' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
-#' vector of true values of the mean of the total counts used to generate the
-#' data. The length of the vector must be \code{max_lag - 1}
+#' @param true_value NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise a vector of true values of the mean of the total counts used to
+#' generate the data. The length of the vector must be \code{max_lag - 1}
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -1001,7 +1018,7 @@ plot_mean_proc <- function(
   date_of_the_nowcast,
   max_lag,
   fitting_method = c("mcmc", "glm"),
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   true_value = NULL,
   save_plot = TRUE
@@ -1038,7 +1055,7 @@ plot_mean_proc <- function(
       labs(title = expression(Asymptotic~distribution~of~lambda[t]))  # nolint
   }
 
-  if (data_origin != "case_study") {
+  if (!(data_origin %in% c("SARI", "ILI"))) {
     df_true_value <- data.frame(
       true_value = true_value,
       week = factor(seq_along(true_value) + train_data_lgt - max_lag + 1)
@@ -1099,8 +1116,8 @@ plot_mean_proc <- function(
 #' @param date_of_the_nowcast a date, when the nowcast is made to name the
 #' saved file correctly
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param save_plot logical indicator, whether to save the plot using
@@ -1118,7 +1135,7 @@ plot_rw_sd <- function(
   df_nb_size,
   model_names,
   date_of_the_nowcast,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
@@ -1224,15 +1241,17 @@ plot_rw_sd <- function(
 #' of the dispersion parametr. The data frame should have 6 rows, one for each
 #' model
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
-#' @param prob_true_val  NULL for \code{data_origin = "case_study"}, otherwise
-#' the true value of the delay probability vector used to generate the data
-#' @param disp_true_val NULL for \code{data_origin = "case_study"}, otherwise
-#' the true value of the dispersion parameter used to generate the data
-#' @param lambda_true_val NULL for \code{data_origin = "case_study"}, otherwise
-#' the vector of true values of the mean of the total counts used to generate
-#' the data. The length of the vector must be \code{max_lag - 1}
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param prob_true_val  NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise the true value of the delay probability vector used to generate the
+#' data
+#' @param disp_true_val NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise the true value of the dispersion parameter used to generate the
+#' data
+#' @param lambda_true_val NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise the vector of true values of the mean of the total counts used to
+#' generate the data. The length of the vector must be \code{max_lag - 1}
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -1253,7 +1272,7 @@ plot_per_window <- function(
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
   disp_prior_pars = NULL,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   prob_true_val = NULL,
   disp_true_val = NULL,
   lambda_true_val = NULL,
@@ -1393,8 +1412,8 @@ plot_per_window <- function(
 #' where we should leave gaps in the plot of the nowcasts.
 #' \code{skip_dates = NULL} if no gaps are to be plotted.
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plots using
 #' \code{ggsave()}
 #'
@@ -1402,8 +1421,8 @@ plot_per_window <- function(
 #' There is one list element per sensitivity analysis scenario, each list
 #' element contains 3 more elements (reserved for the coverage plot, CRPS plot
 #' and prediction interval bands). For the simulation study,
-#' (i.e. \code{data_origin} other than "case_study"), there is always NULL for
-#' the CRPS and coverage plot.
+#' (i.e. \code{data_origin} other than "SARI" or "ILI"), there is always NULL
+#' for the CRPS and coverage plot.
 #'
 #' @import dplyr ggplot2
 #' @importFrom patchwork plot_layout plot_spacer wrap_elements
@@ -1413,8 +1432,8 @@ plot_per_window <- function(
 plot_aggregated <- function(
   df_nowcast,
   full_data,
-  skip_dates,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  skip_dates = NULL,
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -1432,7 +1451,7 @@ plot_aggregated <- function(
     # CRPS plots individually. Rather, we glue them together using patchwork to
     # fit better on page of the manuscript.
     main_scenario <- scenario[k] == ""
-    if (data_origin == "case_study") {
+    if (data_origin %in% c("SARI", "ILI")) {
       p_coverage <- plot_coverage(
         filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
         data_origin,
@@ -1467,8 +1486,8 @@ plot_aggregated <- function(
   }
   # If the plots are to be saved, glue together the coverage and CRPS plots from
   # the sensitivity analysis.
-  if (save_plot && data_origin == "case_study") {
-    save_patchwork_plots(ret_list)
+  if (save_plot && data_origin %in% c("SARI", "ILI")) {
+    save_patchwork_plots(ret_list, data_origin)
     # If we save a plot, we usually return NULL in place of the individual
     # plots. For consistency, we reconstruct the list of NULLs with a
     # corresponding structure here.
@@ -1501,6 +1520,8 @@ plot_aggregated <- function(
 #' the inner list by plot type. The names of the sensitivity screnarios are:
 #' `prob_high`, `prob_low`, `disp_high`, `disp_low`. The names of the relevant
 #' individual plots are `coverage` and `crps_decomp`.
+#' @param data_origin a string indicating the case study we plot. Either "SARI",
+#' or "ILI". For the simulations, we don't run a robustness check.
 #'
 #' @return NULL
 #'
@@ -1508,7 +1529,8 @@ plot_aggregated <- function(
 #' @importFrom patchwork plot_layout plot_spacer
 #'
 #' @export
-save_patchwork_plots <- function(plot_list) {
+save_patchwork_plots <- function(plot_list, data_origin = c("SARI", "ILI")) {
+  data_origin <- match.arg(data_origin)
   # Add a plot title to distinguish between more and less informative priors.
   # The same title is used for the delay probability and the dispersion
   # parameter.
@@ -1531,10 +1553,10 @@ save_patchwork_plots <- function(plot_list) {
   patchworked_list <- vector("list", 4)
   # Names that will be used as file names
   names(patchworked_list) <- c(
-    "coverage_plot_case_study_prob",
-    "coverage_plot_case_study_disp",
-    "crps_decomposition_plot_case_study_prob",
-    "crps_decomposition_plot_case_study_disp"
+    paste("coverage_plot", data_origin, "prob", sep = "_"),
+    paste("coverage_plot", data_origin, "disp", sep = "_"),
+    paste("crps_decomposition_plot", data_origin, "prob", sep = "_"),
+    paste("crps_decomposition_plot", data_origin, "disp", sep = "_")
   )
   # Coverage plot for scenarios modifying the dispersion of the delay
   # probability prior
@@ -1566,11 +1588,16 @@ save_patchwork_plots <- function(plot_list) {
   ) + p_layout
   # Iterate over the plots and save them
   for (k in seq_along(patchworked_list)) {
+    plot_height <- if (data_origin == "ILI") {
+      9
+    } else {
+      6
+    }
     save_figure(
       patchworked_list[[k]],
       paste0("inst/figure/", names(patchworked_list)[k]),
       width = 13,
-      height = 6
+      height = plot_height
     )
   }
   NULL
@@ -1598,8 +1625,8 @@ save_patchwork_plots <- function(plot_list) {
 #' @param aux_study_start a date (indeed in the date format), where the
 #' auxiliary case study period used for determining the priors starts.
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -1616,18 +1643,21 @@ plot_trajectory <- function(
   length_of_train_data,
   max_lag,
   aux_study_start,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
-  # The auxiliary analysis ends exactly one week before the main analysis
-  aux_study_end <- start_date - 7
+  # Find a time step for calculating the x-axis coordinates based on the data
+  # resolution.
+  time_step <- as.numeric(full_data$date[2] - full_data$date[1])
+  # The auxiliary analysis ends exactly one week/day before the main analysis
+  aux_study_end <- start_date - time_step
   # Filter the full data to contain only the selected time period
   full_data <- full_data |> filter(date >= aux_study_start, date <= end_date)
   # Arrange the whole trajectory into a data frame for plotting
   totals <- full_data |>
     dplyr::select(paste0("value_", 1:max_lag - 1, "w")) |>
-    create_totals_data_frame(aux_study_start) |>
+    create_totals_data_frame(aux_study_start, time_step) |>
     # `create_totals_data_frame()` returns a long data frame containing the
     # final and the preliminary state of the data. For plotting the whole
     # trajectory we are interested only in the final values.
@@ -1635,7 +1665,7 @@ plot_trajectory <- function(
   # The end point of the first estimation window to be highlighted in the plot.
   # The estimation windows will be highlighted by braces drawn by
   # `ggpubr::geom_bracket()`.
-  first_window_end <- start_date + (length_of_train_data - 1) * 7
+  first_window_end <- start_date + (length_of_train_data - 1) * time_step
   # We need to find the maximum number of cases in the first and last estimation
   # window in order to place the brace correctly above them.
   first_window_max_cases <- totals |>
@@ -1651,8 +1681,8 @@ plot_trajectory <- function(
   bracket_offset <- first_window_max_cases * 0.1
   # For the simulation study, place the bracket indicating the first window a
   # little bit higher, since it is located near a season peak.
-  if (data_origin == "case_study") {
-    figure_path <- "inst/figure/SARI_trajectory"
+  if (data_origin %in% c("SARI", "ILI")) {
+    figure_path <- paste0("inst/figure/", data_origin, "_trajectory")
     first_window_bracket_y <- first_window_max_cases + bracket_offset
   } else {
     figure_path <- paste0("inst/figure/", data_origin, "_simulation_trajectory")
@@ -1680,7 +1710,7 @@ plot_trajectory <- function(
     ) +
     # Highlight the last window of training data including the nowcasting part
     ggpubr::geom_bracket(
-      xmin = end_date - (length_of_train_data - 1) * 7,
+      xmin = end_date - (length_of_train_data - 1) * time_step,
       xmax = end_date,
       y.position = overall_max_cases + bracket_offset,
       label = "Last\nwindow",
@@ -1692,7 +1722,7 @@ plot_trajectory <- function(
     ) +
     get_plot_theme()
 
-  if (data_origin != "case_study") {
+  if (!(data_origin %in% c("SARI", "ILI"))) {
     p_trajectory <- p_trajectory + labs(title = get_dgp_title(data_origin))
   }
 
@@ -1862,8 +1892,8 @@ plot_all_sim_trajectories <- function(
 #' where we should leave gaps in the plot of the nowcasts.
 #' \code{skip_dates = NULL} if no gaps are to be plotted.
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param save_plot logical indicator, whether to save the plot using
@@ -1880,19 +1910,20 @@ plot_nowcast_bands <- function(
   full_data,
   df_nowcast,
   skip_dates = NULL,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
-
+  # Calculate the time resolution of the data
+  time_step <- full_data$date[2] - full_data$date[1]
   # End points of the trajectory is recovered from the data frame containing the
   # nowcasting results. In case we begin or end with skipped dates (Christmas),
   # we might need to adjust this.
   start_date <- min(df_nowcast$date)
   # In case we display a long trajectory like in the simulation study,
   # we will show only the first 150 weeks
-  end_date <- min(max(df_nowcast$date), start_date + 150 * 7)
+  end_date <- min(max(df_nowcast$date), start_date + 150 * time_step)
 
   full_filtered <- full_data |>
     filter(.data$date >= start_date & .data$date < end_date) |>
@@ -1929,7 +1960,7 @@ plot_nowcast_bands <- function(
   # - the case study fitted using the GLM method
   # - the NegBinX simulation study fitted using the MCMC method
   # - the NegBinX simulation study fitted using the GLM method
-  split_figures <- data_origin == "case_study" && sensitivity_sc == ""
+  split_figures <- data_origin %in% c("SARI", "ILI") && sensitivity_sc == ""
   if (split_figures) {
     # Arrange all the patches
     arranged <- patchwork::wrap_plots(
@@ -1960,13 +1991,6 @@ plot_nowcast_bands <- function(
   }
 
   if (save_plot) {
-    # For the case study, we have 4 nowcasting horizons, for the simulation
-    # study only 3
-    plot_height <- if (data_origin == "case_study" && sensitivity_sc == "") {
-      20
-    } else {
-      15
-    }
     plot_path <- paste0(
       "inst/figure/nowcast_bands_",
       data_origin,
@@ -1977,22 +2001,21 @@ plot_nowcast_bands <- function(
         arranged,
         plot_path,
         width = 11.5,
-        height = plot_height * (length(horizons) - 1) / length(horizons)
+        height = 15
       )
       save_figure(
         patches[[1]],
         paste(plot_path, "delay0", sep = "_"),
         width = 11.5,
-        # Increase the height to make enough space for the axis labels and
-        # legend items
-        height = plot_height / length(horizons) + 2
+        # Fixed height to make enough space for the axis labels and legend items
+        height = 7
       )
     } else {
       save_figure(
         arranged,
         plot_path,
         width = 11.5,
-        height = plot_height
+        height = 15
       )
     }
     ret <- NULL
@@ -2051,10 +2074,13 @@ plot_nowcast_bands_per_horizon <- function(
         labels = get_interaction_names(nowcast_bands_ordering = TRUE)
       )
     )
+  # Find the time resolution of the data
+  dates <- sort(unique(df_nowcast$date))
+  time_step <- dates[2] - dates[1]
 
   # Arrange the whole trajectory into a data frame for plotting
   totals <- data.frame(
-    date = start_date + (seq_along(true_data) - 1) * 7,
+    date = start_date + (seq_along(true_data) - 1) * time_step,
     true_data = true_data,
     prelim_data = prelim_data
   ) |>
@@ -2221,8 +2247,8 @@ plot_nowcast_bands_per_horizon <- function(
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -2235,7 +2261,7 @@ plot_nowcast_bands_per_horizon <- function(
 plot_mcmc_diagnostics <- function(
   df_diagnostics,
   model_names,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -2326,8 +2352,8 @@ plot_mcmc_diagnostics <- function(
 #' @param dates_to_show a selection of a few consecutive dates for which we want
 #' to show the estimates.
 #' @param data_origin a string indicating the data generating process of
-#' simulated data, or whether the data correspond to the case study. Possible
-#' values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -2341,7 +2367,7 @@ plot_nowcast_example <- function(
   df_nowcast,
   df_total,
   dates_to_show,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -2404,10 +2430,7 @@ plot_nowcast_example <- function(
   if (save_plot) {
     save_figure(
       arranged,
-      paste0(
-        "inst/figure/nowcast_example_",
-        data_origin
-      ),
+      paste0("inst/figure/nowcast_example_", data_origin),
       width = 11.5,
       height = 7
     )
