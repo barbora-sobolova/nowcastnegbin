@@ -13,6 +13,9 @@
 #' negbin distribution. The lower, the more dispersed
 #' @param model name of the observation model
 #' @param fixed_lambda Numeric vector containing the values of the mean process.
+#' @param switch_last_cols_prob a real value between 0 and 1 including the
+#' endpoints. This is the probability that the cells in the last two columns
+#' switch places. This creates more variability for the later reporting delays.
 #' @param seed An integer for seeding the simulation
 #'
 #' @return The reporting table as a matrix
@@ -48,12 +51,17 @@ generate_reports <- function(
     "NegBin1M"
   ),
   fixed_lambda = NULL,
+  switch_last_cols_prob = 0,
   seed = 123456
 ) {
   model <- match.arg(
     model,
     c("Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M", "NegBin1M")
   )
+
+  if (sum(probs) != 1) {
+    stop("The delay probability vector does not sum up to one.")
+  }
 
   # If the mean process lambda is not specified already, we generate a random
   # walk
@@ -107,5 +115,17 @@ generate_reports <- function(
     samp <- rpois(lgt * max_lag, lambda = exp_obs) |>
       matrix(nrow = lgt, ncol = max_lag)
   }
+  # Switch the last two columns if the probability of switching is non-zero
+  if (switch_last_cols_prob > 0) {
+    switch <- rbinom(lgt, size = 1, switch_last_cols_prob)
+    last_col <- samp[, max_lag]
+    samp[, max_lag] <- ifelse(
+      switch == 1,
+      samp[, max_lag - 1],
+      samp[, max_lag]
+    )
+    samp[, max_lag - 1] <- ifelse(switch == 1, last_col, samp[, max_lag - 1])
+  }
+
   list(reports = samp, exp_obs_total = lambda)
 }
