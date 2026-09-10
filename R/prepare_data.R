@@ -239,7 +239,6 @@ simulate_full_data <- function(
     nb_size = nb_size,
     model = model,
     fixed_lambda = mean_proc,
-    switch_last_cols_prob = switch_last_cols_prob,
     seed = seed
   )$reports
   # Coerce the matrix to a data frame and name the columns appropriately
