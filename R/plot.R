@@ -1483,7 +1483,7 @@ plot_aggregated <- function(
   # If the plots are to be saved, glue together the coverage and CRPS plots from
   # the sensitivity analysis.
   # ADD THE ILI SENSITIVITY PLOTS LATER
-  if (save_plot && data_origin == "SARI") {
+  if (save_plot && data_origin %in% c("SARI", "ILI")) {
     save_patchwork_plots(ret_list, data_origin)
     # If we save a plot, we usually return NULL in place of the individual
     # plots. For consistency, we reconstruct the list of NULLs with a
@@ -1582,11 +1582,16 @@ save_patchwork_plots <- function(plot_list, data_origin) {
   ) + p_layout
   # Iterate over the plots and save them
   for (k in seq_along(patchworked_list)) {
+    plot_height <- if (data_origin == "ILI") {
+      9
+    } else {
+      6
+    }
     save_figure(
       patchworked_list[[k]],
       paste0("inst/figure/", names(patchworked_list)[k]),
       width = 13,
-      height = 6
+      height = plot_height
     )
   }
   NULL
