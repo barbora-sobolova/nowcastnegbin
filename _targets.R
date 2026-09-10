@@ -76,7 +76,6 @@ nowcast_example_dates <- as.Date("2025-02-16")
 # Global object related to the ILI dataset -------------------------------------
 
 # Parameters identical to the SARI analysis:
-# - number of the rolling windows
 # - number of windows used for the auxiliary study to determine the priors
 # - length of the training data, i.e. the size of the rolling window
 
