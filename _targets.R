@@ -82,6 +82,10 @@ nowcast_example_dates <- as.Date("2025-02-16")
 
 # How many columns of the reporting triangle there is.
 ili_max_lag <- 6
+# For how many dates we want to do the fitting. For each time step, we shift the
+# window of the train data to include a new week of observations mimicking a
+# real-time analysis. We don't skip any rolling windows.
+ili_timesteps_to_fit <- 100
 # Where the beginning of the data used for the case study is
 ili_analysis_start_date <- as.Date("2015-06-15")
 # We run an auxiliary case study of 11 time windows before the actual one to
@@ -91,11 +95,7 @@ ili_aux_analysis_start_date <- ili_analysis_start_date -
   (aux_timesteps_to_fit + length_of_train_data - 1) * 7
 # Where the end of the data used for the case study is
 ili_analysis_end_date <- ili_analysis_start_date +
-  (length_of_train_data + timesteps_to_fit - 2) * 7
-# For how many dates we want to do the fitting. For each time step, we shift the
-# window of the train data to include a new week of observations mimicking a
-# real-time analysis. We don't skip any rolling windows.
-ili_timesteps_to_fit <- 100
+  (length_of_train_data + ili_timesteps_to_fit - 2) * 7
 # Dates for which we want to show, what the nowcasts actually look like.
 ili_nowcast_example_dates <- as.Date("2015-12-28")
 
@@ -1097,7 +1097,7 @@ list(
     download_ili_data,
     process_ili_data(
       ili_analysis_start_date,
-      timesteps_to_fit,
+      ili_timesteps_to_fit,
       aux_timesteps_to_fit,
       length_of_train_data,
       max_lag = ili_max_lag
