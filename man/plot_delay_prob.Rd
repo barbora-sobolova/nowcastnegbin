@@ -42,8 +42,9 @@ values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
 \item{sensitivity_sc}{a string indicating the sensitivity analysis scenario
 of the MCMC method. Empty string "" indicates the main analysis.}
 
-\item{true_value}{NULL for \code{data_origin = "case_study"}, otherwise the
-true value of the delay probability vector used to generate the data}
+\item{true_value}{NULL for \code{data_origin} equal "SARI", or "ILI",
+otherwise the true value of the delay probability vector used to generate the
+data}
 
 \item{example}{logical indicator, whether we want to point out the plot as
 an example of different posteriors between the NegBinX and NegBin2D/1D

@@ -43,8 +43,8 @@ a nested list of ggplot objects or NULLs if \code{save_plot = TRUE}.
 There is one list element per sensitivity analysis scenario, each list
 element contains 3 more elements (reserved for the coverage plot, CRPS plot
 and prediction interval bands). For the simulation study,
-(i.e. \code{data_origin} other than "case_study"), there is always NULL for
-the CRPS and coverage plot.
+(i.e. \code{data_origin} other than "SARI" or "ILI"), there is always NULL
+for the CRPS and coverage plot.
 }
 \description{
 This is a wrapper around functions that plot the aggregated

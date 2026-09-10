@@ -45,8 +45,9 @@ values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
 \item{sensitivity_sc}{a string indicating the sensitivity analysis scenario
 of the MCMC method. Empty string "" indicates the main analysis.}
 
-\item{true_value}{NULL for \code{data_origin = "case_study"}, otherwise the
-true value of the dispersion parameter used to generate the data}
+\item{true_value}{NULL for \code{data_origin} equal "SARI", or "ILI",
+otherwise the true value of the delay probability vector used to generate the
+data}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}

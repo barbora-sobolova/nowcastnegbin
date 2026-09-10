@@ -621,8 +621,9 @@ patchwork_sim_results <- function(summarized_nowcast_list, save_plot = TRUE) {
 #' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
-#' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
-#' true value of the dispersion parameter used to generate the data
+#' @param true_value NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise the true value of the delay probability vector used to generate the
+#' data
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -778,8 +779,9 @@ plot_disp_par <- function(
 #' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
-#' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
-#' true value of the delay probability vector used to generate the data
+#' @param true_value NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise the true value of the delay probability vector used to generate the
+#' data
 #' @param example logical indicator, whether we want to point out the plot as
 #' an example of different posteriors between the NegBinX and NegBin2D/1D
 #' models. If \code{example = TRUE}, than we plot/save a version of the plot
@@ -998,8 +1000,8 @@ plot_delay_prob <- function(
 #' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
-#' @param true_value NULL for \code{data_origin = "case_study"}, otherwise the
-#' vector of true values of the mean of the total counts used to generate the
+#' @param true_value NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise the true value of the delay probability vector used to generate the
 #' data. The length of the vector must be \code{max_lag - 1}
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
@@ -1241,13 +1243,14 @@ plot_rw_sd <- function(
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
 #' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
-#' @param prob_true_val  NULL for \code{data_origin = "case_study"}, otherwise
-#' the true value of the delay probability vector used to generate the data
-#' @param disp_true_val NULL for \code{data_origin = "case_study"}, otherwise
-#' the true value of the dispersion parameter used to generate the data
-#' @param lambda_true_val NULL for \code{data_origin = "case_study"}, otherwise
-#' the vector of true values of the mean of the total counts used to generate
-#' the data. The length of the vector must be \code{max_lag - 1}
+#' @param prob_true_val  NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise the true value of the delay probability vector used to generate the
+#' data
+#' @param disp_true_val NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise the true value of the dispersion parameter used to generate the data
+#' @param lambda_true_val NULL for \code{data_origin} equal "SARI", or "ILI",
+#' otherwise the vector of true values of the mean of the total counts used to
+#' generate the data. The length of the vector must be \code{max_lag - 1}
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -1417,8 +1420,8 @@ plot_per_window <- function(
 #' There is one list element per sensitivity analysis scenario, each list
 #' element contains 3 more elements (reserved for the coverage plot, CRPS plot
 #' and prediction interval bands). For the simulation study,
-#' (i.e. \code{data_origin} other than "case_study"), there is always NULL for
-#' the CRPS and coverage plot.
+#' (i.e. \code{data_origin} other than "SARI" or "ILI"), there is always NULL
+#' for the CRPS and coverage plot.
 #'
 #' @import dplyr ggplot2
 #' @importFrom patchwork plot_layout plot_spacer wrap_elements
