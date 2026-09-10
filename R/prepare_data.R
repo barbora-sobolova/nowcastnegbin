@@ -143,8 +143,9 @@ process_ili_data <- function(
 
   # Save as a CSV file
   readr::write_csv(ili_processed, "inst/extdata/fluview_ili.csv")
-  # Return the processed data frame
-  ili_processed
+  # Return the NULL value. To retrieve the data, they must be loaded from the
+  # disc
+  NULL
 }
 
 #' Load the data in the reporting triangle format
