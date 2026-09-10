@@ -1076,9 +1076,10 @@ list(
 
   # Download and process the data available from the Delphi API to the format
   # used by our functions. The dataset is stored as a CSV file analogous to
-  # the SARI reporting triangle.
+  # the SARI reporting triangle. The saved CSV file exists in the project
+  # directory, so there is no need to run this target.
   tar_target(
-    ili_full_data,
+    download_ili_data,
     process_ili_data(
       ili_analysis_start_date,
       timesteps_to_fit,
@@ -1088,6 +1089,27 @@ list(
     ),
     cue = tar_cue("never")
   ),
+  # Load the preprocessed ILI data from the disc. This data spans the whole
+  # period from the beginning of the auxiliary case study to the end of the
+  # actual case study.
+  tar_target(ili_full_data, {
+    load_preprocessed_data(
+      here::here(
+        "inst",
+        "extdata",
+        "fluview_ili.csv"
+      ),
+      start_date = ili_aux_analysis_start_date,
+      # How many weeks of data (rows of the reporting triangle) we want to load.
+      # This is the length of the auxiliary case study (auxiliary windows +
+      # train data) and the length of the actual case study (train data +
+      # desired number of rolling windows). The -1 part is included to get the
+      # exact number of rolling windows, since we count the "zeroth" window as
+      # the first one.
+      num_of_weeks = aux_timesteps_to_fit +
+        2 * length_of_train_data + ili_timesteps_to_fit - 1
+    )
+  }),
 
   # Fit the GLM models to the previous year to obtain the priors ---------------
 
