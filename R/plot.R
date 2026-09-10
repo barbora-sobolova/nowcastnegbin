@@ -2424,7 +2424,7 @@ plot_nowcast_example <- function(
   if (save_plot) {
     save_figure(
       arranged,
-      paste("inst/figure/nowcast_example_", data_origin),
+      paste0("inst/figure/nowcast_example_", data_origin),
       width = 11.5,
       height = 7
     )
