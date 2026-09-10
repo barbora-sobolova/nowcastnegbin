@@ -1247,7 +1247,8 @@ plot_rw_sd <- function(
 #' otherwise the true value of the delay probability vector used to generate the
 #' data
 #' @param disp_true_val NULL for \code{data_origin} equal "SARI", or "ILI",
-#' otherwise the true value of the dispersion parameter used to generate the data
+#' otherwise the true value of the dispersion parameter used to generate the
+#' data
 #' @param lambda_true_val NULL for \code{data_origin} equal "SARI", or "ILI",
 #' otherwise the vector of true values of the mean of the total counts used to
 #' generate the data. The length of the vector must be \code{max_lag - 1}
