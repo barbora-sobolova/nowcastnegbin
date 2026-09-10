@@ -4,7 +4,7 @@
 \alias{save_patchwork_plots}
 \title{Arrange and save figures from the robustness check}
 \usage{
-save_patchwork_plots(plot_list, data_origin)
+save_patchwork_plots(plot_list, data_origin = c("SARI", "ILI"))
 }
 \arguments{
 \item{plot_list}{a list containing the individual plots from the 4
@@ -12,6 +12,9 @@ sensitivity analysis scenarios. The outer list is indexed by the scenarios,
 the inner list by plot type. The names of the sensitivity screnarios are:
 \code{prob_high}, \code{prob_low}, \code{disp_high}, \code{disp_low}. The names of the relevant
 individual plots are \code{coverage} and \code{crps_decomp}.}
+
+\item{data_origin}{a string indicating the case study we plot. Either "SARI",
+or "ILI". For the simulations, we don't run a robustness check.}
 }
 \description{
 This functions takes the individual coverage and CRPS plots of
