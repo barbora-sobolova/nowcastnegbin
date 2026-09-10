@@ -411,8 +411,8 @@ list(
       pattern = map(sim_fitted_mcmc, sim_df_total),
       iteration = "list"
     ),
-    # Create plots for a random sample of the rolling windows from the
-    # simulation study. For the MCMC procedure we plot:
+    # Create plots for a randomly selected rolling window in the simulation
+    # study. For the MCMC procedure we plot:
     # - the nowcast,
     # - posterior density of the delay probability,
     # - posterior density of the dispersion parameter on a scale, where 0 means
@@ -457,6 +457,9 @@ list(
         ),
         n = 1
       ),
+      # The plots are not generated on default, since they serve as a visual
+      # check of the posterior distributions and are not supposed to appear in
+      # the manuscript.
       cue = tar_cue("never"),
       iteration = "list"
     ),
@@ -493,8 +496,8 @@ list(
       pattern = map(sim_fitted_glm, sim_df_total),
       iteration = "list"
     ),
-    # Create plots for each rolling window of the simulation study. For the GLM
-    # procedure we plot:
+    # Create plots for a randomly selected rolling window in the simulation
+    # study. For the GLM procedure we plot:
     # - density of estimates of the delay probability,
     # - density of estimates of the mean process for the weeks, where we
     #   perform nowcasting
@@ -529,6 +532,9 @@ list(
         ),
         n = 1
       ),
+      # The plots are not generated on default, since they serve as a visual
+      # check of the posterior distributions and are not supposed to appear in
+      # the manuscript.
       cue = tar_cue("never"),
       iteration = "list"
     ),
@@ -885,7 +891,8 @@ list(
   pattern = map(fitted_mcmc, df_total),
   iteration = "list"
   ),
-  # Create plots for each rolling window. For the MCMC procedure we plot:
+  # Create plots for a randomly selected rolling window in the SARI case study.
+  # For the MCMC procedure we plot:
   # - the nowcast,
   # - posterior density of the delay probability,
   # - posterior density of the dispersion parameter on a scale, where 0 means
@@ -926,6 +933,9 @@ list(
     ),
     n = 1
   ),
+  # The plots are not generated on default, since they serve as a visual check
+  # of the posterior distributions and are not supposed to appear in the
+  # manuscript.
   cue = tar_cue("never"),
   iteration = "list"),
   # Extract the diagnostic summaries for the MCMC models. We do it per branch to
@@ -986,7 +996,8 @@ list(
   pattern = map(fitted_glm, df_total),
   iteration = "list"
   ),
-  # Create plots for each rolling window. For the GLM procedure we plot:
+  # Create plots for a randomly selected rolling window in the SARI case study.
+  # For the GLM procedure we plot:
   # - the nowcast,
   # - density of estimates of the delay probability,
   # - density of estimates of the mean process for the weeks, where we
@@ -1011,6 +1022,9 @@ list(
     map(fitted_glm, time_horizons, df_total, summarized_nowcast_glm),
     n = 1
   ),
+  # The plots are not generated on default, since they serve as a visual
+  # check of the posterior distributions and are not supposed to appear in
+  # the manuscript.
   cue = tar_cue("never"),
   iteration = "list"),
   # Create plots of aggregated results. We plot:
@@ -1294,7 +1308,7 @@ list(
     pattern = map(ili_fitted_mcmc, ili_df_total),
     iteration = "list"
   ),
-  # Create plots for each rolling window. For the MCMC procedure we plot:
+  # Create plots for a randomly selected rolling window in the ILI case study.
   # - the nowcast,
   # - posterior density of the delay probability,
   # - posterior density of the dispersion parameter on a scale, where 0 means
@@ -1335,7 +1349,10 @@ list(
       ),
       n = 1
     ),
-    # cue = tar_cue("never"),
+    # The plots are not generated on default, since they serve as a visual
+    # check of the posterior distributions and are not supposed to appear in
+    # the manuscript.
+    cue = tar_cue("never"),
     iteration = "list"
   ),
   # Extract the diagnostic summaries for the MCMC models. We do it per branch to
@@ -1376,6 +1393,42 @@ list(
     ),
     pattern = map(ili_fitted_glm, ili_df_total),
     iteration = "list"
+  ),
+  # Create plots for a randomly selected rolling window in the ILI case study.
+  # For the GLM procedure we plot:
+  # - the nowcast,
+  # - density of estimates of the delay probability,
+  # - density of estimates of the mean process for the weeks, where we
+  #   perform nowcasting
+  # - density of estimates of the dispersion parameter on a scale, where 0 means
+  #   the Poisson model and higher values indicate more dispersion.
+  tar_target(
+    ili_rolling_plots_glm,
+    plot_per_window(
+      ili_summarized_nowcast_glm,
+      ili_fitted_glm$delay_prob,
+      ili_fitted_glm$nb_size,
+      ili_fitted_glm$lambda,
+      NULL,  # We don't have the random walk parameters
+      ili_df_total,
+      obs_model_glm,
+      ili_time_horizons$nowcast_date,
+      fitting_method = "glm",
+      data_origin = "ILI"
+    ),
+    pattern = sample(
+      map(
+        ili_fitted_glm,
+        ili_time_horizons,
+        ili_df_total,
+        ili_summarized_nowcast_glm
+      ),
+      n = 1
+    ),
+    # The plots are not generated on default, since they serve as a visual
+    # check of the posterior distributions and are not supposed to appear in
+    # the manuscript.
+    cue = tar_cue("never")
   ),
   # Create plots of aggregated results. We plot:
   # - the coverage of nowcasts,
