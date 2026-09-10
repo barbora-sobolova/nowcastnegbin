@@ -7,6 +7,7 @@ tar_option_set(
   packages = c(
     "cmdstanr",
     "dplyr",
+    "epidatr",
     "gamlss.dist",
     "gamlss2",
     "ggplot2",
