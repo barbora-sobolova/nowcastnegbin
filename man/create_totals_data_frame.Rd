@@ -4,12 +4,15 @@
 \alias{create_totals_data_frame}
 \title{Create a data frame from the reporting table}
 \usage{
-create_totals_data_frame(train_data, start_date)
+create_totals_data_frame(train_data, start_date, time_step = 7)
 }
 \arguments{
 \item{train_data}{the reporting table in a matrix format}
 
 \item{start_date}{date (in a date format) when the incidence begins}
+
+\item{time_step}{an integer indicating the time resolution of the data. The
+default \code{time_step = 7} imply weekly data resolution}
 }
 \value{
 a data frame with columns \code{counts} and \code{date}. The data frame is in a

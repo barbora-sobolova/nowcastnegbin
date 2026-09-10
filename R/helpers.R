@@ -65,7 +65,7 @@ get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
 #' MCMC), so 2 labels will be highlighted in these cases.
 get_y_axis_model_labels <- function(data_origin) {
   model_y_labels <- get_interaction_names()
-  if (data_origin != "case_study") {
+  if (!(data_origin %in% c("SARI", "COVID"))) {
     which_to_highlight <- grepl(data_origin, names(model_y_labels))
     # Make the selected labels in the ggplot in bold
     model_y_labels <- lapply(

@@ -18,6 +18,7 @@ Roxygen: list(markdown = TRUE)
 Imports:
   cmdstanr,
   dplyr,
+  epidatr,
   gamlss.dist,
   gamlss,
   gamlss2,

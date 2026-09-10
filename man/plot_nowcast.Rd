@@ -10,7 +10,7 @@ plot_nowcast(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm", "both"),
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   sensitivity_sc = "",
   axis_limits = list(x = c(NA, NA), y = c(NA, NA)),
   save_plot = TRUE
@@ -38,8 +38,8 @@ saved file correctly}
 "glm", or "both", when we want to plot both methods next to each other}
 
 \item{data_origin}{a string indicating the data generating process of
-simulated data, or whether the data correspond to the case study. Possible
-values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
+simulated data, or the corresponding case study. Possible
+values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{sensitivity_sc}{a string indicating the sensitivity analysis scenario
 of the MCMC method. Empty string "" indicates the main analysis.}

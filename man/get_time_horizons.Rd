@@ -8,6 +8,7 @@ get_time_horizons(
   start_date,
   timesteps_to_fit,
   length_of_train_data,
+  time_step = 7,
   skip_dates = NULL
 )
 }
@@ -18,6 +19,9 @@ estimation window.}
 \item{timesteps_to_fit}{the number of rolling estimation windows.}
 
 \item{length_of_train_data}{the size of one estimation window.}
+
+\item{time_step}{an integer indicating the time resolution of the data. The
+default \code{time_step = 7} imply weekly data resolution}
 
 \item{skip_dates}{a date vector containing the dates, where we don't wish to
 calculate the nowcast}

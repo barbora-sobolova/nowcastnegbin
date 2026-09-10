@@ -16,7 +16,7 @@ plot_per_window(
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
   disp_prior_pars = NULL,
-  data_origin = c("case_study", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
   prob_true_val = NULL,
   disp_true_val = NULL,
   lambda_true_val = NULL,
@@ -75,18 +75,20 @@ of the dispersion parametr. The data frame should have 6 rows, one for each
 model}
 
 \item{data_origin}{a string indicating the data generating process of
-simulated data, or whether the data correspond to the case study. Possible
-values are "case_study", "NegBinX", "NegBin2D" and "NegBin1D"}
+simulated data, or the corresponding case study. Possible
+values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
 
-\item{prob_true_val}{NULL for \code{data_origin = "case_study"}, otherwise
-the true value of the delay probability vector used to generate the data}
+\item{prob_true_val}{NULL for \code{data_origin} equal "SARI", or "ILI",
+otherwise the true value of the delay probability vector used to generate the
+data}
 
-\item{disp_true_val}{NULL for \code{data_origin = "case_study"}, otherwise
-the true value of the dispersion parameter used to generate the data}
+\item{disp_true_val}{NULL for \code{data_origin} equal "SARI", or "ILI",
+otherwise the true value of the dispersion parameter used to generate the
+data}
 
-\item{lambda_true_val}{NULL for \code{data_origin = "case_study"}, otherwise
-the vector of true values of the mean of the total counts used to generate
-the data. The length of the vector must be \code{max_lag - 1}}
+\item{lambda_true_val}{NULL for \code{data_origin} equal "SARI", or "ILI",
+otherwise the vector of true values of the mean of the total counts used to
+generate the data. The length of the vector must be \code{max_lag - 1}}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}
