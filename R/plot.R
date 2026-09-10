@@ -622,7 +622,7 @@ patchwork_sim_results <- function(summarized_nowcast_list, save_plot = TRUE) {
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param true_value NULL for \code{data_origin} equal "SARI", or "ILI",
-#' otherwise the true value of the delay probability vector used to generate the
+#' otherwise the true value of the dispersion parameter used to generate the
 #' data
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
@@ -1001,8 +1001,8 @@ plot_delay_prob <- function(
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param true_value NULL for \code{data_origin} equal "SARI", or "ILI",
-#' otherwise the true value of the delay probability vector used to generate the
-#' data. The length of the vector must be \code{max_lag - 1}
+#' otherwise a vector of true values of the mean of the total counts used to
+#' generate the data. The length of the vector must be \code{max_lag - 1}
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'

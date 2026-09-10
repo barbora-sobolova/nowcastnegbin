@@ -43,8 +43,8 @@ values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
 of the MCMC method. Empty string "" indicates the main analysis.}
 
 \item{true_value}{NULL for \code{data_origin} equal "SARI", or "ILI",
-otherwise the true value of the delay probability vector used to generate the
-data. The length of the vector must be \code{max_lag - 1}}
+otherwise a vector of true values of the mean of the total counts used to
+generate the data. The length of the vector must be \code{max_lag - 1}}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}
