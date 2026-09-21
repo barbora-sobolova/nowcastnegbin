@@ -344,10 +344,8 @@ plot_coverage <- function(
   if (save_plot) {
     if (data_origin == "ILI") {
       plot_height <- 10
-      plot_width <- 15
     } else {
       plot_height <- 7
-      plot_width <- 10
       if (data_origin != "SARI") {
         warning("Trying to save the coverage plot for a simulation scenario. The plot size might not be optimal.")  # nolint
       }
