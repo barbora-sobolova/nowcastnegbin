@@ -62,6 +62,11 @@ generate_reports <- function(
   if (sum(probs) != 1) {
     stop("The delay probability vector does not sum up to one.")
   }
+  if (length(switch_last_cols_prob) != 1L ||
+        switch_last_cols_prob < 0 ||
+        switch_last_cols_prob > 1) {
+    stop("'switch_last_cols_prob' must be a finite number between 0 and 1.")
+  }
 
   # If the mean process lambda is not specified already, we generate a random
   # walk
