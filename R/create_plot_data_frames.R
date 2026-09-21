@@ -264,7 +264,15 @@ filter_nowcast_example_dates <- function(
   df_total,
   df_lambda_mcmc = NULL,
   df_lambda_glm = NULL,
-  dates_to_show = c("2019-03-24", "2019-03-31", "2019-04-07", "2019-04-14"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
+  dates_to_show = NULL,
   model_to_show = c(
     "Poisson",
     "NegBinX",

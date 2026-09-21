@@ -4,7 +4,12 @@
 \alias{create_totals_data_frame}
 \title{Create a data frame from the reporting table}
 \usage{
-create_totals_data_frame(train_data, start_date, time_step = 7)
+create_totals_data_frame(
+  train_data,
+  start_date,
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
+  time_step = 7
+)
 }
 \arguments{
 \item{train_data}{the reporting table in a matrix format}

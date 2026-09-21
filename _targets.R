@@ -576,7 +576,8 @@ list(
         sim_summarized_nowcast_glm,
         sim_df_total,
         dates_to_show = sim_nowcast_example_dates,
-        model_to_show = get_model_names()
+        model_to_show = get_model_names(),
+        data_origin = sc_name
       ),
       pattern = map(
         sim_summarized_nowcast_mcmc,
@@ -803,7 +804,7 @@ list(
     )
   }),
 
-  # Main part of the case study ------------------------------------------------
+  # Main part of the SARI case study -------------------------------------------
 
   # Data frame storing the beginning and end points of the training data to
   # keep track of the rolling windows
@@ -872,7 +873,8 @@ list(
   tar_target(df_total, {
     create_totals_data_frame(
       train_data$train_data,
-      time_horizons$train_data_begin
+      time_horizons$train_data_begin,
+      "SARI"
     )
   },
   pattern = map(time_horizons, train_data),
@@ -1066,7 +1068,8 @@ list(
       summarized_nowcast_glm,
       df_total,
       dates_to_show = nowcast_example_dates,
-      model_to_show = get_model_names()
+      model_to_show = get_model_names(),
+      data_origin = "SARI"
     ),
     pattern = map(
       summarized_nowcast_mcmc,
@@ -1074,17 +1077,6 @@ list(
       df_total
     ),
     iteration = "list"
-  ),
-  # Plot an example of nowcasts from all models (GLM & MCMC) in the case study
-  # for selected dates
-  tar_target(
-    nowcast_plots,
-    plot_nowcast_example(
-      map(df_nowcast_example, "nowcast"),
-      map(df_nowcast_example, "total"),
-      nowcast_example_dates,
-      data_origin = "SARI"
-    )
   ),
 
   # ILI incidence case study ===================================================
@@ -1122,7 +1114,8 @@ list(
       # exact number of rolling windows, since we count the "zeroth" window as
       # the first one.
       num_of_weeks = aux_timesteps_to_fit +
-        2 * length_of_train_data + ili_timesteps_to_fit - 1
+        2 * length_of_train_data + ili_timesteps_to_fit - 1,
+      dataset = "ILI"
     )
   }),
 
@@ -1275,7 +1268,8 @@ list(
     ili_df_total,
     create_totals_data_frame(
       ili_train_data$train_data,
-      ili_time_horizons$train_data_begin
+      ili_time_horizons$train_data_begin,
+      "ILI"
     ),
     pattern = map(ili_time_horizons, ili_train_data),
     iteration = "list"
@@ -1456,7 +1450,8 @@ list(
       ili_summarized_nowcast_glm,
       ili_df_total,
       dates_to_show = ili_nowcast_example_dates,
-      model_to_show = get_model_names()
+      model_to_show = get_model_names(),
+      data_origin = "ILI"
     ),
     pattern = map(
       ili_summarized_nowcast_mcmc,
@@ -1471,12 +1466,18 @@ list(
   # Plot an example of nowcasts from all models (GLM & MCMC) in the case study
   # for selected dates
   tar_target(
-    ili_nowcast_plots,
+    nowcast_plots,
     plot_nowcast_example(
-      map(ili_df_nowcast_example, "nowcast"),
-      map(ili_df_nowcast_example, "total"),
-      ili_nowcast_example_dates,
-      data_origin = "ILI"
+      bind_rows(
+        unname(map(df_nowcast_example, "nowcast")),
+        unname(map(ili_df_nowcast_example, "nowcast"))
+      ),
+      bind_rows(
+        unname(map(df_nowcast_example, "total")),
+        unname(map(ili_df_nowcast_example, "total"))
+      ),
+      dataset = c("SARI", "ILI"),
+      dates_to_show = c(nowcast_example_dates, ili_nowcast_example_dates)
     )
   ),
   # Plot the whole incidence trajectory highlighting the first and the last

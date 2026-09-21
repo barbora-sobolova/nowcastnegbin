@@ -7,8 +7,9 @@
 plot_nowcast_example(
   df_nowcast,
   df_total,
+  dataset,
   dates_to_show,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  sens_sc = "",
   save_plot = TRUE
 )
 }
@@ -28,12 +29,12 @@ version. Needed to plot the observations alongside the nowcasts. The
 individual data frames in the list correspond to different dates, when the
 nowcast is calculated.}
 
-\item{dates_to_show}{a selection of a few consecutive dates for which we want
-to show the estimates.}
-
-\item{data_origin}{a string indicating the data generating process of
+\item{dataset}{a string indicating the data generating process of
 simulated data, or the corresponding case study. Possible
 values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
+
+\item{dates_to_show}{a selection of a few consecutive dates for which we want
+to show the estimates. Must be of equale length as \code{dataset}.}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}

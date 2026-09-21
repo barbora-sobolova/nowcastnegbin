@@ -146,7 +146,8 @@ plot_nowcast <- function(
     labs(
       x = "Date",
       y = "Incidence",
-      title = paste0(
+      title = get_dgp_title(data_origin),
+      subtitle = paste0(
         "Nowcasts on ",
         format(as.Date(date_of_the_nowcast), "%d %b %Y")
       )
@@ -2458,8 +2459,8 @@ plot_mcmc_diagnostics <- function(
 #' individual data frames in the list correspond to different dates, when the
 #' nowcast is calculated.
 #' @param dates_to_show a selection of a few consecutive dates for which we want
-#' to show the estimates.
-#' @param data_origin a string indicating the data generating process of
+#' to show the estimates. Must be of equale length as \code{dataset}.
+#' @param dataset a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
 #' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param save_plot logical indicator, whether to save the plot using
@@ -2474,24 +2475,19 @@ plot_mcmc_diagnostics <- function(
 plot_nowcast_example <- function(
   df_nowcast,
   df_total,
+  dataset,
   dates_to_show,
-  data_origin = c(
-    "SARI",
-    "ILI",
-    "NegBinX",
-    "NegBin2D",
-    "NegBin1D",
-    "NegBinX_switch"
-  ),
+  sens_sc = "",
   save_plot = TRUE
 ) {
-  data_origin <- match.arg(data_origin)
-
-  # Bind rows of all the data frames that are in a list format
-  df_total <- bind_rows(df_total)
-  df_nowcast <- bind_rows(df_nowcast) |>
-    # Create a faceting variable, which is the interaction of the observation
-    # model and the fitting method
+  # Throw an error if nowcasts for multiple dates and data generating processes
+  # are to be plotted, since the combined dataset would likely be hard to read.
+  if (length(dataset) != length(dates_to_show)) {
+    stop("Arguments `dataset` and `dates_to_show` must be of the same length.")  # nolint
+  }
+  # Create a faceting variable, which is the interaction of the observation
+  # model and the fitting method
+  df_nowcast <- df_nowcast |>
     mutate(
       model_method_interact = factor(
         interaction(.data$Distribution, .data$method),
@@ -2499,40 +2495,35 @@ plot_nowcast_example <- function(
         labels = get_interaction_names(nowcast_bands_ordering = TRUE)
       )
     )
-  # Find the axis limits. X-axis limits are defined as the beginning of the
-  # first rolling window and the end of the last rolling window. Having fixed
-  # x-axis limits helps with collecting the axis via `plot_layout()`, which
-  # saves some vertical space, that would otherwise be occupied by x-axis
-  # labels. Y-axis labels are set for the patchwork plot to have consistent
-  # y-axis scale for all subplots.
-  axis_limits <- list(
-    x = range(df_total$date),
-    y = c(
-      min(df_total$counts),
-      max(c(df_nowcast$quantile_97.5, df_total$counts))
-    )
-  )
-
-  # Loop over the dates, on which the nowcasts are calculated
+  # Loop over the dates, or data-generating processes on which the nowcasts are
+  # calculated
   patches <- vector("list", length(dates_to_show))
-  names(patches) <- dates_to_show
+  names(patches) <- paste(dataset, dates_to_show, sep = "_")
   for (k in seq_along(patches)) {
     df_nowcast_filtered <- df_nowcast |>
-      filter(.data$nowcast_date == dates_to_show[k])
+      filter(
+        .data$nowcast_date == dates_to_show[k] &
+          .data$data_origin == dataset[k] &
+          .data$sensitivity_sc == sens_sc
+      )
     df_total_filtered <- df_total |>
-      filter(.data$nowcast_date == dates_to_show[k])
+      filter(
+        .data$nowcast_date == dates_to_show[k] &
+          .data$data_origin == dataset[k]
+      )
     patches[[k]] <- plot_nowcast(
       df_nowcast_filtered,
       df_total_filtered,
       get_interaction_names(),
       dates_to_show[k],
       fitting_method = "both",
-      data_origin = data_origin,
-      sensitivity_sc = "",
-      axis_limits = axis_limits,
+      data_origin = dataset[k],
+      sensitivity_sc = sens_sc,
+      axis_limits = list(x = c(NA, NA), y = c(NA, NA)),
       save_plot = FALSE
     )
   }
+
   # Arrange all the patches
   arranged <- patchwork::wrap_plots(
     patches,
@@ -2543,11 +2534,12 @@ plot_nowcast_example <- function(
   )
   # Save the plot if required, the width, height and path are hard-coded here
   if (save_plot) {
+    plot_height <- length(dataset) * 5 + 1
     save_figure(
       arranged,
-      paste0("inst/figure/nowcast_example_", data_origin),
+      paste0("inst/figure/nowcast_example_", paste(dataset, collapse = "_")),
       width = 11.5,
-      height = 7
+      height = plot_height
     )
     ret <- NULL
   } else {

@@ -4,7 +4,13 @@
 \alias{filter_and_combine_methods}
 \title{Combine data frames of results from different methods}
 \usage{
-filter_and_combine_methods(df_mcmc, df_glm, dates_to_show, model_to_show)
+filter_and_combine_methods(
+  df_mcmc,
+  df_glm,
+  dates_to_show,
+  model_to_show,
+  data_origin
+)
 }
 \arguments{
 \item{df_mcmc}{a data frame with results obtained via the MCMC method}

@@ -151,6 +151,7 @@ get_interaction_colors <- function() {
 get_plot_theme <- function() {
   theme(
     plot.title = element_text(size = 16, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
     axis.title = element_text(size = 14),
     axis.text = element_text(size = 12),
     legend.title = element_text(size = 16),
