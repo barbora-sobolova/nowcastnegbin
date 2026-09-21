@@ -1766,7 +1766,8 @@ plot_trajectory <- function(
       xmax = aux_study_end,
       y.position = first_window_max_cases + bracket_offset,
       label = "Data to\ninform priors",
-      label.size = 4
+      label.size = 4,
+      lineheight = 0.8
     ) +
     # Highlight the first window of training data including the nowcasting
     # part
@@ -1775,7 +1776,8 @@ plot_trajectory <- function(
       xmax = first_window_end,
       y.position = first_window_bracket_y,
       label = "First\nwindow",
-      label.size = 4
+      label.size = 4,
+      lineheight = 0.8
     ) +
     # Highlight the last window of training data including the nowcasting part
     ggpubr::geom_bracket(
@@ -1783,7 +1785,8 @@ plot_trajectory <- function(
       xmax = end_date,
       y.position = overall_max_cases + bracket_offset,
       label = "Last\nwindow",
-      label.size = 4
+      label.size = 4,
+      lineheight = 0.8
     ) +
     labs(y = "Incidence", x = "Date", title = get_dgp_title(data_origin)) +
     ylim(
