@@ -62,10 +62,12 @@ get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
 #' fuction would return. If the data generating process is known, the return
 #' object is a list and we show the model labels aligned with it in bold. For
 #' the NegBinX and NegBin1D models, we fit the models with both methods (GLM and
-#' MCMC), so 2 labels will be highlighted in these cases.
+#' MCMC), so 2 labels will be highlighted in these cases. If the data generating
+#' process is a simulation, but from a perturbed model, we don't highlight
+#' anything.
 get_y_axis_model_labels <- function(data_origin) {
   model_y_labels <- get_interaction_names()
-  if (!(data_origin %in% c("SARI", "COVID"))) {
+  if (!(data_origin %in% c("SARI", "COVID", "NegBinX_switch"))) {
     which_to_highlight <- grepl(data_origin, names(model_y_labels))
     # Make the selected labels in the ggplot in bold
     model_y_labels <- lapply(
@@ -94,12 +96,17 @@ get_y_axis_model_labels <- function(data_origin) {
 get_dgp_title <- function(data_origin) {
   formatted_data_origin <- switch(
     data_origin,
-    # We use only these three as a data generating process in the simulations
+    # We use only these four as a data generating process in the simulations
     NegBinX = "NegBin-X",
     NegBin1D = "NegBin-LD",
-    NegBin2D = "NegBin-QD"
+    NegBin2D = "NegBin-QD",
+    NegBinX_switch = "NegBin-X"
   )
-  paste0(formatted_data_origin, " data generating process")
+  title_str <- paste0(formatted_data_origin, " data generating process")
+  if (data_origin == "NegBinX_switch") {
+    title_str <- paste0(title_str, " with irregularities")
+  }
+  title_str
 }
 
 #' Get the colors of the observation models for the plots

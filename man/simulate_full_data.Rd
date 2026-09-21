@@ -11,6 +11,7 @@ simulate_full_data(
   probs,
   nb_size = NULL,
   model = c("Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M", "NegBin1M"),
+  switch_last_cols_prob = 0,
   seed = 123456
 )
 }
@@ -29,6 +30,10 @@ to be passed to \code{generate_reports}.}
 negbin distribution. The lower, the more dispersed}
 
 \item{model}{name of the observation model}
+
+\item{switch_last_cols_prob}{a real value between 0 and 1 including the
+endpoints. This is the probability that the cells in the last two columns
+switch places. This creates more variability for the later reporting delays.}
 
 \item{seed}{An integer for seeding the simulation}
 }

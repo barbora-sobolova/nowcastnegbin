@@ -123,15 +123,23 @@ sim_timesteps_to_fit <- 500
 sim_end_date <- sim_start_date +
   (length_of_train_data + sim_timesteps_to_fit - 2) * 7
 # Delay probabilities used in the simulation.
-sim_delay_prob <- c(0.5, 0.3, 0.2, 0.1)
+sim_delay_prob <- c(0.5, 0.3, 0.15, 0.05)
 # Dispersion parameter of the negative binomial distribution used in the
 # simulation. No single value can be used, as the dispersion parameters are on a
 # different scale for each model.
 sim_disp_par <- c("NegBinX" = 0.04, "NegBin2D" = 0.01, "NegBin1D" = 100)
 # Selected models for the simulation study
 sim_obs_model <- data.frame(
-  model_obs = c("NegBinX", "NegBin2D", "NegBin1D"),
-  model_number = c(1, 2, 3)
+  # Observation model name
+  model_obs = c("NegBinX", "NegBin2D", "NegBin1D", "NegBinX"),
+  # Observation model internal number
+  model_number = c(1, 2, 3, 1),
+  # Probability that the last two columns switch places
+  switch_last_cols_prob = c(0, 0, 0, 0.2),
+  # Scenario name
+  sc_name = c("NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
+  # Seed, which is set before generating the whole trajectory
+  sim_seed = c(2436, 2437, 2438, 2439)
 )
 # Date for which we want to show, what the nowcasts actually look like in the
 # simulation.
@@ -141,8 +149,6 @@ sim_nowcast_example_dates <- as.Date("2018-04-01")
 glm_overshoot_dates <- as.Date(
   c("2019-03-24", "2019-03-31", "2019-04-07", "2019-04-14")
 )
-# Seed used to simulate the counts
-sim_seed <- 2436
 
 # Define the pipeline
 list(
@@ -230,7 +236,7 @@ list(
   tar_map(
     unlist = TRUE,
     values = sim_obs_model,
-    names = model_obs,
+    names = sc_name,
     # Simulate the reporting triangle using the smoothed version of the
     # historical data as the mean process. It is identical for all 3 observation
     # models.
@@ -242,6 +248,7 @@ list(
         probs = sim_delay_prob,
         nb_size = 1 / sim_disp_par[model_obs],
         model = model_obs,
+        switch_last_cols_prob = switch_last_cols_prob,
         seed = sim_seed
       )
     }),
@@ -441,7 +448,7 @@ list(
         prob_prior_pars = mutate(sim_prior_delay_param, scenario_name = ""),
         disp_prior_pars = mutate(sim_disp_par_prior, scenario_name = ""),
         # From which observation model we simulated the data
-        data_origin = model_obs,
+        data_origin = sc_name,
         # True values of the model parameters used to generate the data
         prob_true_val = sim_delay_prob,
         disp_true_val = sim_disp_par[model_obs],
@@ -474,7 +481,7 @@ list(
     # Plot the diagnostic summaries for the MCMC models in the simulation study
     tar_target(
       sim_plot_diagnostics,
-      plot_mcmc_diagnostics(sim_diagnostics, obs_model, data_origin = model_obs)
+      plot_mcmc_diagnostics(sim_diagnostics, obs_model, data_origin = sc_name)
     ),
     # Fit each observational model to each rolling window of the simulation
     # study using the GLM method.
@@ -516,7 +523,7 @@ list(
         sim_time_horizons$nowcast_date,
         fitting_method = "glm",
         # From which observation model we simulated the data
-        data_origin = model_obs,
+        data_origin = sc_name,
         # True values of the model parameters used to generate the data
         prob_true_val = sim_delay_prob,
         disp_true_val = sim_disp_par[model_obs],
@@ -553,7 +560,7 @@ list(
         # any dates.
         skip_dates = NULL,
         # From which observation model we simulated the data
-        data_origin = model_obs
+        data_origin = sc_name
       )
     }),
     # Extract the nowcasts from both fitting methods in the simulation study in
@@ -584,7 +591,7 @@ list(
         map(sim_df_nowcast_example, "nowcast"),
         map(sim_df_nowcast_example, "total"),
         sim_nowcast_example_dates,
-        data_origin = model_obs
+        data_origin = sc_name
       )
     )
   ),
@@ -638,6 +645,10 @@ list(
       NegBin2D = bind_rows(
         bind_rows(sim_summarized_nowcast_mcmc_NegBin2D),
         bind_rows(sim_summarized_nowcast_glm_NegBin2D)
+      ),
+      NegBinX_switch = bind_rows(
+        bind_rows(sim_summarized_nowcast_mcmc_NegBinX_switch),
+        bind_rows(sim_summarized_nowcast_glm_NegBinX_switch)
       )
     )
   ),
@@ -651,7 +662,8 @@ list(
       bind_rows(
         sim_full_data_NegBinX,
         sim_full_data_NegBin1D,
-        sim_full_data_NegBin2D
+        sim_full_data_NegBin2D,
+        sim_full_data_NegBinX_switch
       ),
       sim_start_date,
       sim_end_date,
