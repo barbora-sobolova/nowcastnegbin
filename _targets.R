@@ -96,7 +96,7 @@ ili_aux_analysis_start_date <- ili_analysis_start_date -
 ili_analysis_end_date <- ili_analysis_start_date +
   (length_of_train_data + ili_timesteps_to_fit - 2) * 7
 # Dates for which we want to show, what the nowcasts actually look like.
-ili_nowcast_example_dates <- as.Date("2015-12-28")
+ili_nowcast_example_dates <- as.Date("2016-10-24")
 
 # Global object related to the simulations -------------------------------------
 
