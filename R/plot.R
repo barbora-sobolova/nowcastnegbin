@@ -44,7 +44,14 @@ plot_nowcast <- function(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm", "both"),
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   sensitivity_sc = "",
   axis_limits = list(x = c(NA, NA), y = c(NA, NA)),
   save_plot = TRUE
@@ -214,7 +221,14 @@ plot_nowcast <- function(
 #' @export
 plot_coverage <- function(
   df_summarized_nowcast,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
@@ -378,7 +392,14 @@ plot_coverage <- function(
 #' @export
 plot_crps_decomp <- function(
   df_summarized_nowcast,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
@@ -640,7 +661,14 @@ plot_disp_par <- function(
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   disp_prior_pars = NULL,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   sensitivity_sc = "",
   true_value = NULL,
   save_plot = TRUE
@@ -801,7 +829,14 @@ plot_delay_prob <- function(
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   sensitivity_sc = "",
   true_value = NULL,
   example = FALSE,
@@ -1018,7 +1053,14 @@ plot_mean_proc <- function(
   date_of_the_nowcast,
   max_lag,
   fitting_method = c("mcmc", "glm"),
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   sensitivity_sc = "",
   true_value = NULL,
   save_plot = TRUE
@@ -1135,7 +1177,14 @@ plot_rw_sd <- function(
   df_nb_size,
   model_names,
   date_of_the_nowcast,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
@@ -1272,7 +1321,14 @@ plot_per_window <- function(
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
   disp_prior_pars = NULL,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   prob_true_val = NULL,
   disp_true_val = NULL,
   lambda_true_val = NULL,
@@ -1433,7 +1489,14 @@ plot_aggregated <- function(
   df_nowcast,
   full_data,
   skip_dates = NULL,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -1643,7 +1706,14 @@ plot_trajectory <- function(
   length_of_train_data,
   max_lag,
   aux_study_start,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -1910,7 +1980,14 @@ plot_nowcast_bands <- function(
   full_data,
   df_nowcast,
   skip_dates = NULL,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   sensitivity_sc = "",
   save_plot = TRUE
 ) {
@@ -2261,7 +2338,14 @@ plot_nowcast_bands_per_horizon <- function(
 plot_mcmc_diagnostics <- function(
   df_diagnostics,
   model_names,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -2367,7 +2451,14 @@ plot_nowcast_example <- function(
   df_nowcast,
   df_total,
   dates_to_show,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)

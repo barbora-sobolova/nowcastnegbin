@@ -195,6 +195,9 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
 #' @param nb_size Numeric, a positive real value specifying the size of the
 #' negbin distribution. The lower, the more dispersed
 #' @param model name of the observation model
+#' @param switch_last_cols_prob a real value between 0 and 1 including the
+#' endpoints. This is the probability that the cells in the last two columns
+#' switch places. This creates more variability for the later reporting delays.
 #' @param seed An integer for seeding the simulation
 #'
 #' @return The reporting table in a data frame format
@@ -214,12 +217,19 @@ simulate_full_data <- function(
     "NegBin2M",
     "NegBin1M"
   ),
+  switch_last_cols_prob = 0,
   seed = 123456
 ) {
   model <- match.arg(
     model,
     c("Poisson", "NegBinX", "NegBin2D", "NegBin1D", "NegBin2M", "NegBin1M")
   )
+
+  # Check that the probability of switching the last two columns is between 0
+  # and 1
+  if (switch_last_cols_prob < 0 || switch_last_cols_prob > 1) {
+    stop("Probability of switching the last two columns of the reporting triangle must be between 0 and 1, endpoints included.")  # nolint
+  }
 
   lgt <- nrow(df_series) - ma_degree + 1
 
@@ -239,6 +249,7 @@ simulate_full_data <- function(
     nb_size = nb_size,
     model = model,
     fixed_lambda = mean_proc,
+    switch_last_cols_prob = switch_last_cols_prob,
     seed = seed
   )$reports
   # Coerce the matrix to a data frame and name the columns appropriately
