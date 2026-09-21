@@ -4,7 +4,12 @@
 \alias{load_preprocessed_data}
 \title{Load the data in the reporting triangle format}
 \usage{
-load_preprocessed_data(path, start_date, num_of_weeks)
+load_preprocessed_data(
+  path,
+  start_date,
+  num_of_weeks,
+  dataset = c("SARI", "ILI")
+)
 }
 \arguments{
 \item{path}{the path of the data file}
@@ -14,6 +19,9 @@ case study.}
 
 \item{num_of_weeks}{number of weeks starting from the \code{start_date}
 (included), we want to load.}
+
+\item{dataset}{a string indicating, which dataset we are loading, either
+"SARI", or "ILI"}
 }
 \value{
 a data frame containing columns \code{date} and columns

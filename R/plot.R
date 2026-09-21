@@ -1682,9 +1682,6 @@ save_patchwork_plots <- function(plot_list, data_origin = c("SARI", "ILI")) {
 #' endpoint will be included.
 #' @param length_of_train_data a number, the length of the estimation window
 #' (endpoints included)
-#' @param max_lag maximum reporting delay represented by the number of columns
-#' of the reporting table. In this way, the 0-th lag counts as the first, 1-st
-#' lag as the second and so on.
 #' @param aux_study_start a date (indeed in the date format), where the
 #' auxiliary case study period used for determining the priors starts.
 #' @param data_origin a string indicating the data generating process of
@@ -1704,7 +1701,6 @@ plot_trajectory <- function(
   start_date,
   end_date,
   length_of_train_data,
-  max_lag,
   aux_study_start,
   data_origin = c(
     "SARI",
@@ -1717,6 +1713,8 @@ plot_trajectory <- function(
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
+  # Grab the maximum lag
+  max_lag <- full_data |> select(starts_with("value_")) |> ncol()
   # Find a time step for calculating the x-axis coordinates based on the data
   # resolution.
   time_step <- as.numeric(full_data$date[2] - full_data$date[1])
@@ -1786,15 +1784,11 @@ plot_trajectory <- function(
       label = "Last\nwindow",
       label.size = 4
     ) +
-    labs(y = "Incidence", x = "Date") +
+    labs(y = "Incidence", x = "Date", title = get_dgp_title(data_origin)) +
     ylim(
       c(0, max(overall_max_cases, first_window_bracket_y) + 4 * bracket_offset)
     ) +
     get_plot_theme()
-
-  if (!(data_origin %in% c("SARI", "ILI"))) {
-    p_trajectory <- p_trajectory + labs(title = get_dgp_title(data_origin))
-  }
 
   # We add the plot of proportions of cases reported for each delay
   df_prop_reported <- full_data |>
@@ -1852,29 +1846,34 @@ plot_trajectory <- function(
   ret
 }
 
-#' Plot the incidence trajectory for all simulation scenarios
+#' Plot the incidence trajectory for multiple datasets
 #'
 #' @description A wrapper around \code{plot_trajectory}. This function plots and
-#' possibly saves the incidence trajectory used in the simulation study. The
-#' first and the last estimation windows will be highlighted to see the chunk of
-#' the data we use for model training. Each trajectory is accompanied by a plot
-#' of proportions of cases per delay. The plots corresponding to different
-#' data-generating processes are placed on top of each other.
+#' possibly saves several incidence trajectories in one plot. The first and the
+#' last estimation windows will be highlighted to see the chunk of the data we
+#' use for model training. Each trajectory is accompanied by a plot of
+#' proportions of cases per delay. The plots corresponding to different
+#' data-generating processes/datasets are placed on top of each other.
 #'
 #' @param full_data a data frame of the whole trajectory containing columns
 #' `date`, `Distribution` (the data-generating process) and columns `value_0w`,
 #' `value_1w`, etc. until `max_lag - 1`.
-#' @param start_date a date (indeed in the date format), where the training data
-#' start. The starting point will be included.
-#' @param end_date a date (in the date format), where the training data end. The
-#' endpoint will be included.
-#' @param length_of_train_data a number, the length of the estimation window
-#' (endpoints included)
-#' @param max_lag maximum reporting delay represented by the number of columns
-#' of the reporting table. In this way, the 0-th lag counts as the first, 1-st
-#' lag as the second and so on.
-#' @param aux_study_start a date (indeed in the date format), where the
-#' auxiliary case study period used for determining the priors starts.
+#' @param start_date a vector of dates (indeed in the date format), where the
+#' training data start. It should be as long as the number of simulation
+#' scenarios/datasets. For simulations, all entries are the same. For the case
+#' studies, the dates are different. The starting point will be included.
+#' @param end_date a vector of dates (in the date format), where the training
+#' data end. It should be as long as the number of simulation
+#' scenarios/datasets. For simulations, all entries are the same. For the case
+#' studies, the dates are different. The endpoint will be included.
+#' @param length_of_train_data an integer vector, the length of the estimation
+#' window (endpoints included). For both, simulations and case studies, all
+#' entries are the same.
+#' @param aux_study_start a vector of dates (indeed in the date format), where
+#' the auxiliary case study period used for determining the priors starts. It
+#' should be as long as the number of simulation scenarios/datasets. For
+#' simulations, all entries are the same. For the case studies, the dates are
+#' different.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -1885,36 +1884,53 @@ plot_trajectory <- function(
 #' @importFrom patchwork wrap_plots
 #'
 #' @export
-plot_all_sim_trajectories <- function(
+plot_multiple_trajectories <- function(
   full_data,
   start_date,
   end_date,
   length_of_train_data,
-  max_lag,
   aux_study_start,
   save_plot = TRUE
 ) {
-  data_origin <- unique(full_data$Distribution)
-  # Loop over the data generating processes
-  trajectory_patches <- vector("list", length(data_origin))
-  names(trajectory_patches) <- data_origin
-  for (dgp in data_origin) {
-    full_data_filtered <- full_data |> filter(.data$Distribution == dgp)
-    trajectory_patches[[dgp]] <- plot_trajectory(
+  dgp <- unique(full_data$data_origin)
+  # If there is the "SARI" string among the data_origin elements, we know, we
+  # are plotting the case study trajectory
+  plotting_case_study <- "SARI" %in% dgp
+  # Check whether the parameters have the same length as the number of scenarios
+  # we plot
+  correct_par_lengths <- length(start_date) == length(dgp) &&
+    length(length_of_train_data) == length(dgp) &&
+    length(aux_study_start) == length(dgp)
+  if (!correct_par_lengths) {
+    stop("Parameters `start_date`, `length_of_train_data`, and `aux_study_start` must have the same length as the number of plotted scenarios")  # nolint
+  }
+  # If we bind together data frames with different maximum lag, we get all zeros
+  # in the columns corresponding to lags larger than the maximum. We replace
+  # these NAs by 0.
+  full_data <- full_data |>
+    mutate(across(starts_with("value_"), \(x) replace_na(x, 0)))
+  # Loop over the data generating processes/data sets
+  trajectory_patches <- vector("list", length(dgp))
+  names(trajectory_patches) <- dgp
+  for (k in seq_along(dgp)) {
+    full_data_filtered <- full_data |>
+      filter(.data$data_origin == dgp[k])
+    trajectory_patches[[dgp[k]]] <- plot_trajectory(
       full_data_filtered,
-      start_date,
-      end_date,
-      length_of_train_data,
-      max_lag,
-      aux_study_start,
-      data_origin = dgp,
+      start_date[k],
+      end_date[k],
+      length_of_train_data[k],
+      aux_study_start[k],
+      data_origin = dgp[k],
       save_plot = FALSE
     )
-    # In the end, we will get a patchwork plot with a nested layou, where it's
+    # In the end, we will get a patchwork plot with a nested layout, where it's
     # not possible anymore to collect the x-axis guide. Therefore, we remove it
-    # manually for all plots except for the last one.
-    if (dgp != tail(data_origin, 1)) {
-      trajectory_patches[[dgp]] <- trajectory_patches[[dgp]] &
+    # manually for all plots except for the last one. This manual collection is
+    # done only for the simulations, since in the case study, the x-axes are
+    # different.
+    if (k != length(dgp) && !plotting_case_study) {
+      trajectory_patches[[dgp[k]]] <- trajectory_patches[[dgp[k]]] &
         theme(
           axis.title.x = element_blank(),
           axis.text.x = element_blank(),
@@ -1925,16 +1941,24 @@ plot_all_sim_trajectories <- function(
   # Put the patchwork plot together
   arranged <- patchwork::wrap_plots(
     trajectory_patches,
-    nrow = 3,
+    nrow = length(dgp),
     guides = "collect"
   )
   if (save_plot) {
+    # Distinguish between the simulation and case study plot
+    if (plotting_case_study) {
+      plot_path <- "inst/figure/case_study_trajectory"
+      plot_height <- 8
+    } else {
+      plot_path <- "inst/figure/sim_trajectory"
+      plot_height <- 12
+    }
     ret <- NULL
     save_figure(
       arranged,
-      "inst/figure/sim_trajectory",
+      plot_path,
       width = 9,
-      height = 11
+      height = plot_height
     )
   } else {
     ret <- arranged

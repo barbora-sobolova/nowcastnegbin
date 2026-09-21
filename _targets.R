@@ -206,7 +206,8 @@ list(
       # "zeroth" window as the first one. The length of training data is
       # identical here and in the case study.
       num_of_weeks = aux_timesteps_to_fit +
-        2 * length_of_train_data + sim_timesteps_to_fit
+        2 * length_of_train_data + sim_timesteps_to_fit,
+      dataset = "SARI"
     )
   }),
   # Data frame storing the beginning and end points of the training data for the
@@ -387,7 +388,8 @@ list(
       sim_df_total,
       create_totals_data_frame(
         sim_train_data$train_data,
-        sim_time_horizons$train_data_begin
+        sim_time_horizons$train_data_begin,
+        sc_name
       ),
       pattern = map(sim_time_horizons, sim_train_data),
       iteration = "list"
@@ -658,18 +660,17 @@ list(
   ),
   tar_target(
     sim_all_trajectories,
-    plot_all_sim_trajectories(
+    plot_multiple_trajectories(
       bind_rows(
         sim_full_data_NegBinX,
         sim_full_data_NegBin1D,
         sim_full_data_NegBin2D,
         sim_full_data_NegBinX_switch
       ),
-      sim_start_date,
-      sim_end_date,
-      length_of_train_data,
-      length(sim_delay_prob),
-      aux_sim_start_date,
+      rep(sim_start_date, 4),
+      rep(sim_end_date, 4),
+      rep(length_of_train_data, 4),
+      rep(aux_sim_start_date, 4),
       save_plot = TRUE
     )
   ),
@@ -696,7 +697,8 @@ list(
       # exact number of rolling windows, since we count the "zeroth" window as
       # the first one.
       num_of_weeks = aux_timesteps_to_fit +
-        2 * length_of_train_data + timesteps_to_fit - 1
+        2 * length_of_train_data + timesteps_to_fit - 1,
+      dataset = "SARI"
     )
   }),
 
@@ -1084,19 +1086,6 @@ list(
       data_origin = "SARI"
     )
   ),
-  # Plot the whole incidence trajectory highlighting the first and the last
-  # estimation windows
-  tar_target(whole_trajectory_plot, {
-    plot_trajectory(
-      full_data,
-      analysis_start_date,
-      analysis_end_date,
-      length_of_train_data,
-      max_lag,
-      aux_analysis_start_date,
-      data_origin = "SARI"
-    )
-  }),
 
   # ILI incidence case study ===================================================
 
@@ -1476,6 +1465,9 @@ list(
     ),
     iteration = "list"
   ),
+
+  # Combined plots from both case studies ======================================
+
   # Plot an example of nowcasts from all models (GLM & MCMC) in the case study
   # for selected dates
   tar_target(
@@ -1490,15 +1482,13 @@ list(
   # Plot the whole incidence trajectory highlighting the first and the last
   # estimation windows
   tar_target(
-    ili_whole_trajectory_plot,
-    plot_trajectory(
-      ili_full_data,
-      ili_analysis_start_date,
-      ili_analysis_end_date,
-      length_of_train_data,
-      ili_max_lag,
-      ili_aux_analysis_start_date,
-      data_origin = "ILI"
+    case_study_trajectory_plot,
+    plot_multiple_trajectories(
+      bind_rows(full_data, ili_full_data),
+      c(analysis_start_date, ili_analysis_start_date),
+      c(analysis_end_date, ili_analysis_end_date),
+      rep(length_of_train_data, 2),
+      c(aux_analysis_start_date, ili_aux_analysis_start_date)
     )
   )
 )

@@ -17,6 +17,14 @@
 create_totals_data_frame <- function(
   train_data,
   start_date,
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   time_step = 7
 ) {
   # Data frame to plot the observations - final counts and counts available at
@@ -27,7 +35,8 @@ create_totals_data_frame <- function(
       rowSums(mock_unobserved(train_data), na.rm = TRUE)
     ),
     date = rep(start_date + (seq_len(nrow(train_data)) - 1) * time_step, 2),
-    data = rep(c("Final", "Preliminary"), each = nrow(train_data))
+    data = rep(c("Final", "Preliminary"), each = nrow(train_data)),
+    data_origin = data_origin
   )
 }
 
@@ -176,7 +185,8 @@ filter_and_combine_methods <- function(
   df_mcmc,
   df_glm,
   dates_to_show,
-  model_to_show
+  model_to_show,
+  data_origin
 ) {
   df_combined <- bind_rows(
     mutate(
@@ -186,7 +196,8 @@ filter_and_combine_methods <- function(
         .data$nowcast_date %in% dates_to_show &
           .data$Distribution %in% model_to_show
       ),
-      method = "mcmc"
+      method = "mcmc",
+      data_origin = data_origin
     ),
     mutate(
       dplyr::filter(
@@ -195,7 +206,8 @@ filter_and_combine_methods <- function(
         .data$nowcast_date %in% dates_to_show &
           .data$Distribution %in% model_to_show
       ),
-      method = "glm"
+      method = "glm",
+      data_origin = data_origin
     )
   )
   df_combined
@@ -269,14 +281,16 @@ filter_nowcast_example_dates <- function(
     df_nowcast_mcmc,
     df_nowcast_glm,
     dates_to_show,
-    model_to_show
+    model_to_show,
+    data_origin
   )
   if (!is.null(df_lambda_mcmc) && !is.null(df_lambda_glm)) {
     df_lambda <- filter_and_combine_methods(
       df_lambda_mcmc,
       df_lambda_glm,
       dates_to_show,
-      model_to_show
+      model_to_show,
+      data_origin
     )
   } else {
     df_lambda <- NULL

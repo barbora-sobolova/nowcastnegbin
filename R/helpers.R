@@ -94,19 +94,17 @@ get_y_axis_model_labels <- function(data_origin) {
 #' @param data_origin string indicating the data generating process
 #' @return a string to use as a ggplot title
 get_dgp_title <- function(data_origin) {
-  formatted_data_origin <- switch(
+  switch(
     data_origin,
     # We use only these four as a data generating process in the simulations
-    NegBinX = "NegBin-X",
-    NegBin1D = "NegBin-LD",
-    NegBin2D = "NegBin-QD",
-    NegBinX_switch = "NegBin-X"
+    NegBinX = "NegBin-X data generating process",
+    NegBin1D = "NegBin-LD data generating process",
+    NegBin2D = "NegBin-QD data generating process",
+    NegBinX_switch = "NegBin-X data generating process with irregularities",
+    # Two case studies
+    SARI = "SARI hospitalizations in Germany",
+    ILI = "ILI cases in the US",
   )
-  title_str <- paste0(formatted_data_origin, " data generating process")
-  if (data_origin == "NegBinX_switch") {
-    title_str <- paste0(title_str, " with irregularities")
-  }
-  title_str
 }
 
 #' Get the colors of the observation models for the plots
