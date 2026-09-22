@@ -236,7 +236,7 @@ plot_coverage <- function(
   data_origin <- match.arg(data_origin)
 
   # Highlight the model aligned with the true data generating process if known.
-  model_y_labels <- get_y_axis_model_labels(data_origin)
+  model_y_labels <- get_model_axis_labels(data_origin)
 
   # Calculate the empirical coverage
   df_coverage <- df_summarized_nowcast |>
@@ -365,6 +365,127 @@ plot_coverage <- function(
   ret
 }
 
+#' Plot and save the coverage in an alternative picture
+#'
+#' @description This function plots and possibly saves the chart of empirical
+#' vs. nominal coverage for selected models as a line plot. The selected models
+#' are NegBinX, NegBin1D and NegBin2D, for both MCMC and GLM methods. Only 50%
+#' and 95% coverage is considered.
+#'
+#' @param df_summarized_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_2.5`,
+#' `quantile_25`, `quantile_75`, `quantile_97.5` (bounds of the prediction
+#' intervals), `delay` (the nowcasting horizon) and the true value of the
+#' prediction target `true_val`
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a ggplot object with one facet per nowcasting horizon, or NULL if
+#' \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#' @importFrom ggpubr get_legend
+#' @importFrom patchwork wrap_elements
+#'
+#' @export
+plot_coverage_alt <- function(
+  df_summarized_nowcast,
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
+  sensitivity_sc = "",
+  save_plot = TRUE
+) {
+  data_origin <- match.arg(data_origin)
+
+  # Calculate the empirical coverage
+  df_coverage <- df_summarized_nowcast |>
+    filter(!(.data$Distribution %in% c("Poisson", "NegBin1M", "NegBin2M"))) |>
+    group_by(.data$delay, .data$Distribution, .data$method) |>
+    summarize(
+      coverage_50 = sum(
+        .data$true_val >= .data$quantile_25 &
+          .data$true_val <= .data$quantile_75
+      ) / n(),
+      coverage_95 = sum(
+        .data$true_val >= .data$quantile_2.5 &
+          .data$true_val <= .data$quantile_97.5
+      ) / n(),
+      .groups = "drop"
+    ) |>
+    # Pivot for easier definition of the alpha aesthetic
+    tidyr::pivot_longer(
+      cols = starts_with("coverage"),
+      names_to = "nominal_coverage",
+      values_to = "empirical_coverage"
+    ) |>
+    mutate(
+      model_method_interact = factor(
+        interaction(.data$Distribution, .data$method),
+        levels = names(get_interaction_names()),
+        labels = get_interaction_names()
+      ),
+      # Convert the delay factor to a numeric
+      delay = as.numeric(as.character(.data$delay))
+    )
+  # Grab the maximum lag
+  max_lag <- length(unique(df_coverage$delay))
+
+  # Plot the empirical coverage as horizontal bars
+  coverage_plot <- ggplot(
+    df_coverage,
+    aes(
+      x = .data$delay,
+      y = .data$empirical_coverage,
+      color = .data$model_method_interact,
+      linetype = .data$nominal_coverage,
+      shape = .data$method
+    )
+  ) +
+    geom_line() +
+    geom_point() +
+    # Highlight the 50% and 95% nominal coverage
+    geom_hline(yintercept = c(0.5, 0.95), linetype = "dotted") +
+    scale_linetype_manual(
+      values = c("coverage_50" = "dashed", "coverage_95" = "solid"),
+      labels = c("50% coverage", "95% coverage"),
+      name = ""
+    ) +
+    scale_shape_manual(
+      values = c("mcmc" = 19, "glm" = 8),
+      labels = c("mcmc" = "RW", "glm" = "GAM"),
+      name = "Model type"
+    ) +
+    scale_color_manual(values = get_interaction_colors(), name = "Model") +
+    scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.20)) +
+    scale_x_continuous(breaks = seq(1 - max_lag, 0, by = 1)) +
+    labs(y = "Empirical coverage", x = "Nowcasting horizon") +
+    get_plot_theme()
+  if (save_plot) {
+    save_figure(
+      coverage_plot,
+      paste0("inst/figure/coverage_plot_alt_", data_origin, sensitivity_sc),
+      width = 10,
+      height = 5
+    )
+    ret <- NULL
+  } else {
+    ret <- coverage_plot
+  }
+  ret
+}
+
 #' Plot and save the decomposition of the CRPS
 #'
 #' @description This function plots and possibly saves the average CRPS
@@ -407,7 +528,7 @@ plot_crps_decomp <- function(
   data_origin <- match.arg(data_origin)
 
   # Highlight the model aligned with the true data generating process if known.
-  model_y_labels <- get_y_axis_model_labels(data_origin)
+  model_y_labels <- get_model_axis_labels(data_origin)
 
   # Calculate the decomposition of the average CRPS
   df_crps <- df_summarized_nowcast |>
@@ -573,17 +694,195 @@ plot_crps_decomp <- function(
   ret
 }
 
+#' Plot and save the decomposition of the CRPS for selected models
+#'
+#' @description This function plots and possibly saves the average CRPS
+#' decomposed according to the spread, underprediction and overprediction. Also
+#' the mean absolute error is displayed in this figure.
+#'
+#' @param df_summarized_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `dispersion`,
+#' `underprediction`, `overprediction`, `delay` (the nowcasting horizon),
+#' `quantile_50` and `true_val` (to calculate the mean absolute error).
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a ggplot object with one facet per nowcasting horizon, or NULL if
+#' \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#' @importFrom ggpubr get_legend
+#' @importFrom patchwork wrap_elements
+#'
+#' @export
+plot_crps_decomp_alt <- function(
+  df_summarized_nowcast,
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
+  sensitivity_sc = "",
+  save_plot = TRUE
+) {
+  data_origin <- match.arg(data_origin)
+
+  # Highlight the model aligned with the true data generating process if known.
+  model_x_labels <- get_model_axis_labels(data_origin, bold = FALSE)
+
+  # Calculate the decomposition of the average CRPS
+  df_crps <- df_summarized_nowcast |>
+    filter(!(.data$Distribution %in% c("Poisson", "NegBin1M", "NegBin2M"))) |>
+    # Calculate the absolute error
+    group_by(.data$delay, .data$Distribution, .data$method) |>
+    summarize(
+      # CRPS components
+      Dispersion = mean(.data$dispersion),
+      Underprediction = mean(.data$underprediction),
+      Overprediction = mean(.data$overprediction),
+      Total = mean(.data$crps),
+      .groups = "drop"
+    ) |>
+    # Calculate the x-coordinate of the labels denoting the total CRPS
+    mutate(
+      lab_position = ifelse(
+        .data$delay == "0",
+        # For horizon 0, the bar is wide enough to place the label inside it
+        max(.data$Total) / 35,
+        # For other horizons, we place the label outside of the bar, after the
+        # dot denoting the MAE
+        .data$Total + max(.data$Total) / 40
+      )
+    ) |>
+    mutate(
+      model_method_interact = factor(
+        interaction(.data$Distribution, .data$method),
+        levels = names(get_interaction_names()),
+        labels = get_interaction_names()
+      ),
+      # Reverse the levels of the delay factor to show the nowcasting horizon 0
+      # on the left and the past horizons more to the right
+      delay = factor(.data$delay, levels = rev(levels(.data$delay)))
+    )
+
+  # Grab the maximum delay in order to label the facets according to the
+  # corresponding delay
+  max_lag <- length(unique(df_crps$delay))
+
+  df_crps_decomp <- df_crps |>
+    # Pivot for easier definition of the alpha aesthetic
+    tidyr::pivot_longer(
+      cols = c("Dispersion", "Overprediction", "Underprediction"),
+      names_to = "Component",
+      values_to = "CRPS"
+    ) |>
+    mutate(
+      Component = factor(
+        .data$Component,
+        levels = c("Overprediction", "Dispersion", "Underprediction")
+      )
+    )
+
+  # Plot the CRPS as horizontal bars
+  crps_decomp_plot <- ggplot() +
+    geom_col(
+      df_crps_decomp,
+      mapping = aes(
+        y = .data$CRPS,
+        x = .data$model_method_interact,
+        fill = .data$model_method_interact,
+        alpha = .data$Component
+      ),
+      position = "stack"
+    ) +
+    geom_label(
+      df_crps,
+      mapping = aes(
+        y = .data$lab_position,
+        x = .data$model_method_interact,
+        label = format(round(.data$Total, 2), nsmall = 2)
+      ),
+      hjust = 0,
+      angle = 90
+    ) +
+    scale_alpha_manual(
+      values = c(
+        "Underprediction" = 1,
+        "Dispersion" = 0.4,
+        "Overprediction" = 0.7
+      ),
+      name = "Component"
+    ) +
+    scale_fill_manual(values = get_interaction_colors(), name = "Model") +
+    scale_x_discrete(labels = model_x_labels) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.2))) +
+    labs(y = "Mean CRPS", x = "Model", title = get_dgp_title(data_origin)) +
+    # By default, the colors in the legend show up in the reverse order
+    # compared to the barplot
+    guides(fill = guide_legend(reverse = TRUE)) +
+    get_plot_theme() +
+    theme(
+      legend.background = element_blank(),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0)
+    ) +
+    facet_wrap(
+      ~delay,
+      nrow = 1,
+      labeller = as_labeller(label_horizon_facet(max_lag))
+    )
+
+  # Save the plot if required, the width, height and path are hard-coded here.
+  # If the plot is saved on the disc, we don't return the ggplot object.
+  if (save_plot) {
+    if (data_origin == "ILI") {
+      plot_width <- 10
+    } else if (data_origin == "SARI") {
+      plot_width <- 7
+    } else {
+      plot_width <- 4
+    }
+    save_figure(
+      crps_decomp_plot,
+      paste0(
+        "inst/figure/crps_decomposition_plot_alt_",
+        data_origin,
+        sensitivity_sc
+      ),
+      width = plot_width,
+      height = 5
+    )
+    ret <- NULL
+  } else {
+    ret <- crps_decomp_plot
+  }
+  ret
+}
+
 patchwork_sim_results <- function(summarized_nowcast_list, save_plot = TRUE) {
   data_origin <- names(summarized_nowcast_list)
   plot_list <- replicate(
-    2,
+    4,
     setNames(vector("list", length(data_origin)), data_origin),
     simplify = FALSE
   )
-  names(plot_list) <- c("coverage", "crps")
+  names(plot_list) <- c("coverage", "coverage_alt", "crps", "crps_alt")
   # Loop over the data generating processes
   for (dgp in data_origin) {
     plot_list$coverage[[dgp]] <- plot_coverage(
+      summarized_nowcast_list[[dgp]],
+      data_origin = dgp,
+      sensitivity_sc = "",
+      save_plot = FALSE
+    )
+    plot_list$coverage_alt[[dgp]] <- plot_coverage_alt(
       summarized_nowcast_list[[dgp]],
       data_origin = dgp,
       sensitivity_sc = "",
@@ -595,22 +894,43 @@ patchwork_sim_results <- function(summarized_nowcast_list, save_plot = TRUE) {
       sensitivity_sc = "",
       save_plot = FALSE
     )
+    plot_list$crps_alt[[dgp]] <- plot_crps_decomp_alt(
+      summarized_nowcast_list[[dgp]],
+      data_origin = dgp,
+      sensitivity_sc = "",
+      save_plot = FALSE
+    )
   }
-  coverage_plot <- wrap_plots(plot_list$coverage, nrow = 3) +
+  coverage_plot <- wrap_plots(plot_list$coverage, nrow = length(data_origin)) +
     plot_layout(axes = "collect", guides = "collect") &
     theme(legend.position = "bottom", legend.justification = "right")
+  coverage_alt_plot <- wrap_plots(plot_list$coverage_alt, nrow = 1) +
+    plot_layout(axes = "collect", guides = "collect")
   crps_plot <- wrap_plots(plot_list$crps, nrow = 3) +
     plot_layout(axes = "collect", guides = "collect") &
     theme(legend.position = "bottom", legend.justification = "right")
+  crps_alt_plot <- wrap_plots(plot_list$crps_alt, nrow = 4) +
+    plot_layout(axes = "collect", guides = "collect")
   if (save_plot) {
-    save_figure(coverage_plot, "inst/figure/coverage_plot_simulation", 9, 10)
+    save_figure(
+      coverage_alt_plot, "inst/figure/coverage_plot_alt_simulation",
+      9,
+      5
+    )
+    save_figure(coverage_plot, "inst/figure/coverage_plot_simulation", 9, 13)
     save_figure(
       crps_plot,
       "inst/figure/crps_decomposition_plot_simulation",
       width = 10,
       height = 14
     )
-    ret <- vector("list", 2)
+    save_figure(
+      crps_alt_plot,
+      "inst/figure/crps_decomposition_alt_plot_simulation",
+      width = 9,
+      height = 11
+    )
+    ret <- vector("list", 4)
   } else {
     ret <- list(coverage = coverage_plot, crps = crps_plot)
   }

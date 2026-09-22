@@ -58,16 +58,16 @@ get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
 #' @param data_origin string indicating the data generating process
 #' @return a named list or vector of 9 elements containing the model labels to
 #' show as ticks on the ggplot y-axis. If the \code{data_origin = "case_study"}
-#' the function returns the same named vector the \code{get_y_axis_model_labels}
+#' the function returns the same named vector the \code{get_model_axis_labels}
 #' fuction would return. If the data generating process is known, the return
 #' object is a list and we show the model labels aligned with it in bold. For
 #' the NegBinX and NegBin1D models, we fit the models with both methods (GLM and
 #' MCMC), so 2 labels will be highlighted in these cases. If the data generating
 #' process is a simulation, but from a perturbed model, we don't highlight
 #' anything.
-get_y_axis_model_labels <- function(data_origin) {
+get_model_axis_labels <- function(data_origin, bold = TRUE) {
   model_y_labels <- get_interaction_names()
-  if (!(data_origin %in% c("SARI", "COVID", "NegBinX_switch"))) {
+  if (!(data_origin %in% c("SARI", "COVID", "NegBinX_switch")) && bold) {
     which_to_highlight <- grepl(data_origin, names(model_y_labels))
     # Make the selected labels in the ggplot in bold
     model_y_labels <- lapply(
