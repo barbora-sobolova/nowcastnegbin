@@ -1193,8 +1193,8 @@ list(
     calc_delay_prob_prior(
       ili_full_data,
       ili_aux_analysis_start_date,
-      ili_aux_analysis_start_date + length_of_train_data +
-        aux_timesteps_to_fit,
+      ili_aux_analysis_start_date +
+        (length_of_train_data + aux_timesteps_to_fit) * 7,
       unique(sensitivity_scenarios$delay_prob_factor)
     )
   ),
