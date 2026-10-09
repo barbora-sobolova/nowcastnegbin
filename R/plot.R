@@ -2423,26 +2423,13 @@ plot_nowcast_bands_per_horizon <- function(
 
   # In case there are dates, where we skip nowcasting, due to the reporting
   # irregularities around Christmas, we would like to break the nowcast band
-  # into segments. For this reason, we split the data frame with the nowcasts
-  # into several parts, which will be plotted separately.
-  lower_bound <- c(start_date, skip_dates)
-  # In case that skip_dates = NULL, the resulting vector will be coerced to
-  # numeric. For this reason, we need to keep as.Date. This is not the case
-  # for the lower bound, since there we always start with a date.
-  upper_bound <- as.Date(c(skip_dates, end_date))
-  df_nowcast_splitted <- sapply(
-    seq_along(lower_bound),
-    function(ind) {
-      filter(
-        df_nowcast,
-        df_nowcast$nowcast_date >= lower_bound[ind] &
-          df_nowcast$nowcast_date <= upper_bound[ind]
-      )
-    },
-    simplify = FALSE
-  )
-  splitted_lengths <- lapply(df_nowcast_splitted, nrow) |> unlist()
-  df_nowcast_splitted <- df_nowcast_splitted[splitted_lengths > 0]
+  # into segments. For this reason, we add a dummy variable "segment", which
+  # governs the "group" aesthetic. We determine the segment based on how many
+  # skipped dates are behind the current date.
+  df_nowcast <- df_nowcast |>
+    group_by(.data$date) |>
+    mutate(segment = sum(.data$date[1] >= skip_dates)) |>
+    ungroup()
 
   # Set the x-axis breaks
   date_breaks <- seq(
@@ -2462,47 +2449,42 @@ plot_nowcast_bands_per_horizon <- function(
         linetype = .data$type
       ),
       linewidth = 0.3
-    )
-
-  # Plot the nowcast segments
-  for (k in seq_along(df_nowcast_splitted)) {
-    nowcast_band_plot <- nowcast_band_plot +
-      # Nowcast as a colored, dashed line
-      geom_line(
-        df_nowcast_splitted[[k]],
-        mapping = aes(
-          x = .data$date,
-          y = .data$quantile_50,
-          color = .data$model_method_interact,
-          linetype = "Nowcast"
-        ),
-        linewidth = 0.25
-      ) +
-      # 95 % prediction interval
-      geom_ribbon(
-        df_nowcast_splitted[[k]],
-        mapping = aes(
-          x = .data$date,
-          ymin = .data$quantile_2.5,
-          ymax = .data$quantile_97.5,
-          fill = .data$model_method_interact,
-          alpha = "PI_95"
-        )
-      ) +
-      # 50 % prediction interval
-      geom_ribbon(
-        df_nowcast_splitted[[k]],
-        mapping = aes(
-          x = .data$date,
-          ymin = .data$quantile_25,
-          ymax = .data$quantile_75,
-          fill = .data$model_method_interact,
-          alpha = "PI_50"
-        )
+    ) +
+    # Nowcast as a colored, dashed line
+    geom_line(
+      df_nowcast,
+      mapping = aes(
+        x = .data$date,
+        y = .data$quantile_50,
+        color = .data$model_method_interact,
+        linetype = "Nowcast"
+      ),
+      linewidth = 0.25
+    ) +
+    # 95 % prediction interval
+    geom_ribbon(
+      df_nowcast,
+      mapping = aes(
+        x = .data$date,
+        ymin = .data$quantile_2.5,
+        ymax = .data$quantile_97.5,
+        fill = .data$model_method_interact,
+        group = .data$segment,
+        alpha = "PI_95"
+      ),
+    ) +
+    # 50 % prediction interval
+    geom_ribbon(
+      df_nowcast,
+      mapping = aes(
+        x = .data$date,
+        ymin = .data$quantile_25,
+        ymax = .data$quantile_75,
+        fill = .data$model_method_interact,
+        group = .data$segment,
+        alpha = "PI_50"
       )
-  }
-  # Finish the plot
-  nowcast_band_plot <- nowcast_band_plot +
+    ) +
     scale_x_date(breaks = date_breaks, date_labels = "%b %Y") +
     scale_color_manual(
       values = c(
