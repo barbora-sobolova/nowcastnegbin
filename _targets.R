@@ -637,10 +637,6 @@ list(
   tar_target(
     sim_summarized_nowcast_list,
     list(
-      NegBinX = bind_rows(
-        bind_rows(sim_summarized_nowcast_mcmc_NegBinX),
-        bind_rows(sim_summarized_nowcast_glm_NegBinX)
-      ),
       NegBin1D = bind_rows(
         bind_rows(sim_summarized_nowcast_mcmc_NegBin1D),
         bind_rows(sim_summarized_nowcast_glm_NegBin1D)
@@ -648,6 +644,10 @@ list(
       NegBin2D = bind_rows(
         bind_rows(sim_summarized_nowcast_mcmc_NegBin2D),
         bind_rows(sim_summarized_nowcast_glm_NegBin2D)
+      ),
+      NegBinX = bind_rows(
+        bind_rows(sim_summarized_nowcast_mcmc_NegBinX),
+        bind_rows(sim_summarized_nowcast_glm_NegBinX)
       ),
       NegBinX_switch = bind_rows(
         bind_rows(sim_summarized_nowcast_mcmc_NegBinX_switch),
@@ -663,9 +663,9 @@ list(
     sim_all_trajectories,
     plot_multiple_trajectories(
       bind_rows(
-        sim_full_data_NegBinX,
         sim_full_data_NegBin1D,
         sim_full_data_NegBin2D,
+        sim_full_data_NegBinX,
         sim_full_data_NegBinX_switch
       ),
       rep(sim_start_date, 4),
