@@ -163,6 +163,77 @@ summarize_nowcast <- function(
   df_nowcast_plot
 }
 
+create_coverage_plot_df <- function(df_summarized_nowcast) {
+  # Calculate the empirical coverage
+  df_coverage <- df_summarized_nowcast |>
+    group_by(.data$delay, .data$Distribution, .data$method) |>
+    summarize(
+      coverage_50 = sum(
+        .data$true_val >= .data$quantile_25 &
+          .data$true_val <= .data$quantile_75
+      ) / n(),
+      coverage_95 = sum(
+        .data$true_val >= .data$quantile_2.5 &
+          .data$true_val <= .data$quantile_97.5
+      ) / n(),
+      .groups = "drop"
+    ) |>
+    # Pivot for easier definition of the alpha aesthetic
+    tidyr::pivot_longer(
+      cols = starts_with("coverage"),
+      names_to = "nominal_coverage",
+      values_to = "empirical_coverage"
+    ) |>
+    mutate(
+      model_method_interact = factor(
+        interaction(.data$Distribution, .data$method),
+        levels = names(get_interaction_names()),
+        labels = get_interaction_names()
+      )
+    )
+}
+
+create_crps_plot_df <- function(df_summarized_nowcast) {
+  # Calculate the decomposition of the average CRPS
+  df_crps <- df_summarized_nowcast |>
+    # Calculate the absolute error
+    mutate(AE = abs(.data$true_val - .data$quantile_50)) |>
+    group_by(.data$delay, .data$Distribution, .data$method) |>
+    summarize(
+      # Mean absolute error
+      MAE = mean(.data$AE),
+      # CRPS components
+      Dispersion = mean(.data$dispersion),
+      Underprediction = mean(.data$underprediction),
+      Overprediction = mean(.data$overprediction),
+      Total = mean(.data$crps),
+      .groups = "drop"
+    ) |>
+    mutate(
+      model_method_interact = factor(
+        interaction(.data$Distribution, .data$method),
+        levels = names(get_interaction_names()),
+        labels = get_interaction_names()
+      )
+    )
+
+  df_crps_decomp <- df_crps |>
+    # Pivot for easier definition of the alpha aesthetic
+    tidyr::pivot_longer(
+      cols = c("Dispersion", "Overprediction", "Underprediction"),
+      names_to = "Component",
+      values_to = "CRPS"
+    ) |>
+    mutate(
+      Component = factor(
+        .data$Component,
+        levels = c("Overprediction", "Dispersion", "Underprediction")
+      )
+    )
+  ret <- list(df_crps = df_crps, df_decomp = df_crps_decomp)
+  ret
+}
+
 #' Combine data frames of results from different methods
 #'
 #' @description This function combines data frames containing results from the

@@ -237,37 +237,11 @@ plot_coverage <- function(
 
   # Highlight the model aligned with the true data generating process if known.
   model_y_labels <- get_model_axis_labels(data_origin)
-
-  # Calculate the empirical coverage
-  df_coverage <- df_summarized_nowcast |>
-    group_by(.data$delay, .data$Distribution, .data$method) |>
-    summarize(
-      coverage_50 = sum(
-        .data$true_val >= .data$quantile_25 &
-          .data$true_val <= .data$quantile_75
-      ) / n(),
-      coverage_95 = sum(
-        .data$true_val >= .data$quantile_2.5 &
-          .data$true_val <= .data$quantile_97.5
-      ) / n(),
-      .groups = "drop"
-    ) |>
-    # Pivot for easier definition of the alpha aesthetic
-    tidyr::pivot_longer(
-      cols = starts_with("coverage"),
-      names_to = "nominal_coverage",
-      values_to = "empirical_coverage"
-    ) |>
-    mutate(
-      model_method_interact = factor(
-        interaction(.data$Distribution, .data$method),
-        levels = names(get_interaction_names()),
-        labels = get_interaction_names()
-      ),
-      # Reverse the levels of the delay factor to show the nowcasting horizon 0
-      # on the left and the past horizons more to the right
-      delay = factor(.data$delay, levels = rev(levels(.data$delay)))
-    )
+  # Calculate empirical coverage
+  df_coverage <- create_coverage_plot_df(df_summarized_nowcast) |>
+    # Reverse the levels of the delay factor to show the nowcasting horizon 0
+    # on the left and the past horizons more to the right
+    mutate(delay = factor(.data$delay, levels = rev(levels(.data$delay))))
 
   # Grab the maximum delay in order to label the plot facets according to the
   # corresponding delay
@@ -410,35 +384,8 @@ plot_coverage_alt <- function(
   data_origin <- match.arg(data_origin)
 
   # Calculate the empirical coverage
-  df_coverage <- df_summarized_nowcast |>
-    filter(!(.data$Distribution %in% c("Poisson", "NegBin1M", "NegBin2M"))) |>
-    group_by(.data$delay, .data$Distribution, .data$method) |>
-    summarize(
-      coverage_50 = sum(
-        .data$true_val >= .data$quantile_25 &
-          .data$true_val <= .data$quantile_75
-      ) / n(),
-      coverage_95 = sum(
-        .data$true_val >= .data$quantile_2.5 &
-          .data$true_val <= .data$quantile_97.5
-      ) / n(),
-      .groups = "drop"
-    ) |>
-    # Pivot for easier definition of the alpha aesthetic
-    tidyr::pivot_longer(
-      cols = starts_with("coverage"),
-      names_to = "nominal_coverage",
-      values_to = "empirical_coverage"
-    ) |>
-    mutate(
-      model_method_interact = factor(
-        interaction(.data$Distribution, .data$method),
-        levels = names(get_interaction_names()),
-        labels = get_interaction_names()
-      ),
-      # Convert the delay factor to a numeric
-      delay = as.numeric(as.character(.data$delay))
-    )
+  df_coverage <- create_coverage_plot_df(df_summarized_nowcast) |>
+    mutate(delay = as.numeric(as.character(delay)))
   # Grab the maximum lag
   max_lag <- length(unique(df_coverage$delay))
 
@@ -531,20 +478,8 @@ plot_crps_decomp <- function(
   model_y_labels <- get_model_axis_labels(data_origin)
 
   # Calculate the decomposition of the average CRPS
-  df_crps <- df_summarized_nowcast |>
-    # Calculate the absolute error
-    mutate(AE = abs(.data$true_val - .data$quantile_50)) |>
-    group_by(.data$delay, .data$Distribution, .data$method) |>
-    summarize(
-      # Mean absolute error
-      MAE = mean(.data$AE),
-      # CRPS components
-      Dispersion = mean(.data$dispersion),
-      Underprediction = mean(.data$underprediction),
-      Overprediction = mean(.data$overprediction),
-      Total = mean(.data$crps),
-      .groups = "drop"
-    ) |>
+  df_crps_list <- create_crps_plot_df(df_summarized_nowcast)
+  df_crps_list$df_crps <- df_crps_list$df_crps |>
     # Calculate the x-coordinate of the labels denoting the total CRPS
     mutate(
       lab_position = ifelse(
@@ -555,13 +490,9 @@ plot_crps_decomp <- function(
         # dot denoting the MAE
         .data$MAE * 1.3
       )
-    ) |>
+    )
+  df_crps_list$df_decomp <- df_crps_list$df_decomp |>
     mutate(
-      model_method_interact = factor(
-        interaction(.data$Distribution, .data$method),
-        levels = names(get_interaction_names()),
-        labels = get_interaction_names()
-      ),
       # Reverse the levels of the delay factor to show the nowcasting horizon 0
       # on the left and the past horizons more to the right
       delay = factor(.data$delay, levels = rev(levels(.data$delay)))
@@ -569,7 +500,7 @@ plot_crps_decomp <- function(
 
   # Grab the maximum delay in order to label the facets according to the
   # corresponding delay
-  max_lag <- length(unique(df_crps$delay))
+  max_lag <- length(unique(df_crps_list$df_crps$delay))
   # Set the number of rows for `facet_wrap`. For the case study, we always have
   # a 2x2 grid. For the simulation study, we can decide, whether we want to plot
   # the coverage for each data generating process individually, or patchwork
@@ -585,29 +516,15 @@ plot_crps_decomp <- function(
   # Grab the number of models in order to set the height of the plot
   # accordingly. We plot only the 6 MCMC-based models for the scenarios of the
   # sensitivity analysis. Otherwise we plot 9 models (6  MCMC, and 3 GLM).
-  n_models <- length(unique(df_crps$model_method_interact))
+  n_models <- length(unique(df_crps_list$df_crps$model_method_interact))
   if (!(n_models %in% c(6, 9))) {
     stop("Number of models must be 6 or 9.")
   }
 
-  df_crps_decomp <- df_crps |>
-    # Pivot for easier definition of the alpha aesthetic
-    tidyr::pivot_longer(
-      cols = c("Dispersion", "Overprediction", "Underprediction"),
-      names_to = "Component",
-      values_to = "CRPS"
-    ) |>
-    mutate(
-      Component = factor(
-        .data$Component,
-        levels = c("Overprediction", "Dispersion", "Underprediction")
-      )
-    )
-
   # Plot the CRPS as horizontal bars
   crps_decomp_plot <- ggplot() +
     geom_col(
-      df_crps_decomp,
+      df_crps_list$df_decomp,
       mapping = aes(
         x = .data$CRPS,
         y = .data$model_method_interact,
@@ -617,7 +534,7 @@ plot_crps_decomp <- function(
       position = "stack"
     ) +
     geom_label(
-      df_crps,
+      df_crps_list$df_crps,
       mapping = aes(
         x = .data$lab_position,
         y = .data$model_method_interact,
@@ -637,7 +554,7 @@ plot_crps_decomp <- function(
       name = "Component"
     ) +
     geom_point(
-      df_crps_decomp,
+      df_crps_list$df_decomp,
       mapping = aes(x = .data$MAE, y = .data$model_method_interact)
     ) +
     scale_fill_manual(values = get_interaction_colors(), name = "Model") +
@@ -739,18 +656,8 @@ plot_crps_decomp_alt <- function(
   model_x_labels <- get_model_axis_labels(data_origin, bold = FALSE)
 
   # Calculate the decomposition of the average CRPS
-  df_crps <- df_summarized_nowcast |>
-    filter(!(.data$Distribution %in% c("Poisson", "NegBin1M", "NegBin2M"))) |>
-    # Calculate the absolute error
-    group_by(.data$delay, .data$Distribution, .data$method) |>
-    summarize(
-      # CRPS components
-      Dispersion = mean(.data$dispersion),
-      Underprediction = mean(.data$underprediction),
-      Overprediction = mean(.data$overprediction),
-      Total = mean(.data$crps),
-      .groups = "drop"
-    ) |>
+  df_crps_list <- create_crps_plot_df(df_summarized_nowcast)
+  df_crps_list$df_crps <- df_crps_list$df_crps |>
     # Calculate the x-coordinate of the labels denoting the total CRPS
     mutate(
       lab_position = ifelse(
@@ -761,40 +668,25 @@ plot_crps_decomp_alt <- function(
         # dot denoting the MAE
         .data$Total + max(.data$Total) / 40
       )
-    ) |>
+    )
+  df_crps_list$df_decomp <- df_crps_list$df_decomp |>
     mutate(
+      # Reverse the model names to make the ordering consistent
       model_method_interact = factor(
-        interaction(.data$Distribution, .data$method),
-        levels = names(get_interaction_names()),
-        labels = get_interaction_names()
-      ),
-      # Reverse the levels of the delay factor to show the nowcasting horizon 0
-      # on the left and the past horizons more to the right
-      delay = factor(.data$delay, levels = rev(levels(.data$delay)))
+        model_method_interact,
+        levels = rev(get_interaction_names())
+      )
     )
 
   # Grab the maximum delay in order to label the facets according to the
   # corresponding delay
-  max_lag <- length(unique(df_crps$delay))
-
-  df_crps_decomp <- df_crps |>
-    # Pivot for easier definition of the alpha aesthetic
-    tidyr::pivot_longer(
-      cols = c("Dispersion", "Overprediction", "Underprediction"),
-      names_to = "Component",
-      values_to = "CRPS"
-    ) |>
-    mutate(
-      Component = factor(
-        .data$Component,
-        levels = c("Overprediction", "Dispersion", "Underprediction")
-      )
+  max_lag <- length(unique(df_crps_list$df_crps$delay))
     )
 
   # Plot the CRPS as horizontal bars
   crps_decomp_plot <- ggplot() +
     geom_col(
-      df_crps_decomp,
+      df_crps_list$df_decomp,
       mapping = aes(
         y = .data$CRPS,
         x = .data$model_method_interact,
@@ -804,7 +696,7 @@ plot_crps_decomp_alt <- function(
       position = "stack"
     ) +
     geom_label(
-      df_crps,
+      df_crps_list$df_crps,
       mapping = aes(
         y = .data$lab_position,
         x = .data$model_method_interact,
