@@ -634,6 +634,8 @@ list(
       "NegBinX"
     )
   ),
+  # Combine the results from the simulation scenarios into a list. The ordering
+  # is important here as it will be adopted by the plotting functions.
   tar_target(
     sim_summarized_nowcast_list,
     list(
@@ -657,7 +659,16 @@ list(
   ),
   tar_target(
     sim_results_plot,
-    patchwork_sim_results(sim_summarized_nowcast_list)
+    patchwork_results(
+      sim_summarized_nowcast_list,
+      full_data_list = list(
+        NegBin1D = full_data_NegBin1D,
+        NegBin2D = full_data_NegBin2D,
+        NegBinX = full_data_NegBinX,
+        NegBinX_switch = full_data_NegBinX_switch,
+      ),
+      type = "simulation"
+    )
   ),
   tar_target(
     sim_all_trajectories,
@@ -1463,6 +1474,36 @@ list(
 
   # Combined plots from both case studies ======================================
 
+  # Combine the results from the SARI and ILI case study into a list, focusing
+  # only on the main analysis (i.e. ignoring the robustness check scenarios)
+  tar_target(
+    summarized_nowcast_list,
+    list(
+      SARI = filter(
+        bind_rows(
+          bind_rows(summarized_nowcast_mcmc),
+          bind_rows(summarized_nowcast_glm)
+        ),
+        sensitivity_sc == ""
+      ),
+      ILI = filter(
+        bind_rows(
+          bind_rows(ili_summarized_nowcast_mcmc),
+          bind_rows(ili_summarized_nowcast_glm)
+        ),
+        sensitivity_sc == ""
+      )
+    )
+  ),
+  tar_target(
+    case_study_results_plot,
+    patchwork_results(
+      summarized_nowcast_list,
+      full_data_list = list(SARI = full_data, ILI = ili_full_data),
+      skip_dates_list = list(SARI = skip_dates, ILI = NULL),
+      type = "case_study"
+    )
+  ),
   # Plot an example of nowcasts from all models (GLM & MCMC) in the case study
   # for selected dates
   tar_target(

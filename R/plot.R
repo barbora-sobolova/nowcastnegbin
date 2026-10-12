@@ -297,7 +297,7 @@ plot_coverage <- function(
     get_plot_theme() +
     theme(
       legend.background = element_blank(),
-      axis.text.y = element_text(color = "black")
+      axis.text.y = element_text(color = "black", hjust = 0)
     ) +
     facet_wrap(
       ~delay,
@@ -383,9 +383,13 @@ plot_coverage_alt <- function(
 ) {
   data_origin <- match.arg(data_origin)
 
+  # Alternative plots are drawn for the "interesting" models only
+  df_summarized_nowcast <- df_summarized_nowcast |>
+    filter(!(.data$Distribution %in% c("Poisson", "NegBin2M", "NegBin1M")))
+
   # Calculate the empirical coverage
   df_coverage <- create_coverage_plot_df(df_summarized_nowcast) |>
-    mutate(delay = as.numeric(as.character(delay)))
+    mutate(delay = as.numeric(as.character(.data$delay)))
   # Grab the maximum lag
   max_lag <- length(unique(df_coverage$delay))
 
@@ -417,7 +421,11 @@ plot_coverage_alt <- function(
     scale_color_manual(values = get_interaction_colors(), name = "Model") +
     scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.20)) +
     scale_x_continuous(breaks = seq(1 - max_lag, 0, by = 1)) +
-    labs(y = "Empirical coverage", x = "Nowcasting horizon") +
+    labs(
+      y = "Empirical coverage",
+      x = "Nowcasting horizon",
+      title = get_dgp_title(data_origin)
+    ) +
     get_plot_theme()
   if (save_plot) {
     save_figure(
@@ -559,14 +567,14 @@ plot_crps_decomp <- function(
     ) +
     scale_fill_manual(values = get_interaction_colors(), name = "Model") +
     scale_y_discrete(labels = model_y_labels) +
-    labs(x = "Mean CRPS/AE", y = "Model") +
+    labs(x = "Mean CRPS/AE", y = "Model", title = get_dgp_title(data_origin)) +
     # By default, the colors in the legend show up in the reverse order
     # compared to the barplot
     guides(fill = guide_legend(reverse = TRUE)) +
     get_plot_theme() +
     theme(
       legend.background = element_blank(),
-      axis.text.y = element_text(color = "black")
+      axis.text.y = element_text(color = "black", hjust = 0)
     ) +
     facet_wrap(
       ~delay,
@@ -579,7 +587,6 @@ plot_crps_decomp <- function(
   # process and place the legend to the bottom in a way it fits.
   if (!(data_origin %in% c("SARI", "ILI"))) {
     crps_decomp_plot <- crps_decomp_plot +
-      labs(title = get_dgp_title(data_origin)) +
       guides(alpha = guide_legend(nrow = 3), fill = guide_legend(nrow = 3)) +
       theme(legend.position = "bottom")
   }
@@ -655,6 +662,10 @@ plot_crps_decomp_alt <- function(
   # Highlight the model aligned with the true data generating process if known.
   model_x_labels <- get_model_axis_labels(data_origin, bold = FALSE)
 
+  # Alternative plots are drawn for the "interesting" models only
+  df_summarized_nowcast <- df_summarized_nowcast |>
+    filter(!(.data$Distribution %in% c("Poisson", "NegBin2M", "NegBin1M")))
+
   # Calculate the decomposition of the average CRPS
   df_crps_list <- create_crps_plot_df(df_summarized_nowcast)
   df_crps_list$df_crps <- df_crps_list$df_crps |>
@@ -664,16 +675,20 @@ plot_crps_decomp_alt <- function(
         .data$delay == "0",
         # For horizon 0, the bar is wide enough to place the label inside it
         max(.data$Total) / 35,
-        # For other horizons, we place the label outside of the bar, after the
-        # dot denoting the MAE
-        .data$Total + max(.data$Total) / 40
+        # For other horizons, we place the label outside of the bar with some
+        # padding between the bars and the labels
+        .data$Total + max(.data$Total, na.rm = TRUE) / 40
+      ),
+      model_method_interact = factor(
+        .data$model_method_interact,
+        levels = rev(get_interaction_names())
       )
     )
   df_crps_list$df_decomp <- df_crps_list$df_decomp |>
     mutate(
       # Reverse the model names to make the ordering consistent
       model_method_interact = factor(
-        model_method_interact,
+        .data$model_method_interact,
         levels = rev(get_interaction_names())
       )
     )
@@ -681,7 +696,31 @@ plot_crps_decomp_alt <- function(
   # Grab the maximum delay in order to label the facets according to the
   # corresponding delay
   max_lag <- length(unique(df_crps_list$df_crps$delay))
+
+  # For the SARI data, we combine the CRPS plot together with the ILI results,
+  # which have a longer maximum delay by one. For this reason we add a dummy
+  # reporting delay to get as many facets as for the ILI data
+  if (data_origin == "SARI") {
+    # Increase the maximum lag
+    max_lag <- max_lag + 1
+    # Create dummy data
+    dummy <- data.frame(
+      sensitivity_sc = "",
+      Component = factor("Overprediction"),
+      delay = factor(-4),
+      # This model is displayed in the middle. We use the middle position to
+      # plot a "Not applicable" label
+      model_method_interact = factor("NegBin-X-RW")
     )
+    df_crps_list$df_decomp <- bind_rows(df_crps_list$df_decomp, dummy) |>
+      # Sot the delay factor delays to display the facets in the correct order
+      mutate(
+        delay = factor(
+          .data$delay,
+          levels = sort(as.numeric(as.character(levels(.data$delay))))
+        )
+      )
+  }
 
   # Plot the CRPS as horizontal bars
   crps_decomp_plot <- ggplot() +
@@ -715,11 +754,7 @@ plot_crps_decomp_alt <- function(
     ) +
     scale_fill_manual(values = get_interaction_colors(), name = "Model") +
     scale_x_discrete(labels = model_x_labels) +
-    scale_y_continuous(expand = expansion(mult = c(0, 0.2))) +
     labs(y = "Mean CRPS", x = "Model", title = get_dgp_title(data_origin)) +
-    # By default, the colors in the legend show up in the reverse order
-    # compared to the barplot
-    guides(fill = guide_legend(reverse = TRUE)) +
     get_plot_theme() +
     theme(
       legend.background = element_blank(),
@@ -728,8 +763,29 @@ plot_crps_decomp_alt <- function(
     facet_wrap(
       ~delay,
       nrow = 1,
-      labeller = as_labeller(label_horizon_facet(max_lag))
+      labeller = as_labeller(label_horizon_facet(max_lag)),
+      drop = FALSE
     )
+
+  if (data_origin == "SARI") {
+    dummy <- dummy |>
+      mutate(
+        na_label = "Not applicable",
+        na_label_position = max(df_crps_list$df_crps$Total, na.rm = TRUE) / 2
+      )
+    crps_decomp_plot <- crps_decomp_plot +
+      geom_label(
+        dummy,
+        mapping = aes(
+          x = .data$model_method_interact,
+          y = .data$na_label_position,
+          label = .data$na_label
+        ),
+        border.color = alpha("white", 0),
+        fill = alpha("white", 0),
+        hjust = 0.5
+      )
+  }
 
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
@@ -758,14 +814,36 @@ plot_crps_decomp_alt <- function(
   ret
 }
 
-patchwork_sim_results <- function(summarized_nowcast_list, save_plot = TRUE) {
+patchwork_results <- function(
+  summarized_nowcast_list,
+  full_data_list = NULL,
+  skip_dates_list = NULL,
+  type = c("case_study", "simulation"),
+  save_plot = TRUE
+) {
   data_origin <- names(summarized_nowcast_list)
+  # How many data-generating processes there is
+  n_dgp <- length(data_origin)
+  # We generate 4 plots:
+  # - coverage (as barplots)
+  # - alternative coverage (as lineplots)
+  # - CRPS (as horizontal barplots)
+  # - alternative CRPS (as vertical barplots)
+  # For the case studies, we also generate nowcast bands at delay 0, which we
+  # glue together for the ILI and SARI data.
+  plot_names <- c("coverage", "coverage_alt", "crps", "crps_alt")
+  if (type == "case_study") {
+    n_plots <- 5
+    plot_names <- c(plot_names, "nowcast_bands0")
+  } else {
+    n_plots <- 4
+  }
   plot_list <- replicate(
-    4,
-    setNames(vector("list", length(data_origin)), data_origin),
+    n_plots,
+    setNames(vector("list", n_dgp), data_origin),
     simplify = FALSE
   )
-  names(plot_list) <- c("coverage", "coverage_alt", "crps", "crps_alt")
+  names(plot_list) <- plot_names
   # Loop over the data generating processes
   for (dgp in data_origin) {
     plot_list$coverage[[dgp]] <- plot_coverage(
@@ -792,39 +870,126 @@ patchwork_sim_results <- function(summarized_nowcast_list, save_plot = TRUE) {
       sensitivity_sc = "",
       save_plot = FALSE
     )
+    if (type == "case_study") {
+      plot_list$nowcast_bands0[[dgp]] <- plot_nowcast_bands(
+        full_data_list[[dgp]],
+        summarized_nowcast_list[[dgp]],
+        skip_dates = skip_dates_list[[dgp]],
+        data_origin = dgp,
+        sensitivity_sc = "",
+        save_plot = FALSE
+      )$separated_plot &
+        labs(title = get_dgp_title(dgp))
+    }
   }
-  coverage_plot <- wrap_plots(plot_list$coverage, nrow = length(data_origin)) +
-    plot_layout(axes = "collect", guides = "collect") &
-    theme(legend.position = "bottom", legend.justification = "right")
-  coverage_alt_plot <- wrap_plots(plot_list$coverage_alt, nrow = 1) +
-    plot_layout(axes = "collect", guides = "collect")
-  crps_plot <- wrap_plots(plot_list$crps, nrow = 3) +
-    plot_layout(axes = "collect", guides = "collect") &
-    theme(legend.position = "bottom", legend.justification = "right")
-  crps_alt_plot <- wrap_plots(plot_list$crps_alt, nrow = 4) +
-    plot_layout(axes = "collect", guides = "collect")
-  if (save_plot) {
-    save_figure(
-      coverage_alt_plot, "inst/figure/coverage_plot_alt_simulation",
-      9,
-      5
+
+  if (type == "simulation") {
+    # 4x3 barplot showing coverage of all models. This goes to the supplement.
+    coverage_plot <- patchwork::wrap_plots(
+      plot_list$coverage,
+      nrow = n_dgp,
+      axes = "collect",
+      guides = "collect"
+    ) &
+      theme(legend.position = "bottom", legend.justification = "right")
+    # 2x2 lineplot showing coverage of selected models. This goes to the main
+    # manuscript.
+    coverage_alt_plot <-  patchwork::wrap_plots(
+      plot_list$coverage_alt, nrow = 2,
+      axes = "collect",
+      guides = "collect"
     )
-    save_figure(coverage_plot, "inst/figure/coverage_plot_simulation", 9, 13)
-    save_figure(
-      crps_plot,
-      "inst/figure/crps_decomposition_plot_simulation",
-      width = 10,
-      height = 14
-    )
-    save_figure(
-      crps_alt_plot,
-      "inst/figure/crps_decomposition_alt_plot_simulation",
-      width = 9,
-      height = 11
-    )
-    ret <- vector("list", 4)
+    # 4x3 barplot showing the CRPS of all models. This goes to the supplement.
+    crps_plot <-  patchwork::wrap_plots(
+      plot_list$crps,
+      nrow = n_dgp,
+      axes = "collect",
+      guides = "collect"
+    ) &
+      theme(legend.position = "bottom", legend.justification = "right")
   } else {
-    ret <- list(coverage = coverage_plot, crps = crps_plot)
+    # 1x2 lineplot showing coverage of selected models. This goes to the main
+    # manuscript.
+    coverage_alt_plot <-  patchwork::wrap_plots(
+      plot_list$coverage_alt,
+      nrow = 1,
+      axes = "collect",
+      guides = "collect",
+      widths = c(4, 5.1)
+    )
+    # 2x1 barplot showing the CRPS of selected models. This goes to the main
+    # manuscript.
+    crps_alt_plot <- patchwork::wrap_plots(
+      plot_list$crps_alt,
+      nrow = 2,
+      guides = "collect",
+      axes = "collect"
+    ) &
+      theme(
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.box = "vertical"
+      )
+    # 2x1 nowcast bands plot of all models. This goes to the main manuscript
+    nowcast_bands0_plot <-  patchwork::wrap_plots(
+      plot_list$nowcast_bands0,
+      nrow = 2,
+      guides = "collect",
+      axes = "collect"
+    )
+  }
+
+  if (save_plot) {
+    if (type == "simulation") {
+      # For the simulation study, we save the 4x3 barplot of coverage
+      # (supplement)
+      save_figure(coverage_plot, "inst/figure/coverage_plot_simulation", 9, 13)
+      # For the simulation study, we save a 4x3 barplot of CRPS (supplement)
+      save_figure(
+        crps_plot,
+        "inst/figure/crps_decomposition_plot_simulation",
+        width = 10,
+        height = 14
+      )
+      # Set the plot dimensions of the coverage plot displayed as a lineplot.
+      # This will go to the main manuscript.
+      coverage_alt_plot_size <- list(width = 9, height = 9)
+    } else {
+      # For the case studies, we save the 2x5 vertical CRPS barplot, which
+      # will go to the main manuscript.
+      save_figure(
+        crps_alt_plot,
+        "inst/figure/crps_decomposition_alt_plot_case_study",
+        width = 11,
+        height = 9
+      )
+      # For the case studies, we save the 2x1 plot of prediction interval bands
+      # for delay 0. This will go to the main manuscript.
+      save_figure(
+        nowcast_bands0_plot,
+        "inst/figure/nowcast_bands_case_study_delay0",
+        width = 11.5,
+        height = 11
+      )
+      coverage_alt_plot_size <- list(width = 11, height = 6)
+    }
+    # For the case studies and simulations, we save the coverage lineplot,
+    # which will both go to the main manuscript.
+    save_figure(
+      coverage_alt_plot,
+      paste0("inst/figure/coverage_plot_alt_", type),
+      coverage_alt_plot_size$width,
+      coverage_alt_plot_size$height
+    )
+    ret <- vector("list", 5)
+  } else {
+    ret <- list(
+      coverage = coverage_plot,
+      coverage_alt = coverage_alt_plot,
+      crps = crps_plot,
+      crps_alt = crps_alt_plot,
+      nowcast_bands0 = nowcast_bands0_plot
+    )
   }
   ret
 }
@@ -1662,7 +1827,7 @@ plot_per_window <- function(
 #' scenarios as a robustness check. For these scenarios, the coverage and CRPS
 #' plots are saved as glued together by pairs. For the simulations, we don't
 #' create the coverage and CRPS. This is done in the
-#' \code{patchwork_sim_results} function, where we merge together results from
+#' \code{patchwork_results} function, where we merge together results from
 #' all simulation study scenarios.
 #'
 #' @param df_nowcast a data frame containing columns `Distribution`
@@ -2731,7 +2896,7 @@ plot_nowcast_example <- function(
   )
   # Save the plot if required, the width, height and path are hard-coded here
   if (save_plot) {
-    plot_height <- length(dataset) * 5 + 1
+    plot_height <- length(dataset) * 6 + 1
     save_figure(
       arranged,
       paste0("inst/figure/nowcast_example_", paste(dataset, collapse = "_")),
