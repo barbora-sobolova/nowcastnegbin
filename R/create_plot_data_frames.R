@@ -165,7 +165,7 @@ summarize_nowcast <- function(
 
 create_coverage_plot_df <- function(df_summarized_nowcast) {
   # Calculate the empirical coverage
-  df_coverage <- df_summarized_nowcast |>
+  df_summarized_nowcast |>
     group_by(.data$delay, .data$Distribution, .data$method) |>
     summarize(
       coverage_50 = sum(
