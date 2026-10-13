@@ -147,7 +147,7 @@ sim_nowcast_example_dates <- as.Date("2018-04-01")
 # The GLM method often overestimates the mean process around season peaks.
 # We show this in a separate plot for the selected dates.
 glm_overshoot_dates <- as.Date(
-  c("2019-03-24", "2019-03-31", "2019-04-07", "2019-04-14")
+  c("2018-04-01", "2018-04-08", "2018-04-15", "2018-04-22")
 )
 
 # Define the pipeline
@@ -611,6 +611,7 @@ list(
       sim_df_total_NegBinX,
       sim_fitted_mcmc_NegBinX$lambda,
       sim_fitted_glm_NegBinX$lambda,
+      data_origin = "NegBinX",
       dates_to_show = glm_overshoot_dates,
       model_to_show = "NegBinX"
     ),

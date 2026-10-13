@@ -353,6 +353,9 @@ filter_nowcast_example_dates <- function(
     "NegBin1M"
   )
 ) {
+  data_origin <- match.arg(data_origin)
+  model_to_show <- match.arg(model_to_show)
+
   # We filter out all rolling windows we don't want to show. Since the function
   # is called for each dynamic branch, in most cases, the filtered data frame
   # will have 0 rows.
