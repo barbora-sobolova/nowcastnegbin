@@ -494,9 +494,11 @@ plot_crps_decomp <- function(
         .data$delay == "0",
         # For horizon 0, the bar is wide enough to place the label inside it
         max(.data$Total) / 35,
-        # For other horizons, we place the label outside of the bar, after the
-        # dot denoting the MAE
-        .data$MAE * 1.3
+        # For other horizons, we place the label outside of the bar with some
+        # padding between the bars and the labels. If we add the mean absolute
+        # error or the log score as points into the plot, we will have to make
+        # sure that they don't overlap with the labels.
+        .data$Total + max(.data$Total, na.rm = TRUE) / 40
       )
     )
   df_crps_list$df_decomp <- df_crps_list$df_decomp |>
@@ -560,10 +562,6 @@ plot_crps_decomp <- function(
         "Overprediction" = 0.7
       ),
       name = "Component"
-    ) +
-    geom_point(
-      df_crps_list$df_decomp,
-      mapping = aes(x = .data$MAE, y = .data$model_method_interact)
     ) +
     scale_fill_manual(values = get_interaction_colors(), name = "Model") +
     scale_y_discrete(labels = model_y_labels) +
