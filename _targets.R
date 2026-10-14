@@ -587,14 +587,14 @@ list(
       iteration = "list"
     ),
     # Plot an example of nowcasts from all models (GLM & MCMC) in the
-    # simualation study for selected dates
+    # simulation study for selected dates
     tar_target(
       sim_nowcast_plots,
       plot_nowcast_example(
-        map(sim_df_nowcast_example, "nowcast"),
-        map(sim_df_nowcast_example, "total"),
+        bind_rows(map(sim_df_nowcast_example, "nowcast")),
+        bind_rows(map(sim_df_nowcast_example, "total")),
         sim_nowcast_example_dates,
-        data_origin = sc_name
+        dataset = sc_name
       )
     )
   ),
