@@ -166,7 +166,12 @@ summarize_nowcast <- function(
 create_coverage_plot_df <- function(df_summarized_nowcast) {
   # Calculate the empirical coverage
   df_summarized_nowcast |>
-    group_by(.data$delay, .data$Distribution, .data$method) |>
+    group_by(
+      .data$delay,
+      .data$Distribution,
+      .data$method,
+      .data$sensitivity_sc
+    ) |>
     summarize(
       coverage_50 = sum(
         .data$true_val >= .data$quantile_25 &
@@ -198,7 +203,12 @@ create_crps_plot_df <- function(df_summarized_nowcast) {
   df_crps <- df_summarized_nowcast |>
     # Calculate the absolute error
     mutate(AE = abs(.data$true_val - .data$quantile_50)) |>
-    group_by(.data$delay, .data$Distribution, .data$method) |>
+    group_by(
+      .data$delay,
+      .data$Distribution,
+      .data$method,
+      .data$sensitivity_sc
+    ) |>
     summarize(
       # Mean absolute error
       MAE = mean(.data$AE),
