@@ -889,7 +889,7 @@ patchwork_results <- function(
       axes = "collect",
       guides = "collect"
     ) &
-      theme(legend.position = "bottom", legend.justification = "right")
+      theme(legend.position = "bottom")
     # 2x2 lineplot showing coverage of selected models. This goes to the main
     # manuscript.
     coverage_alt_plot <-  patchwork::wrap_plots(
@@ -904,7 +904,7 @@ patchwork_results <- function(
       axes = "collect",
       guides = "collect"
     ) &
-      theme(legend.position = "bottom", legend.justification = "right")
+      theme(legend.position = "bottom")
   } else {
     # 1x2 lineplot showing coverage of selected models. This goes to the main
     # manuscript.
@@ -941,13 +941,13 @@ patchwork_results <- function(
     if (type == "simulation") {
       # For the simulation study, we save the 4x3 barplot of coverage
       # (supplement)
-      save_figure(coverage_plot, "inst/figure/coverage_plot_simulation", 9, 13)
+      save_figure(coverage_plot, "inst/figure/coverage_plot_simulation", 13, 17)
       # For the simulation study, we save a 4x3 barplot of CRPS (supplement)
       save_figure(
         crps_plot,
         "inst/figure/crps_decomposition_plot_simulation",
-        width = 10,
-        height = 14
+        width = 13,
+        height = 17
       )
       # Set the plot dimensions of the coverage plot displayed as a lineplot.
       # This will go to the main manuscript.
@@ -2028,14 +2028,14 @@ save_patchwork_plots <- function(plot_list, data_origin = c("SARI", "ILI")) {
   # Iterate over the plots and save them
   for (k in seq_along(patchworked_list)) {
     plot_height <- if (data_origin == "ILI") {
-      9
+      8
     } else {
-      6
+      5.5
     }
     save_figure(
       patchworked_list[[k]],
       paste0("inst/figure/", names(patchworked_list)[k]),
-      width = 13,
+      width = 15,
       height = plot_height
     )
   }
