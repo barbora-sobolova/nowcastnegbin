@@ -484,10 +484,8 @@ plot_crps_decomp <- function(
 
   # Highlight the model aligned with the true data generating process if known.
   model_y_labels <- get_model_axis_labels(data_origin)
-
   # Calculate the decomposition of the average CRPS
-  df_crps_list <- create_crps_plot_df(df_summarized_nowcast)
-  df_crps_list$df_crps <- df_crps_list$df_crps |>
+  df_crps <- create_crps_plot_df(df_summarized_nowcast) |>
     # Calculate the x-coordinate of the labels denoting the total CRPS
     mutate(
       lab_position = ifelse(
@@ -501,8 +499,19 @@ plot_crps_decomp <- function(
         .data$Total + max(.data$Total, na.rm = TRUE) / 40
       )
     )
-  df_crps_list$df_decomp <- df_crps_list$df_decomp |>
+  # Pivot the table by the CRPS components for easier definition of the alpha
+  # aesthetic
+  df_crps_component <- df_crps |>
+    tidyr::pivot_longer(
+      cols = c("Dispersion", "Overprediction", "Underprediction"),
+      names_to = "Component",
+      values_to = "CRPS"
+    ) |>
     mutate(
+      Component = factor(
+        .data$Component,
+        levels = c("Overprediction", "Dispersion", "Underprediction")
+      ),
       # Reverse the levels of the delay factor to show the nowcasting horizon 0
       # on the left and the past horizons more to the right
       delay = factor(.data$delay, levels = rev(levels(.data$delay)))
@@ -510,7 +519,7 @@ plot_crps_decomp <- function(
 
   # Grab the maximum delay in order to label the facets according to the
   # corresponding delay
-  max_lag <- length(unique(df_crps_list$df_crps$delay))
+  max_lag <- length(unique(df_crps$delay))
   # Set the number of rows for `facet_wrap`. For the case study, we always have
   # a 2x2 grid. For the simulation study, we can decide, whether we want to plot
   # the coverage for each data generating process individually, or patchwork
@@ -526,7 +535,7 @@ plot_crps_decomp <- function(
   # Grab the number of models in order to set the height of the plot
   # accordingly. We plot only the 6 MCMC-based models for the scenarios of the
   # sensitivity analysis. Otherwise we plot 9 models (6  MCMC, and 3 GLM).
-  n_models <- length(unique(df_crps_list$df_crps$model_method_interact))
+  n_models <- length(unique(df_crps$model_method_interact))
   if (!(n_models %in% c(6, 9))) {
     stop("Number of models must be 6 or 9.")
   }
@@ -534,7 +543,7 @@ plot_crps_decomp <- function(
   # Plot the CRPS as horizontal bars
   crps_decomp_plot <- ggplot() +
     geom_col(
-      df_crps_list$df_decomp,
+      df_crps_component,
       mapping = aes(
         x = .data$CRPS,
         y = .data$model_method_interact,
@@ -544,7 +553,7 @@ plot_crps_decomp <- function(
       position = "stack"
     ) +
     geom_label(
-      df_crps_list$df_crps,
+      df_crps,
       mapping = aes(
         x = .data$lab_position,
         y = .data$model_method_interact,
@@ -663,10 +672,8 @@ plot_crps_decomp_alt <- function(
   # Alternative plots are drawn for the "interesting" models only
   df_summarized_nowcast <- df_summarized_nowcast |>
     filter(!(.data$Distribution %in% c("Poisson", "NegBin2M", "NegBin1M")))
-
   # Calculate the decomposition of the average CRPS
-  df_crps_list <- create_crps_plot_df(df_summarized_nowcast)
-  df_crps_list$df_crps <- df_crps_list$df_crps |>
+  df_crps <- create_crps_plot_df(df_summarized_nowcast) |>
     # Calculate the x-coordinate of the labels denoting the total CRPS
     mutate(
       lab_position = ifelse(
@@ -677,23 +684,30 @@ plot_crps_decomp_alt <- function(
         # padding between the bars and the labels
         .data$Total + max(.data$Total, na.rm = TRUE) / 40
       ),
+      # Reverse the model names to appear in the correct order
       model_method_interact = factor(
         .data$model_method_interact,
         levels = rev(get_interaction_names())
       )
     )
-  df_crps_list$df_decomp <- df_crps_list$df_decomp |>
+  # Pivot the table by the CRPS components for easier definition of the alpha
+  # aesthetic
+  df_crps_component <- df_crps |>
+    tidyr::pivot_longer(
+      cols = c("Dispersion", "Overprediction", "Underprediction"),
+      names_to = "Component",
+      values_to = "CRPS"
+    ) |>
     mutate(
-      # Reverse the model names to make the ordering consistent
-      model_method_interact = factor(
-        .data$model_method_interact,
-        levels = rev(get_interaction_names())
+      Component = factor(
+        .data$Component,
+        levels = c("Overprediction", "Dispersion", "Underprediction")
       )
     )
 
   # Grab the maximum delay in order to label the facets according to the
   # corresponding delay
-  max_lag <- length(unique(df_crps_list$df_crps$delay))
+  max_lag <- length(unique(df_crps$delay))
 
   # For the SARI data, we combine the CRPS plot together with the ILI results,
   # which have a longer maximum delay by one. For this reason we add a dummy
@@ -710,7 +724,7 @@ plot_crps_decomp_alt <- function(
       # plot a "Not applicable" label
       model_method_interact = factor("NegBin-X-RW")
     )
-    df_crps_list$df_decomp <- bind_rows(df_crps_list$df_decomp, dummy) |>
+    df_crps_component <- bind_rows(df_crps_component, dummy) |>
       # Sot the delay factor delays to display the facets in the correct order
       mutate(
         delay = factor(
@@ -723,7 +737,7 @@ plot_crps_decomp_alt <- function(
   # Plot the CRPS as horizontal bars
   crps_decomp_plot <- ggplot() +
     geom_col(
-      df_crps_list$df_decomp,
+      df_crps_component,
       mapping = aes(
         y = .data$CRPS,
         x = .data$model_method_interact,
@@ -733,7 +747,7 @@ plot_crps_decomp_alt <- function(
       position = "stack"
     ) +
     geom_label(
-      df_crps_list$df_crps,
+      df_crps,
       mapping = aes(
         y = .data$lab_position,
         x = .data$model_method_interact,
@@ -769,7 +783,7 @@ plot_crps_decomp_alt <- function(
     dummy <- dummy |>
       mutate(
         na_label = "Not applicable",
-        na_label_position = max(df_crps_list$df_crps$Total, na.rm = TRUE) / 2
+        na_label_position = max(df_crps$Total, na.rm = TRUE) / 2
       )
     crps_decomp_plot <- crps_decomp_plot +
       geom_label(

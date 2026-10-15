@@ -225,23 +225,21 @@ create_crps_plot_df <- function(df_summarized_nowcast) {
         levels = names(get_interaction_names()),
         labels = get_interaction_names()
       )
-    )
-
-  df_crps_decomp <- df_crps |>
-    # Pivot for easier definition of the alpha aesthetic
-    tidyr::pivot_longer(
-      cols = c("Dispersion", "Overprediction", "Underprediction"),
-      names_to = "Component",
-      values_to = "CRPS"
     ) |>
-    mutate(
-      Component = factor(
-        .data$Component,
-        levels = c("Overprediction", "Dispersion", "Underprediction")
+    dplyr::select(
+      c(
+        "delay",
+        "sensitivity_sc",
+        "MAE",
+        "Total",
+        "model_method_interact",
+        "Dispersion",
+        "Underprediction",
+        "Overprediction",
+        "Total"
       )
     )
-  ret <- list(df_crps = df_crps, df_decomp = df_crps_decomp)
-  ret
+  df_crps
 }
 
 #' Combine data frames of results from different methods
