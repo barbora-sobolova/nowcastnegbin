@@ -1926,7 +1926,7 @@ plot_aggregated <- function(
   # If the plots are to be saved, glue together the coverage and CRPS plots from
   # the sensitivity analysis.
   if (save_plot && data_origin %in% c("SARI", "ILI")) {
-    save_patchwork_plots(ret_list, data_origin)
+    save_sensitivity_plots(ret_list, data_origin)
     # If we save a plot, we usually return NULL in place of the individual
     # plots. For consistency, we reconstruct the list of NULLs with a
     # corresponding structure here.
@@ -1968,7 +1968,7 @@ plot_aggregated <- function(
 #' @importFrom patchwork plot_layout plot_spacer
 #'
 #' @export
-save_patchwork_plots <- function(plot_list, data_origin = c("SARI", "ILI")) {
+save_sensitivity_plots <- function(plot_list, data_origin = c("SARI", "ILI")) {
   data_origin <- match.arg(data_origin)
   # Add a plot title to distinguish between more and less informative priors.
   # The same title is used for the delay probability and the dispersion
