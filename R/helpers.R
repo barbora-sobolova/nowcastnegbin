@@ -97,10 +97,10 @@ get_dgp_title <- function(data_origin) {
   switch(
     data_origin,
     # We use only these four as a data generating process in the simulations
-    NegBinX = "NegBin-X data generating process",
-    NegBin1D = "NegBin-LD data generating process",
-    NegBin2D = "NegBin-QD data generating process",
-    NegBinX_switch = "NegBin-X data generating process with irregularities",
+    NegBinX = "NegBin-X data",
+    NegBin1D = "NegBin-LD data",
+    NegBin2D = "NegBin-QD data",
+    NegBinX_switch = "NegBin-X data with irregularities",
     # Two case studies
     SARI = "SARI hospitalizations in Germany",
     ILI = "ILI cases in the US",
@@ -172,7 +172,7 @@ get_plot_theme <- function() {
 #' @return a named vector of length \code{max_lag} with the factor levels and
 #' their corresponding labels
 label_horizon_facet <- function(max_lag) {
-  horizons <- -rev(seq_len(max_lag) - 1)
+  horizons <- -(seq_len(max_lag) - 1)
   ret <- paste0("Horizon: ", horizons)
   names(ret) <- as.character(horizons)
   ret
