@@ -10,7 +10,7 @@ plot_rw_sd(
   df_nb_size,
   model_names,
   date_of_the_nowcast,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
   sensitivity_sc = "",
   save_plot = TRUE
 )

@@ -826,6 +826,54 @@ plot_crps_decomp_alt <- function(
   ret
 }
 
+#' Compose and save figures showing results
+#'
+#' @description This functions takes the results of multiple simulation
+#' scenarios, or different case studies and creates composed figures that go
+#' either to the main manuscript, or the supplement. Potentially generated plots
+#' are:
+#' \itemize{
+#'   \item coverage of selected models as a line plot (simulations and case
+#'   studies),
+#'   \item coverage of all models as a bar plot (simulations and case studies),
+#'   \item CRPS of selected models as a vertical barplot (only the case
+#'   studies),
+#'   \item CRPS of all models as a horizontal barplot (simulations and case
+#'   studies),
+#'   \item incidence trajectory along nowcasts at horizon 0 (only the case
+#'   studies),
+#' }
+#'
+#' @param summarized_nowcast_list a list with one element for each
+#' case study/simulation scenario, containing a data frame of the nowcasts in
+#' the quantile format. Each data frame contains columns `Distribution`
+#' (the name of the observation model), `quantile_50`
+#' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
+#' `quantile_97.5` (bounds of the prediction intervals), `dispersion` (spread
+#' component of the CRPS), `underprediction` (CRPS component) and
+#' `overprediction` (CRPS component), `date` (x-axis dates), `delay`
+#' (nowcast horizon) and `sensitivity_sc` (the name of a sensitivity analysis
+#' scenario).
+#' @param full_data_list a list with one element for each
+#' case study/simulation scenario, containing a data frame of the observations.
+#' The data frame has columns `date` and columns `value_0w`, `value_1w`, etc.
+#' until `max_lag - 1` used to plot the preliminary and final data alongside the
+#' nowcasts.
+#' @param skip_dates_list a list with one element for each
+#' case study/simulation scenario, containing a vector of dates, where no
+#' nowcasting has been done and where we should leave gaps in the plot of the
+#' nowcasts.
+#' @param type string indicating whether we compose results of the 4 simulation
+#' study scenarios, or 2 case studies
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return NULL
+#'
+#' @import ggplot2
+#' @importFrom patchwork plot_layout
+#'
+#' @export
 patchwork_results <- function(
   summarized_nowcast_list,
   full_data_list = NULL,

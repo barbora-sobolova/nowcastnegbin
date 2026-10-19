@@ -6,7 +6,7 @@
 \usage{
 plot_coverage(
   df_summarized_nowcast,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
   sensitivity_sc = "",
   save_plot = TRUE
 )

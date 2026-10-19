@@ -163,6 +163,35 @@ summarize_nowcast <- function(
   df_nowcast_plot
 }
 
+#' Calculate the coverage values to be displayed in plots
+#'
+#' @description This function calculates the empirical coverage fractions for
+#' the 50% and 95% nominal coverage values based on the nowcasts in the form of
+#' quantiles. The resulting data frame is in the long format to allow for easier
+#' plotting. Will be called by the \code{plot_coverage} and
+#' \code{plot_coverage_alt} functions.
+#'
+#' @param df_summarized_nowcast a data frame with the summarized nowcasts,
+#' containing columns `date`, `nowcast_date`, `Distribution`, `sensitivity_sc`,
+#' `delay`, `method`, `true_val`, `quantile_2.5`, `quantile_25`, `quantile_75`
+#' and `quantile_97.5`
+#' @return a data frame with columns
+#' \describe{
+#'   \item{\code{delay}}{reporting delay as a factor,}
+#'   \item{\code{Distribution}}{factor, label of the observation model,}
+#'   \item{\code{method}}{the fitting method, either "mcmc", or "glm",}
+#'   \item{\code{sensitivity_sc}}{string indicating the sensitivity analysis
+#'   scenario, "" denotes the main analysis,}
+#'   \item{\code{nominal_coverage}}{the nominal coverage level, either
+#'   "coverage_50", or "coverage_95",}
+#'   \item{\code{empirical_coverage}}{the value of the empirical coverage,}
+#'   \item{\code{model_method_interact}}{factor, label of the model-method
+#'   combination, necessary for determining the plot colors correctly,}
+#' }
+#'
+#' @import dplyr
+#'
+#' @export
 create_coverage_plot_df <- function(df_summarized_nowcast) {
   # Calculate the empirical coverage
   df_summarized_nowcast |>
@@ -198,6 +227,36 @@ create_coverage_plot_df <- function(df_summarized_nowcast) {
     )
 }
 
+#' Calculate the coverage values to be displayed in plots
+#'
+#' @description This function calculates the average CRPS values based on the
+#' CRPS of individual nowcasts, including the CRPS decomposition. The resulting
+#' data frame is in the long format to allow for easier plotting. Will be called
+#'  by the \code{plot_crps_decomp} and \code{plot_crps_decomp_alt} functions.
+#'
+#' @param df_summarized_nowcast a data frame with the summarized nowcasts,
+#' containing columns `date`, `nowcast_date`, `Distribution`, `sensitivity_sc`,
+#' `delay`, `method`, `crps`, `dispersion`, `underprediction` and
+#' `overprediction`
+#' @return a data frame with columns
+#' \describe{
+#'   \item{\code{delay}}{reporting delay as a factor,}
+#'   \item{\code{sensitivity_sc}}{string indicating the sensitivity analysis
+#'   scenario, "" denotes the main analysis,}
+#'   \item{\code{MAE}}{value of the mean absoltue error,}
+#'   \item{\code{Total}}{total value of the CRPS,}
+#'   \item{\code{model_method_interact}}{factor, label of the model-method
+#'   combination, necessary for determining the plot colors correctly,}
+#'   \item{\code{Dispersion}}{value of the dispersion component of the CRPS,}
+#'   \item{\code{Underprediction}}{value of the underprediction component of the
+#'   CRPS,}
+#'   \item{\code{Overprediction}}{value of the overprediction component of the
+#'   CRPS,}
+#' }
+#'
+#' @import dplyr
+#'
+#' @export
 create_crps_plot_df <- function(df_summarized_nowcast) {
   # Calculate the decomposition of the average CRPS
   df_crps <- df_summarized_nowcast |>
