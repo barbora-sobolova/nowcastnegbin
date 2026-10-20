@@ -2917,7 +2917,19 @@ plot_nowcast_example <- function(
   sens_sc = "",
   save_plot = TRUE
 ) {
-  dataset <- match.arg(dataset, several.ok = TRUE)
+  # Check the data-generating process as either one of the case studies or
+  # simulation scenarios.
+  valid_dataset <- dataset %in% c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  )
+  if (!valid_dataset) {
+    stop("Only strings 'SARI', 'ILI', 'NegBinX', 'NegBin2D', 'NegBin1D' and 'NegBinX_switch' are possible elements of the 'dataset' vector.")  # nolint
+  }
 
   # Throw an error if nowcasts for multiple dates and/or data generating
   # processes are to be plotted and the number of dates and the data generating
