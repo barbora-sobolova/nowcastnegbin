@@ -879,8 +879,9 @@ patchwork_results <- function(
   type = c("case_study", "simulation"),
   save_plot = TRUE
 ) {
-  data_origin <- names(summarized_nowcast_list)
+  type <- match.arg(type)
   # How many data-generating processes there is
+  data_origin <- names(summarized_nowcast_list)
   n_dgp <- length(data_origin)
   # We generate 4 plots:
   # - coverage (as barplots)
@@ -965,6 +966,10 @@ patchwork_results <- function(
       guides = "collect"
     ) &
       theme(legend.position = "bottom")
+    # We do not create a composite plot of the nowcast bands and the alternative
+    # CRPS plot for the simulations. The nowcast bands are created for each
+    # simulation scenario separately.
+    nowcast_bands0_plot <- crps_alt_plot <- NULL
   } else {
     # 1x2 lineplot showing coverage of selected models. This goes to the main
     # manuscript.
@@ -995,6 +1000,9 @@ patchwork_results <- function(
       guides = "collect",
       axes = "collect"
     )
+    # We do not create a composite CRPS and coverage plot for the case studies.
+    # They are generated for each case study separately.
+    crps_plot <- coverage_plot <- NULL
   }
 
   if (save_plot) {
@@ -2162,7 +2170,7 @@ plot_trajectory <- function(
   # Arrange the whole trajectory into a data frame for plotting
   totals <- full_data |>
     dplyr::select(paste0("value_", 1:max_lag - 1, "w")) |>
-    create_totals_data_frame(aux_study_start, time_step) |>
+    create_totals_data_frame(aux_study_start, data_origin, time_step) |>
     # `create_totals_data_frame()` returns a long data frame containing the
     # final and the preliminary state of the data. For plotting the whole
     # trajectory we are interested only in the final values.
@@ -2908,8 +2916,11 @@ plot_nowcast_example <- function(
   sens_sc = "",
   save_plot = TRUE
 ) {
-  # Throw an error if nowcasts for multiple dates and data generating processes
-  # are to be plotted, since the combined dataset would likely be hard to read.
+  dataset <- match.arg(dataset, several.ok = TRUE)
+
+  # Throw an error if nowcasts for multiple dates and/or data generating
+  # processes are to be plotted and the number of dates and the data generating
+  # processes don't match.
   if (length(dataset) != length(dates_to_show)) {
     stop("Arguments `dataset` and `dates_to_show` must be of the same length.")  # nolint
   }

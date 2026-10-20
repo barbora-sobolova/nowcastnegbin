@@ -27,6 +27,7 @@ create_totals_data_frame <- function(
   ),
   time_step = 7
 ) {
+  data_origin <- match.arg(data_origin)
   # Data frame to plot the observations - final counts and counts available at
   # the time of creating the nowcast
   data.frame(
@@ -420,8 +421,8 @@ filter_nowcast_example_dates <- function(
     "NegBin1M"
   )
 ) {
-  data_origin <- match.arg(data_origin)
-  model_to_show <- match.arg(model_to_show)
+  data_origin <- match.arg(data_origin, several.ok = TRUE)
+  model_to_show <- match.arg(model_to_show, several.ok = TRUE)
 
   # We filter out all rolling windows we don't want to show. Since the function
   # is called for each dynamic branch, in most cases, the filtered data frame
