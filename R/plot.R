@@ -835,13 +835,11 @@ plot_crps_decomp_alt <- function(
 #' \itemize{
 #'   \item coverage of selected models as a line plot (simulations and case
 #'   studies),
-#'   \item coverage of all models as a bar plot (simulations and case studies),
-#'   \item CRPS of selected models as a vertical barplot (only the case
-#'   studies),
+#'   \item coverage of all models as a bar plot (only simulations),
+#'   \item CRPS of selected models as a vertical barplot (only case studies),
 #'   \item CRPS of all models as a horizontal barplot (simulations and case
 #'   studies),
-#'   \item incidence trajectory along nowcasts at horizon 0 (only the case
-#'   studies),
+#'   \item incidence trajectory along nowcasts at horizon 0 (only case studies)
 #' }
 #'
 #' @param summarized_nowcast_list a list with one element for each
