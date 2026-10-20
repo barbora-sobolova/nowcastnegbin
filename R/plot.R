@@ -2690,6 +2690,7 @@ plot_nowcast_bands_per_horizon <- function(
         x = .data$date,
         y = .data$quantile_50,
         color = .data$model_method_interact,
+        group = .data$segment,
         linetype = "Nowcast"
       ),
       linewidth = 0.25
