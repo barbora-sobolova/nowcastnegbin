@@ -663,10 +663,10 @@ list(
     patchwork_results(
       sim_summarized_nowcast_list,
       full_data_list = list(
-        NegBin1D = full_data_NegBin1D,
-        NegBin2D = full_data_NegBin2D,
-        NegBinX = full_data_NegBinX,
-        NegBinX_switch = full_data_NegBinX_switch,
+        NegBin1D = sim_full_data_NegBin1D,
+        NegBin2D = sim_full_data_NegBin2D,
+        NegBinX = sim_full_data_NegBinX,
+        NegBinX_switch = sim_full_data_NegBinX_switch
       ),
       type = "simulation"
     )
