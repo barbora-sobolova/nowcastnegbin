@@ -15,8 +15,9 @@ plot_multiple_trajectories(
 }
 \arguments{
 \item{full_data}{a data frame of the whole trajectory containing columns
-\code{date}, \code{Distribution} (the data-generating process) and columns \code{value_0w},
-\code{value_1w}, etc. until \code{max_lag - 1}.}
+\code{date}, \code{data_origin} (the data-generating process - a case study, or a
+simulation scenario) and columns \code{value_0w}, \code{value_1w}, etc. until
+\code{max_lag - 1}.}
 
 \item{start_date}{a vector of dates (indeed in the date format), where the
 training data start. It should be as long as the number of simulation

@@ -2122,7 +2122,8 @@ save_sensitivity_plots <- function(plot_list, data_origin = c("SARI", "ILI")) {
 #' auxiliary case study period used for determining the priors starts.
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -2295,8 +2296,9 @@ plot_trajectory <- function(
 #' data-generating processes/datasets are placed on top of each other.
 #'
 #' @param full_data a data frame of the whole trajectory containing columns
-#' `date`, `Distribution` (the data-generating process) and columns `value_0w`,
-#' `value_1w`, etc. until `max_lag - 1`.
+#' `date`, `data_origin` (the data-generating process - a case study, or a
+#' simulation scenario) and columns `value_0w`, `value_1w`, etc. until
+#' `max_lag - 1`.
 #' @param start_date a vector of dates (indeed in the date format), where the
 #' training data start. It should be as long as the number of simulation
 #' scenarios/datasets. For simulations, all entries are the same. For the case
@@ -2865,7 +2867,7 @@ plot_mcmc_diagnostics <- function(
 #' nowcast plots as calculated in "real time". Individual panels correspond
 #' to different dates, when the nowcast is calculated.
 #'
-#' @param df_nowcast a list of data frames containing columns `Distribution`
+#' @param df_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `quantile_50`
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
 #' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
@@ -2879,10 +2881,16 @@ plot_mcmc_diagnostics <- function(
 #' individual data frames in the list correspond to different dates, when the
 #' nowcast is calculated.
 #' @param dates_to_show a selection of a few consecutive dates for which we want
-#' to show the estimates. Must be of equale length as \code{dataset}.
-#' @param dataset a string indicating the data generating process of
-#' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' to show the estimates. Must be of equal length as \code{dataset}.
+#' @param dataset a string vector indicating the data generating process of
+#' simulated data, or the corresponding case study. If a vector of length larger
+#' than 1 is supplied, the plots are combined using the \code{patchwork}
+#' approach. Possible string values that can appear as elements of the vector
+#' are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and "NegBinX_switch".
+#' These values will be used to filter the \code{df_nowcast} data frame.
+#' @param sens_sc a string indicating the sensitivity analysis scenario used
+#' to generate the nowcasts. In general, we don't plot anything beyond the main
+#' analysis denoted by ""
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
