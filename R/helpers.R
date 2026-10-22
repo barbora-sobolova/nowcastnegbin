@@ -56,6 +56,8 @@ get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
 #' generating process is highlighted in bold.
 #'
 #' @param data_origin string indicating the data generating process
+#' @param bold a logical indicator, whether the model labels on one of the plot
+#' axis should be drawn in bold.
 #' @return a named list or vector of 9 elements containing the model labels to
 #' show as ticks on the ggplot y-axis. If the \code{data_origin = "case_study"}
 #' the function returns the same named vector the \code{get_model_axis_labels}
@@ -66,22 +68,22 @@ get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
 #' process is a simulation, but from a perturbed model, we don't highlight
 #' anything.
 get_model_axis_labels <- function(data_origin, bold = TRUE) {
-  model_y_labels <- get_interaction_names()
+  model_labels <- get_interaction_names()
   if (!(data_origin %in% c("SARI", "COVID", "NegBinX_switch")) && bold) {
-    which_to_highlight <- grepl(data_origin, names(model_y_labels))
+    which_to_highlight <- grepl(data_origin, names(model_labels))
     # Make the selected labels in the ggplot in bold
-    model_y_labels <- lapply(
+    model_labels <- lapply(
       seq_along(which_to_highlight),
       function(ind) {
         if (which_to_highlight[ind]) {
-          bquote(bold(.(model_y_labels[ind])))
+          bquote(bold(.(model_labels[ind])))
         } else {
-          bquote(.(model_y_labels[ind]))
+          bquote(.(model_labels[ind]))
         }
       }
     )
   }
-  model_y_labels
+  model_labels
 }
 
 #' Get the plot title stating the data generating process

@@ -8,6 +8,9 @@ get_model_axis_labels(data_origin, bold = TRUE)
 }
 \arguments{
 \item{data_origin}{string indicating the data generating process}
+
+\item{bold}{a logical indicator, whether the model labels on one of the plot
+axis should be drawn in bold.}
 }
 \value{
 a named list or vector of 9 elements containing the model labels to
