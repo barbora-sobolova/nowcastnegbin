@@ -7,13 +7,14 @@
 plot_nowcast_example(
   df_nowcast,
   df_total,
+  dataset,
   dates_to_show,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  sens_sc = "",
   save_plot = TRUE
 )
 }
 \arguments{
-\item{df_nowcast}{a list of data frames containing columns \code{Distribution}
+\item{df_nowcast}{a data frame containing columns \code{Distribution}
 (containing the name of the observation model), \code{quantile_50}
 (the point nowcasts), \code{quantile_2.5}, \code{quantile_25}, \code{quantile_75},
 \code{quantile_97.5} (bounds of the prediction intervals), \code{date} (x-axis
@@ -21,19 +22,26 @@ dates), \code{nowcast_date} (when the nowcast was issued) and \code{delay} (nowc
 horizon). The individual data frames in the list correspond to different
 dates, when the nowcast is calculated.}
 
-\item{df_total}{a list of data frames containing columns \code{date}, \code{counts} and
-\code{data}. The last column \code{data} is an indicator, whether the values in the
-\code{counts} column are the final sums of the counts, or the preliminary data
-version. Needed to plot the observations alongside the nowcasts. The
-individual data frames in the list correspond to different dates, when the
-nowcast is calculated.}
+\item{df_total}{a data frame containing columns \code{date}, \code{counts},
+\code{data_origin} (case study or simulation scenario) and \code{data}. The last column
+\code{data} is an indicator, whether the values in the \code{counts} column are the
+final sums of the counts, or the preliminary data version. Needed to plot the
+observations alongside the nowcasts. The individual data frames in the list
+correspond to different dates, when the nowcast is calculated.}
+
+\item{dataset}{a string vector indicating the data generating process of
+simulated data, or the corresponding case study. If a vector of length larger
+than 1 is supplied, the plots are combined using the \code{patchwork}
+approach. Possible string values that can appear as elements of the vector
+are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and "NegBinX_switch".
+These values will be used to filter the \code{df_nowcast} data frame.}
 
 \item{dates_to_show}{a selection of a few consecutive dates for which we want
-to show the estimates.}
+to show the estimates. Must be of equal length as \code{dataset}.}
 
-\item{data_origin}{a string indicating the data generating process of
-simulated data, or the corresponding case study. Possible
-values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
+\item{sens_sc}{a string indicating the sensitivity analysis scenario used
+to generate the nowcasts. In general, we don't plot anything beyond the main
+analysis denoted by ""}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}

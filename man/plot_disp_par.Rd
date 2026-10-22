@@ -10,7 +10,7 @@ plot_disp_par(
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm"),
   disp_prior_pars = NULL,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
   sensitivity_sc = "",
   true_value = NULL,
   save_plot = TRUE

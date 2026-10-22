@@ -56,32 +56,34 @@ get_interaction_names <- function(nowcast_bands_ordering = FALSE) {
 #' generating process is highlighted in bold.
 #'
 #' @param data_origin string indicating the data generating process
+#' @param bold a logical indicator, whether the model labels on one of the plot
+#' axis should be drawn in bold.
 #' @return a named list or vector of 9 elements containing the model labels to
 #' show as ticks on the ggplot y-axis. If the \code{data_origin = "case_study"}
-#' the function returns the same named vector the \code{get_y_axis_model_labels}
+#' the function returns the same named vector the \code{get_model_axis_labels}
 #' fuction would return. If the data generating process is known, the return
 #' object is a list and we show the model labels aligned with it in bold. For
 #' the NegBinX and NegBin1D models, we fit the models with both methods (GLM and
 #' MCMC), so 2 labels will be highlighted in these cases. If the data generating
 #' process is a simulation, but from a perturbed model, we don't highlight
 #' anything.
-get_y_axis_model_labels <- function(data_origin) {
-  model_y_labels <- get_interaction_names()
-  if (!(data_origin %in% c("SARI", "COVID", "NegBinX_switch"))) {
-    which_to_highlight <- grepl(data_origin, names(model_y_labels))
+get_model_axis_labels <- function(data_origin, bold = TRUE) {
+  model_labels <- get_interaction_names()
+  if (!(data_origin %in% c("SARI", "COVID", "NegBinX_switch")) && bold) {
+    which_to_highlight <- grepl(data_origin, names(model_labels))
     # Make the selected labels in the ggplot in bold
-    model_y_labels <- lapply(
+    model_labels <- lapply(
       seq_along(which_to_highlight),
       function(ind) {
         if (which_to_highlight[ind]) {
-          bquote(bold(.(model_y_labels[ind])))
+          bquote(bold(.(model_labels[ind])))
         } else {
-          bquote(.(model_y_labels[ind]))
+          bquote(.(model_labels[ind]))
         }
       }
     )
   }
-  model_y_labels
+  model_labels
 }
 
 #' Get the plot title stating the data generating process
@@ -94,19 +96,17 @@ get_y_axis_model_labels <- function(data_origin) {
 #' @param data_origin string indicating the data generating process
 #' @return a string to use as a ggplot title
 get_dgp_title <- function(data_origin) {
-  formatted_data_origin <- switch(
+  switch(
     data_origin,
     # We use only these four as a data generating process in the simulations
-    NegBinX = "NegBin-X",
-    NegBin1D = "NegBin-LD",
-    NegBin2D = "NegBin-QD",
-    NegBinX_switch = "NegBin-X"
+    NegBinX = "NegBin-X data",
+    NegBin1D = "NegBin-LD data",
+    NegBin2D = "NegBin-QD data",
+    NegBinX_switch = "NegBin-X data with irregularities",
+    # Two case studies
+    SARI = "SARI hospitalizations in Germany",
+    ILI = "ILI cases in the US",
   )
-  title_str <- paste0(formatted_data_origin, " data generating process")
-  if (data_origin == "NegBinX_switch") {
-    title_str <- paste0(title_str, " with irregularities")
-  }
-  title_str
 }
 
 #' Get the colors of the observation models for the plots
@@ -153,6 +153,7 @@ get_interaction_colors <- function() {
 get_plot_theme <- function() {
   theme(
     plot.title = element_text(size = 16, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
     axis.title = element_text(size = 14),
     axis.text = element_text(size = 12),
     legend.title = element_text(size = 16),
@@ -173,7 +174,7 @@ get_plot_theme <- function() {
 #' @return a named vector of length \code{max_lag} with the factor levels and
 #' their corresponding labels
 label_horizon_facet <- function(max_lag) {
-  horizons <- -rev(seq_len(max_lag) - 1)
+  horizons <- -(seq_len(max_lag) - 1)
   ret <- paste0("Horizon: ", horizons)
   names(ret) <- as.character(horizons)
   ret

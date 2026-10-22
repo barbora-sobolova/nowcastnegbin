@@ -8,7 +8,7 @@ plot_nowcast_bands(
   full_data,
   df_nowcast,
   skip_dates = NULL,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
   sensitivity_sc = "",
   save_plot = TRUE
 )

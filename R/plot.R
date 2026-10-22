@@ -146,7 +146,8 @@ plot_nowcast <- function(
     labs(
       x = "Date",
       y = "Incidence",
-      title = paste0(
+      title = get_dgp_title(data_origin),
+      subtitle = paste0(
         "Nowcasts on ",
         format(as.Date(date_of_the_nowcast), "%d %b %Y")
       )
@@ -235,38 +236,12 @@ plot_coverage <- function(
   data_origin <- match.arg(data_origin)
 
   # Highlight the model aligned with the true data generating process if known.
-  model_y_labels <- get_y_axis_model_labels(data_origin)
-
-  # Calculate the empirical coverage
-  df_coverage <- df_summarized_nowcast |>
-    group_by(.data$delay, .data$Distribution, .data$method) |>
-    summarize(
-      coverage_50 = sum(
-        .data$true_val >= .data$quantile_25 &
-          .data$true_val <= .data$quantile_75
-      ) / n(),
-      coverage_95 = sum(
-        .data$true_val >= .data$quantile_2.5 &
-          .data$true_val <= .data$quantile_97.5
-      ) / n(),
-      .groups = "drop"
-    ) |>
-    # Pivot for easier definition of the alpha aesthetic
-    tidyr::pivot_longer(
-      cols = starts_with("coverage"),
-      names_to = "nominal_coverage",
-      values_to = "empirical_coverage"
-    ) |>
-    mutate(
-      model_method_interact = factor(
-        interaction(.data$Distribution, .data$method),
-        levels = names(get_interaction_names()),
-        labels = get_interaction_names()
-      ),
-      # Reverse the levels of the delay factor to show the nowcasting horizon 0
-      # on the left and the past horizons more to the right
-      delay = factor(.data$delay, levels = rev(levels(.data$delay)))
-    )
+  model_y_labels <- get_model_axis_labels(data_origin)
+  # Calculate empirical coverage
+  df_coverage <- create_coverage_plot_df(df_summarized_nowcast) |>
+    # Reverse the levels of the delay factor to show the nowcasting horizon 0
+    # on the left and the past horizons more to the right
+    mutate(delay = factor(.data$delay, levels = rev(levels(.data$delay))))
 
   # Grab the maximum delay in order to label the plot facets according to the
   # corresponding delay
@@ -322,7 +297,7 @@ plot_coverage <- function(
     get_plot_theme() +
     theme(
       legend.background = element_blank(),
-      axis.text.y = element_text(color = "black")
+      axis.text.y = element_text(color = "black", hjust = 0)
     ) +
     facet_wrap(
       ~delay,
@@ -356,6 +331,108 @@ plot_coverage <- function(
       paste0("inst/figure/coverage_plot_", data_origin, sensitivity_sc),
       width = 10,
       height = plot_height
+    )
+    ret <- NULL
+  } else {
+    ret <- coverage_plot
+  }
+  ret
+}
+
+#' Plot and save the coverage in an alternative picture
+#'
+#' @description This function plots and possibly saves the chart of empirical
+#' vs. nominal coverage for selected models as a line plot. The selected models
+#' are NegBinX, NegBin1D and NegBin2D, for both MCMC and GLM methods. Only 50%
+#' and 95% coverage is considered.
+#'
+#' @param df_summarized_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_2.5`,
+#' `quantile_25`, `quantile_75`, `quantile_97.5` (bounds of the prediction
+#' intervals), `delay` (the nowcasting horizon) and the true value of the
+#' prediction target `true_val`
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a ggplot object with one facet per nowcasting horizon, or NULL if
+#' \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#' @importFrom ggpubr get_legend
+#' @importFrom patchwork wrap_elements
+#'
+#' @export
+plot_coverage_alt <- function(
+  df_summarized_nowcast,
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
+  sensitivity_sc = "",
+  save_plot = TRUE
+) {
+  data_origin <- match.arg(data_origin)
+
+  # Alternative plots are drawn for the "interesting" models only
+  df_summarized_nowcast <- df_summarized_nowcast |>
+    filter(!(.data$Distribution %in% c("Poisson", "NegBin2M", "NegBin1M")))
+
+  # Calculate the empirical coverage
+  df_coverage <- create_coverage_plot_df(df_summarized_nowcast) |>
+    mutate(delay = as.numeric(as.character(.data$delay)))
+  # Grab the maximum lag
+  max_lag <- length(unique(df_coverage$delay))
+
+  # Plot the empirical coverage as horizontal bars
+  coverage_plot <- ggplot(
+    df_coverage,
+    aes(
+      x = .data$delay,
+      y = .data$empirical_coverage,
+      color = .data$model_method_interact,
+      linetype = .data$nominal_coverage,
+      shape = .data$method
+    )
+  ) +
+    geom_line() +
+    geom_point() +
+    # Highlight the 50% and 95% nominal coverage
+    geom_hline(yintercept = c(0.5, 0.95), linetype = "dotted") +
+    scale_linetype_manual(
+      values = c("coverage_50" = "dashed", "coverage_95" = "solid"),
+      labels = c("50% coverage", "95% coverage"),
+      name = ""
+    ) +
+    scale_shape_manual(
+      values = c("mcmc" = 19, "glm" = 8),
+      labels = c("mcmc" = "RW", "glm" = "GAM"),
+      name = "Model type"
+    ) +
+    scale_color_manual(values = get_interaction_colors(), name = "Model") +
+    scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.20)) +
+    scale_x_continuous(breaks = seq(1 - max_lag, 0, by = 1)) +
+    labs(
+      y = "Empirical coverage",
+      x = "Nowcasting horizon",
+      title = get_dgp_title(data_origin)
+    ) +
+    get_plot_theme()
+  if (save_plot) {
+    save_figure(
+      coverage_plot,
+      paste0("inst/figure/coverage_plot_alt_", data_origin, sensitivity_sc),
+      width = 10,
+      height = 5
     )
     ret <- NULL
   } else {
@@ -406,39 +483,34 @@ plot_crps_decomp <- function(
   data_origin <- match.arg(data_origin)
 
   # Highlight the model aligned with the true data generating process if known.
-  model_y_labels <- get_y_axis_model_labels(data_origin)
-
+  model_y_labels <- get_model_axis_labels(data_origin)
   # Calculate the decomposition of the average CRPS
-  df_crps <- df_summarized_nowcast |>
-    # Calculate the absolute error
-    mutate(AE = abs(.data$true_val - .data$quantile_50)) |>
-    group_by(.data$delay, .data$Distribution, .data$method) |>
-    summarize(
-      # Mean absolute error
-      MAE = mean(.data$AE),
-      # CRPS components
-      Dispersion = mean(.data$dispersion),
-      Underprediction = mean(.data$underprediction),
-      Overprediction = mean(.data$overprediction),
-      Total = mean(.data$crps),
-      .groups = "drop"
-    ) |>
+  df_crps <- create_crps_plot_df(df_summarized_nowcast) |>
     # Calculate the x-coordinate of the labels denoting the total CRPS
     mutate(
       lab_position = ifelse(
         .data$delay == "0",
         # For horizon 0, the bar is wide enough to place the label inside it
         max(.data$Total) / 35,
-        # For other horizons, we place the label outside of the bar, after the
-        # dot denoting the MAE
-        .data$MAE * 1.3
+        # For other horizons, we place the label outside of the bar with some
+        # padding between the bars and the labels. If we add the mean absolute
+        # error or the log score as points into the plot, we will have to make
+        # sure that they don't overlap with the labels.
+        .data$Total + max(.data$Total, na.rm = TRUE) / 40
       )
+    )
+  # Pivot the table by the CRPS components for easier definition of the alpha
+  # aesthetic
+  df_crps_component <- df_crps |>
+    tidyr::pivot_longer(
+      cols = c("Dispersion", "Overprediction", "Underprediction"),
+      names_to = "Component",
+      values_to = "CRPS"
     ) |>
     mutate(
-      model_method_interact = factor(
-        interaction(.data$Distribution, .data$method),
-        levels = names(get_interaction_names()),
-        labels = get_interaction_names()
+      Component = factor(
+        .data$Component,
+        levels = c("Overprediction", "Dispersion", "Underprediction")
       ),
       # Reverse the levels of the delay factor to show the nowcasting horizon 0
       # on the left and the past horizons more to the right
@@ -468,24 +540,10 @@ plot_crps_decomp <- function(
     stop("Number of models must be 6 or 9.")
   }
 
-  df_crps_decomp <- df_crps |>
-    # Pivot for easier definition of the alpha aesthetic
-    tidyr::pivot_longer(
-      cols = c("Dispersion", "Overprediction", "Underprediction"),
-      names_to = "Component",
-      values_to = "CRPS"
-    ) |>
-    mutate(
-      Component = factor(
-        .data$Component,
-        levels = c("Overprediction", "Dispersion", "Underprediction")
-      )
-    )
-
   # Plot the CRPS as horizontal bars
   crps_decomp_plot <- ggplot() +
     geom_col(
-      df_crps_decomp,
+      df_crps_component,
       mapping = aes(
         x = .data$CRPS,
         y = .data$model_method_interact,
@@ -514,20 +572,16 @@ plot_crps_decomp <- function(
       ),
       name = "Component"
     ) +
-    geom_point(
-      df_crps_decomp,
-      mapping = aes(x = .data$MAE, y = .data$model_method_interact)
-    ) +
     scale_fill_manual(values = get_interaction_colors(), name = "Model") +
     scale_y_discrete(labels = model_y_labels) +
-    labs(x = "Mean CRPS/AE", y = "Model") +
+    labs(x = "Mean CRPS/AE", y = "Model", title = get_dgp_title(data_origin)) +
     # By default, the colors in the legend show up in the reverse order
     # compared to the barplot
     guides(fill = guide_legend(reverse = TRUE)) +
     get_plot_theme() +
     theme(
       legend.background = element_blank(),
-      axis.text.y = element_text(color = "black")
+      axis.text.y = element_text(color = "black", hjust = 0)
     ) +
     facet_wrap(
       ~delay,
@@ -540,7 +594,6 @@ plot_crps_decomp <- function(
   # process and place the legend to the bottom in a way it fits.
   if (!(data_origin %in% c("SARI", "ILI"))) {
     crps_decomp_plot <- crps_decomp_plot +
-      labs(title = get_dgp_title(data_origin)) +
       guides(alpha = guide_legend(nrow = 3), fill = guide_legend(nrow = 3)) +
       theme(legend.position = "bottom")
   }
@@ -572,17 +625,293 @@ plot_crps_decomp <- function(
   ret
 }
 
-patchwork_sim_results <- function(summarized_nowcast_list, save_plot = TRUE) {
+#' Plot and save the decomposition of the CRPS for selected models
+#'
+#' @description This function plots and possibly saves the average CRPS
+#' decomposed according to the spread, underprediction and overprediction. Also
+#' the mean absolute error is displayed in this figure.
+#'
+#' @param df_summarized_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `dispersion`,
+#' `underprediction`, `overprediction`, `delay` (the nowcasting horizon),
+#' `quantile_50` and `true_val` (to calculate the mean absolute error).
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return a ggplot object with one facet per nowcasting horizon, or NULL if
+#' \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#' @importFrom ggpubr get_legend
+#' @importFrom patchwork wrap_elements
+#'
+#' @export
+plot_crps_decomp_alt <- function(
+  df_summarized_nowcast,
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
+  sensitivity_sc = "",
+  save_plot = TRUE
+) {
+  data_origin <- match.arg(data_origin)
+
+  # Highlight the model aligned with the true data generating process if known.
+  model_x_labels <- get_model_axis_labels(data_origin, bold = FALSE)
+
+  # Alternative plots are drawn for the "interesting" models only
+  df_summarized_nowcast <- df_summarized_nowcast |>
+    filter(!(.data$Distribution %in% c("Poisson", "NegBin2M", "NegBin1M")))
+  # Calculate the decomposition of the average CRPS
+  df_crps <- create_crps_plot_df(df_summarized_nowcast) |>
+    # Calculate the x-coordinate of the labels denoting the total CRPS
+    mutate(
+      lab_position = ifelse(
+        .data$delay == "0",
+        # For horizon 0, the bar is wide enough to place the label inside it
+        max(.data$Total) / 35,
+        # For other horizons, we place the label outside of the bar with some
+        # padding between the bars and the labels
+        .data$Total + max(.data$Total, na.rm = TRUE) / 40
+      ),
+      # Reverse the model names to appear in the correct order
+      model_method_interact = factor(
+        .data$model_method_interact,
+        levels = rev(get_interaction_names())
+      )
+    )
+  # Pivot the table by the CRPS components for easier definition of the alpha
+  # aesthetic
+  df_crps_component <- df_crps |>
+    tidyr::pivot_longer(
+      cols = c("Dispersion", "Overprediction", "Underprediction"),
+      names_to = "Component",
+      values_to = "CRPS"
+    ) |>
+    mutate(
+      Component = factor(
+        .data$Component,
+        levels = c("Overprediction", "Dispersion", "Underprediction")
+      )
+    )
+
+  # Grab the maximum delay in order to label the facets according to the
+  # corresponding delay
+  max_lag <- length(unique(df_crps$delay))
+
+  # For the SARI data, we combine the CRPS plot together with the ILI results,
+  # which have a longer maximum delay by one. For this reason we add a dummy
+  # reporting delay to get as many facets as for the ILI data
+  if (data_origin == "SARI") {
+    # Increase the maximum lag
+    max_lag <- max_lag + 1
+    # Create dummy data
+    dummy <- data.frame(
+      sensitivity_sc = "",
+      Component = factor("Overprediction"),
+      delay = factor(-4),
+      # This model is displayed in the middle. We use the middle position to
+      # plot a "Not applicable" label
+      model_method_interact = factor("NegBin-X-RW")
+    )
+    df_crps_component <- bind_rows(df_crps_component, dummy) |>
+      # Sot the delay factor delays to display the facets in the correct order
+      mutate(
+        delay = factor(
+          .data$delay,
+          levels = sort(as.numeric(as.character(levels(.data$delay))))
+        )
+      )
+  }
+
+  # Plot the CRPS as horizontal bars
+  crps_decomp_plot <- ggplot() +
+    geom_col(
+      df_crps_component,
+      mapping = aes(
+        y = .data$CRPS,
+        x = .data$model_method_interact,
+        fill = .data$model_method_interact,
+        alpha = .data$Component
+      ),
+      position = "stack"
+    ) +
+    geom_label(
+      df_crps,
+      mapping = aes(
+        y = .data$lab_position,
+        x = .data$model_method_interact,
+        label = format(round(.data$Total, 2), nsmall = 2)
+      ),
+      hjust = 0,
+      angle = 90
+    ) +
+    scale_alpha_manual(
+      values = c(
+        "Underprediction" = 1,
+        "Dispersion" = 0.4,
+        "Overprediction" = 0.7
+      ),
+      name = "Component"
+    ) +
+    scale_fill_manual(values = get_interaction_colors(), name = "Model") +
+    scale_x_discrete(labels = model_x_labels) +
+    labs(y = "Mean CRPS", x = "Model", title = get_dgp_title(data_origin)) +
+    get_plot_theme() +
+    theme(
+      legend.background = element_blank(),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0)
+    ) +
+    facet_wrap(
+      ~delay,
+      nrow = 1,
+      labeller = as_labeller(label_horizon_facet(max_lag)),
+      drop = FALSE
+    )
+
+  if (data_origin == "SARI") {
+    dummy <- dummy |>
+      mutate(
+        na_label = "Not applicable",
+        na_label_position = max(df_crps$Total, na.rm = TRUE) / 2
+      )
+    crps_decomp_plot <- crps_decomp_plot +
+      geom_label(
+        dummy,
+        mapping = aes(
+          x = .data$model_method_interact,
+          y = .data$na_label_position,
+          label = .data$na_label
+        ),
+        border.color = alpha("white", 0),
+        fill = alpha("white", 0),
+        hjust = 0.5
+      )
+  }
+
+  # Save the plot if required, the width, height and path are hard-coded here.
+  # If the plot is saved on the disc, we don't return the ggplot object.
+  if (save_plot) {
+    if (data_origin == "ILI") {
+      plot_width <- 10
+    } else if (data_origin == "SARI") {
+      plot_width <- 7
+    } else {
+      plot_width <- 4
+    }
+    save_figure(
+      crps_decomp_plot,
+      paste0(
+        "inst/figure/crps_decomposition_plot_alt_",
+        data_origin,
+        sensitivity_sc
+      ),
+      width = plot_width,
+      height = 5
+    )
+    ret <- NULL
+  } else {
+    ret <- crps_decomp_plot
+  }
+  ret
+}
+
+#' Compose and save figures showing results
+#'
+#' @description This functions takes the results of multiple simulation
+#' scenarios, or different case studies and creates composed figures that go
+#' either to the main manuscript, or the supplement. Potentially generated plots
+#' are:
+#' \itemize{
+#'   \item coverage of selected models as a line plot (simulations and case
+#'   studies),
+#'   \item coverage of all models as a bar plot (only simulations),
+#'   \item CRPS of selected models as a vertical barplot (only case studies),
+#'   \item CRPS of all models as a horizontal barplot (simulations and case
+#'   studies),
+#'   \item incidence trajectory along nowcasts at horizon 0 (only case studies)
+#' }
+#'
+#' @param summarized_nowcast_list a list with one element for each
+#' case study/simulation scenario, containing a data frame of the nowcasts in
+#' the quantile format. Each data frame contains columns `Distribution`
+#' (the name of the observation model), `quantile_50`
+#' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
+#' `quantile_97.5` (bounds of the prediction intervals), `dispersion` (spread
+#' component of the CRPS), `underprediction` (CRPS component) and
+#' `overprediction` (CRPS component), `date` (x-axis dates), `delay`
+#' (nowcast horizon) and `sensitivity_sc` (the name of a sensitivity analysis
+#' scenario).
+#' @param full_data_list a list with one element for each
+#' case study/simulation scenario, containing a data frame of the observations.
+#' The data frame has columns `date` and columns `value_0w`, `value_1w`, etc.
+#' until `max_lag - 1` used to plot the preliminary and final data alongside the
+#' nowcasts.
+#' @param skip_dates_list a list with one element for each
+#' case study/simulation scenario, containing a vector of dates, where no
+#' nowcasting has been done and where we should leave gaps in the plot of the
+#' nowcasts.
+#' @param type string indicating whether we compose results of the 4 simulation
+#' study scenarios, or 2 case studies
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggsave()}
+#'
+#' @return NULL
+#'
+#' @import ggplot2
+#' @importFrom patchwork plot_layout
+#'
+#' @export
+patchwork_results <- function(
+  summarized_nowcast_list,
+  full_data_list = NULL,
+  skip_dates_list = NULL,
+  type = c("case_study", "simulation"),
+  save_plot = TRUE
+) {
+  type <- match.arg(type)
+  # How many data-generating processes there is
   data_origin <- names(summarized_nowcast_list)
+  n_dgp <- length(data_origin)
+  # We generate 4 plots:
+  # - coverage (as barplots)
+  # - alternative coverage (as lineplots)
+  # - CRPS (as horizontal barplots)
+  # - alternative CRPS (as vertical barplots)
+  # For the case studies, we also generate nowcast bands at delay 0, which we
+  # glue together for the ILI and SARI data.
+  plot_names <- c("coverage", "coverage_alt", "crps", "crps_alt")
+  if (type == "case_study") {
+    n_plots <- 5
+    plot_names <- c(plot_names, "nowcast_bands0")
+  } else {
+    n_plots <- 4
+  }
   plot_list <- replicate(
-    2,
-    setNames(vector("list", length(data_origin)), data_origin),
+    n_plots,
+    setNames(vector("list", n_dgp), data_origin),
     simplify = FALSE
   )
-  names(plot_list) <- c("coverage", "crps")
+  names(plot_list) <- plot_names
   # Loop over the data generating processes
   for (dgp in data_origin) {
     plot_list$coverage[[dgp]] <- plot_coverage(
+      summarized_nowcast_list[[dgp]],
+      data_origin = dgp,
+      sensitivity_sc = "",
+      save_plot = FALSE
+    )
+    plot_list$coverage_alt[[dgp]] <- plot_coverage_alt(
       summarized_nowcast_list[[dgp]],
       data_origin = dgp,
       sensitivity_sc = "",
@@ -594,24 +923,139 @@ patchwork_sim_results <- function(summarized_nowcast_list, save_plot = TRUE) {
       sensitivity_sc = "",
       save_plot = FALSE
     )
-  }
-  coverage_plot <- wrap_plots(plot_list$coverage, nrow = 3) +
-    plot_layout(axes = "collect", guides = "collect") &
-    theme(legend.position = "bottom", legend.justification = "right")
-  crps_plot <- wrap_plots(plot_list$crps, nrow = 3) +
-    plot_layout(axes = "collect", guides = "collect") &
-    theme(legend.position = "bottom", legend.justification = "right")
-  if (save_plot) {
-    save_figure(coverage_plot, "inst/figure/coverage_plot_simulation", 9, 10)
-    save_figure(
-      crps_plot,
-      "inst/figure/crps_decomposition_plot_simulation",
-      width = 10,
-      height = 14
+    plot_list$crps_alt[[dgp]] <- plot_crps_decomp_alt(
+      summarized_nowcast_list[[dgp]],
+      data_origin = dgp,
+      sensitivity_sc = "",
+      save_plot = FALSE
     )
-    ret <- vector("list", 2)
+    if (type == "case_study") {
+      plot_list$nowcast_bands0[[dgp]] <- plot_nowcast_bands(
+        full_data_list[[dgp]],
+        summarized_nowcast_list[[dgp]],
+        skip_dates = skip_dates_list[[dgp]],
+        data_origin = dgp,
+        sensitivity_sc = "",
+        save_plot = FALSE
+      )$separated_plot &
+        labs(title = get_dgp_title(dgp))
+    }
+  }
+
+  if (type == "simulation") {
+    # 4x3 barplot showing coverage of all models. This goes to the supplement.
+    coverage_plot <- patchwork::wrap_plots(
+      plot_list$coverage,
+      nrow = n_dgp,
+      axes = "collect",
+      guides = "collect"
+    ) &
+      theme(legend.position = "bottom")
+    # 2x2 lineplot showing coverage of selected models. This goes to the main
+    # manuscript.
+    coverage_alt_plot <-  patchwork::wrap_plots(
+      plot_list$coverage_alt, nrow = 2,
+      axes = "collect",
+      guides = "collect"
+    )
+    # 4x3 barplot showing the CRPS of all models. This goes to the supplement.
+    crps_plot <-  patchwork::wrap_plots(
+      plot_list$crps,
+      nrow = n_dgp,
+      axes = "collect",
+      guides = "collect"
+    ) &
+      theme(legend.position = "bottom")
+    # We do not create a composite plot of the nowcast bands and the alternative
+    # CRPS plot for the simulations. The nowcast bands are created for each
+    # simulation scenario separately.
+    nowcast_bands0_plot <- crps_alt_plot <- NULL
   } else {
-    ret <- list(coverage = coverage_plot, crps = crps_plot)
+    # 1x2 lineplot showing coverage of selected models. This goes to the main
+    # manuscript.
+    coverage_alt_plot <-  patchwork::wrap_plots(
+      plot_list$coverage_alt,
+      nrow = 1,
+      axes = "collect",
+      guides = "collect",
+      widths = c(4, 5.1)
+    )
+    # 2x1 barplot showing the CRPS of selected models. This goes to the main
+    # manuscript.
+    crps_alt_plot <- patchwork::wrap_plots(
+      plot_list$crps_alt,
+      nrow = 2,
+      guides = "collect",
+      axes = "collect"
+    ) &
+      theme(
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.box = "vertical"
+      )
+    # 2x1 nowcast bands plot of all models. This goes to the main manuscript
+    nowcast_bands0_plot <-  patchwork::wrap_plots(
+      plot_list$nowcast_bands0,
+      nrow = 2,
+      guides = "collect",
+      axes = "collect"
+    )
+    # We do not create a composite CRPS and coverage plot for the case studies.
+    # They are generated for each case study separately.
+    crps_plot <- coverage_plot <- NULL
+  }
+
+  if (save_plot) {
+    if (type == "simulation") {
+      # For the simulation study, we save the 4x3 barplot of coverage
+      # (supplement)
+      save_figure(coverage_plot, "inst/figure/coverage_plot_simulation", 13, 17)
+      # For the simulation study, we save a 4x3 barplot of CRPS (supplement)
+      save_figure(
+        crps_plot,
+        "inst/figure/crps_decomposition_plot_simulation",
+        width = 13,
+        height = 17
+      )
+      # Set the plot dimensions of the coverage plot displayed as a lineplot.
+      # This will go to the main manuscript.
+      coverage_alt_plot_size <- list(width = 9, height = 9)
+    } else {
+      # For the case studies, we save the 2x5 vertical CRPS barplot, which
+      # will go to the main manuscript.
+      save_figure(
+        crps_alt_plot,
+        "inst/figure/crps_decomposition_alt_plot_case_study",
+        width = 11,
+        height = 9
+      )
+      # For the case studies, we save the 2x1 plot of prediction interval bands
+      # for delay 0. This will go to the main manuscript.
+      save_figure(
+        nowcast_bands0_plot,
+        "inst/figure/nowcast_bands_case_study_delay0",
+        width = 11.5,
+        height = 11
+      )
+      coverage_alt_plot_size <- list(width = 11, height = 6)
+    }
+    # For the case studies and simulations, we save the coverage lineplot,
+    # which will both go to the main manuscript.
+    save_figure(
+      coverage_alt_plot,
+      paste0("inst/figure/coverage_plot_alt_", type),
+      coverage_alt_plot_size$width,
+      coverage_alt_plot_size$height
+    )
+    ret <- vector("list", 5)
+  } else {
+    ret <- list(
+      coverage = coverage_plot,
+      coverage_alt = coverage_alt_plot,
+      crps = crps_plot,
+      crps_alt = crps_alt_plot,
+      nowcast_bands0 = nowcast_bands0_plot
+    )
   }
   ret
 }
@@ -1449,7 +1893,7 @@ plot_per_window <- function(
 #' scenarios as a robustness check. For these scenarios, the coverage and CRPS
 #' plots are saved as glued together by pairs. For the simulations, we don't
 #' create the coverage and CRPS. This is done in the
-#' \code{patchwork_sim_results} function, where we merge together results from
+#' \code{patchwork_results} function, where we merge together results from
 #' all simulation study scenarios.
 #'
 #' @param df_nowcast a data frame containing columns `Distribution`
@@ -1550,7 +1994,7 @@ plot_aggregated <- function(
   # If the plots are to be saved, glue together the coverage and CRPS plots from
   # the sensitivity analysis.
   if (save_plot && data_origin %in% c("SARI", "ILI")) {
-    save_patchwork_plots(ret_list, data_origin)
+    save_sensitivity_plots(ret_list, data_origin)
     # If we save a plot, we usually return NULL in place of the individual
     # plots. For consistency, we reconstruct the list of NULLs with a
     # corresponding structure here.
@@ -1592,7 +2036,7 @@ plot_aggregated <- function(
 #' @importFrom patchwork plot_layout plot_spacer
 #'
 #' @export
-save_patchwork_plots <- function(plot_list, data_origin = c("SARI", "ILI")) {
+save_sensitivity_plots <- function(plot_list, data_origin = c("SARI", "ILI")) {
   data_origin <- match.arg(data_origin)
   # Add a plot title to distinguish between more and less informative priors.
   # The same title is used for the delay probability and the dispersion
@@ -1652,14 +2096,14 @@ save_patchwork_plots <- function(plot_list, data_origin = c("SARI", "ILI")) {
   # Iterate over the plots and save them
   for (k in seq_along(patchworked_list)) {
     plot_height <- if (data_origin == "ILI") {
-      9
+      8
     } else {
-      6
+      5.5
     }
     save_figure(
       patchworked_list[[k]],
       paste0("inst/figure/", names(patchworked_list)[k]),
-      width = 13,
+      width = 15,
       height = plot_height
     )
   }
@@ -1682,14 +2126,12 @@ save_patchwork_plots <- function(plot_list, data_origin = c("SARI", "ILI")) {
 #' endpoint will be included.
 #' @param length_of_train_data a number, the length of the estimation window
 #' (endpoints included)
-#' @param max_lag maximum reporting delay represented by the number of columns
-#' of the reporting table. In this way, the 0-th lag counts as the first, 1-st
-#' lag as the second and so on.
 #' @param aux_study_start a date (indeed in the date format), where the
 #' auxiliary case study period used for determining the priors starts.
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -1704,7 +2146,6 @@ plot_trajectory <- function(
   start_date,
   end_date,
   length_of_train_data,
-  max_lag,
   aux_study_start,
   data_origin = c(
     "SARI",
@@ -1717,6 +2158,8 @@ plot_trajectory <- function(
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
+  # Grab the maximum lag
+  max_lag <- full_data |> select(starts_with("value_")) |> ncol()
   # Find a time step for calculating the x-axis coordinates based on the data
   # resolution.
   time_step <- as.numeric(full_data$date[2] - full_data$date[1])
@@ -1727,7 +2170,7 @@ plot_trajectory <- function(
   # Arrange the whole trajectory into a data frame for plotting
   totals <- full_data |>
     dplyr::select(paste0("value_", 1:max_lag - 1, "w")) |>
-    create_totals_data_frame(aux_study_start, time_step) |>
+    create_totals_data_frame(aux_study_start, data_origin, time_step) |>
     # `create_totals_data_frame()` returns a long data frame containing the
     # final and the preliminary state of the data. For plotting the whole
     # trajectory we are interested only in the final values.
@@ -1767,7 +2210,8 @@ plot_trajectory <- function(
       xmax = aux_study_end,
       y.position = first_window_max_cases + bracket_offset,
       label = "Data to\ninform priors",
-      label.size = 4
+      label.size = 4,
+      lineheight = 0.8
     ) +
     # Highlight the first window of training data including the nowcasting
     # part
@@ -1776,7 +2220,8 @@ plot_trajectory <- function(
       xmax = first_window_end,
       y.position = first_window_bracket_y,
       label = "First\nwindow",
-      label.size = 4
+      label.size = 4,
+      lineheight = 0.8
     ) +
     # Highlight the last window of training data including the nowcasting part
     ggpubr::geom_bracket(
@@ -1784,17 +2229,14 @@ plot_trajectory <- function(
       xmax = end_date,
       y.position = overall_max_cases + bracket_offset,
       label = "Last\nwindow",
-      label.size = 4
+      label.size = 4,
+      lineheight = 0.8
     ) +
-    labs(y = "Incidence", x = "Date") +
+    labs(y = "Incidence", x = "Date", title = get_dgp_title(data_origin)) +
     ylim(
       c(0, max(overall_max_cases, first_window_bracket_y) + 4 * bracket_offset)
     ) +
     get_plot_theme()
-
-  if (!(data_origin %in% c("SARI", "ILI"))) {
-    p_trajectory <- p_trajectory + labs(title = get_dgp_title(data_origin))
-  }
 
   # We add the plot of proportions of cases reported for each delay
   df_prop_reported <- full_data |>
@@ -1852,29 +2294,35 @@ plot_trajectory <- function(
   ret
 }
 
-#' Plot the incidence trajectory for all simulation scenarios
+#' Plot the incidence trajectory for multiple datasets
 #'
 #' @description A wrapper around \code{plot_trajectory}. This function plots and
-#' possibly saves the incidence trajectory used in the simulation study. The
-#' first and the last estimation windows will be highlighted to see the chunk of
-#' the data we use for model training. Each trajectory is accompanied by a plot
-#' of proportions of cases per delay. The plots corresponding to different
-#' data-generating processes are placed on top of each other.
+#' possibly saves several incidence trajectories in one plot. The first and the
+#' last estimation windows will be highlighted to see the chunk of the data we
+#' use for model training. Each trajectory is accompanied by a plot of
+#' proportions of cases per delay. The plots corresponding to different
+#' data-generating processes/datasets are placed on top of each other.
 #'
 #' @param full_data a data frame of the whole trajectory containing columns
-#' `date`, `Distribution` (the data-generating process) and columns `value_0w`,
-#' `value_1w`, etc. until `max_lag - 1`.
-#' @param start_date a date (indeed in the date format), where the training data
-#' start. The starting point will be included.
-#' @param end_date a date (in the date format), where the training data end. The
-#' endpoint will be included.
-#' @param length_of_train_data a number, the length of the estimation window
-#' (endpoints included)
-#' @param max_lag maximum reporting delay represented by the number of columns
-#' of the reporting table. In this way, the 0-th lag counts as the first, 1-st
-#' lag as the second and so on.
-#' @param aux_study_start a date (indeed in the date format), where the
-#' auxiliary case study period used for determining the priors starts.
+#' `date`, `data_origin` (the data-generating process - a case study, or a
+#' simulation scenario) and columns `value_0w`, `value_1w`, etc. until
+#' `max_lag - 1`.
+#' @param start_date a vector of dates (indeed in the date format), where the
+#' training data start. It should be as long as the number of simulation
+#' scenarios/datasets. For simulations, all entries are the same. For the case
+#' studies, the dates are different. The starting point will be included.
+#' @param end_date a vector of dates (in the date format), where the training
+#' data end. It should be as long as the number of simulation
+#' scenarios/datasets. For simulations, all entries are the same. For the case
+#' studies, the dates are different. The endpoint will be included.
+#' @param length_of_train_data an integer vector, the length of the estimation
+#' window (endpoints included). For both, simulations and case studies, all
+#' entries are the same.
+#' @param aux_study_start a vector of dates (indeed in the date format), where
+#' the auxiliary case study period used for determining the priors starts. It
+#' should be as long as the number of simulation scenarios/datasets. For
+#' simulations, all entries are the same. For the case studies, the dates are
+#' different.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -1885,36 +2333,53 @@ plot_trajectory <- function(
 #' @importFrom patchwork wrap_plots
 #'
 #' @export
-plot_all_sim_trajectories <- function(
+plot_multiple_trajectories <- function(
   full_data,
   start_date,
   end_date,
   length_of_train_data,
-  max_lag,
   aux_study_start,
   save_plot = TRUE
 ) {
-  data_origin <- unique(full_data$Distribution)
-  # Loop over the data generating processes
-  trajectory_patches <- vector("list", length(data_origin))
-  names(trajectory_patches) <- data_origin
-  for (dgp in data_origin) {
-    full_data_filtered <- full_data |> filter(.data$Distribution == dgp)
-    trajectory_patches[[dgp]] <- plot_trajectory(
+  dgp <- unique(full_data$data_origin)
+  # If there is the "SARI" string among the data_origin elements, we know, we
+  # are plotting the case study trajectory
+  plotting_case_study <- "SARI" %in% dgp
+  # Check whether the parameters have the same length as the number of scenarios
+  # we plot
+  correct_par_lengths <- length(start_date) == length(dgp) &&
+    length(length_of_train_data) == length(dgp) &&
+    length(aux_study_start) == length(dgp)
+  if (!correct_par_lengths) {
+    stop("Parameters `start_date`, `length_of_train_data`, and `aux_study_start` must have the same length as the number of plotted scenarios")  # nolint
+  }
+  # If we bind together data frames with different maximum lag, we get all zeros
+  # in the columns corresponding to lags larger than the maximum. We replace
+  # these NAs by 0.
+  full_data <- full_data |>
+    mutate(across(starts_with("value_"), \(x) replace_na(x, 0)))
+  # Loop over the data generating processes/data sets
+  trajectory_patches <- vector("list", length(dgp))
+  names(trajectory_patches) <- dgp
+  for (k in seq_along(dgp)) {
+    full_data_filtered <- full_data |>
+      filter(.data$data_origin == dgp[k])
+    trajectory_patches[[dgp[k]]] <- plot_trajectory(
       full_data_filtered,
-      start_date,
-      end_date,
-      length_of_train_data,
-      max_lag,
-      aux_study_start,
-      data_origin = dgp,
+      start_date[k],
+      end_date[k],
+      length_of_train_data[k],
+      aux_study_start[k],
+      data_origin = dgp[k],
       save_plot = FALSE
     )
-    # In the end, we will get a patchwork plot with a nested layou, where it's
+    # In the end, we will get a patchwork plot with a nested layout, where it's
     # not possible anymore to collect the x-axis guide. Therefore, we remove it
-    # manually for all plots except for the last one.
-    if (dgp != tail(data_origin, 1)) {
-      trajectory_patches[[dgp]] <- trajectory_patches[[dgp]] &
+    # manually for all plots except for the last one. This manual collection is
+    # done only for the simulations, since in the case study, the x-axes are
+    # different.
+    if (k != length(dgp) && !plotting_case_study) {
+      trajectory_patches[[dgp[k]]] <- trajectory_patches[[dgp[k]]] &
         theme(
           axis.title.x = element_blank(),
           axis.text.x = element_blank(),
@@ -1925,16 +2390,24 @@ plot_all_sim_trajectories <- function(
   # Put the patchwork plot together
   arranged <- patchwork::wrap_plots(
     trajectory_patches,
-    nrow = 3,
+    nrow = length(dgp),
     guides = "collect"
   )
   if (save_plot) {
+    # Distinguish between the simulation and case study plot
+    if (plotting_case_study) {
+      plot_path <- "inst/figure/case_study_trajectory"
+      plot_height <- 8
+    } else {
+      plot_path <- "inst/figure/sim_trajectory"
+      plot_height <- 12
+    }
     ret <- NULL
     save_figure(
       arranged,
-      "inst/figure/sim_trajectory",
+      plot_path,
       width = 9,
-      height = 11
+      height = plot_height
     )
   } else {
     ret <- arranged
@@ -2183,26 +2656,13 @@ plot_nowcast_bands_per_horizon <- function(
 
   # In case there are dates, where we skip nowcasting, due to the reporting
   # irregularities around Christmas, we would like to break the nowcast band
-  # into segments. For this reason, we split the data frame with the nowcasts
-  # into several parts, which will be plotted separately.
-  lower_bound <- c(start_date, skip_dates)
-  # In case that skip_dates = NULL, the resulting vector will be coerced to
-  # numeric. For this reason, we need to keep as.Date. This is not the case
-  # for the lower bound, since there we always start with a date.
-  upper_bound <- as.Date(c(skip_dates, end_date))
-  df_nowcast_splitted <- sapply(
-    seq_along(lower_bound),
-    function(ind) {
-      filter(
-        df_nowcast,
-        df_nowcast$nowcast_date >= lower_bound[ind] &
-          df_nowcast$nowcast_date <= upper_bound[ind]
-      )
-    },
-    simplify = FALSE
-  )
-  splitted_lengths <- lapply(df_nowcast_splitted, nrow) |> unlist()
-  df_nowcast_splitted <- df_nowcast_splitted[splitted_lengths > 0]
+  # into segments. For this reason, we add a dummy variable "segment", which
+  # governs the "group" aesthetic. We determine the segment based on how many
+  # skipped dates are behind the current date.
+  df_nowcast <- df_nowcast |>
+    group_by(.data$date) |>
+    mutate(segment = sum(.data$date[1] >= skip_dates)) |>
+    ungroup()
 
   # Set the x-axis breaks
   date_breaks <- seq(
@@ -2222,47 +2682,43 @@ plot_nowcast_bands_per_horizon <- function(
         linetype = .data$type
       ),
       linewidth = 0.3
-    )
-
-  # Plot the nowcast segments
-  for (k in seq_along(df_nowcast_splitted)) {
-    nowcast_band_plot <- nowcast_band_plot +
-      # Nowcast as a colored, dashed line
-      geom_line(
-        df_nowcast_splitted[[k]],
-        mapping = aes(
-          x = .data$date,
-          y = .data$quantile_50,
-          color = .data$model_method_interact,
-          linetype = "Nowcast"
-        ),
-        linewidth = 0.25
-      ) +
-      # 95 % prediction interval
-      geom_ribbon(
-        df_nowcast_splitted[[k]],
-        mapping = aes(
-          x = .data$date,
-          ymin = .data$quantile_2.5,
-          ymax = .data$quantile_97.5,
-          fill = .data$model_method_interact,
-          alpha = "PI_95"
-        )
-      ) +
-      # 50 % prediction interval
-      geom_ribbon(
-        df_nowcast_splitted[[k]],
-        mapping = aes(
-          x = .data$date,
-          ymin = .data$quantile_25,
-          ymax = .data$quantile_75,
-          fill = .data$model_method_interact,
-          alpha = "PI_50"
-        )
+    ) +
+    # Nowcast as a colored, dashed line
+    geom_line(
+      df_nowcast,
+      mapping = aes(
+        x = .data$date,
+        y = .data$quantile_50,
+        color = .data$model_method_interact,
+        group = .data$segment,
+        linetype = "Nowcast"
+      ),
+      linewidth = 0.25
+    ) +
+    # 95 % prediction interval
+    geom_ribbon(
+      df_nowcast,
+      mapping = aes(
+        x = .data$date,
+        ymin = .data$quantile_2.5,
+        ymax = .data$quantile_97.5,
+        fill = .data$model_method_interact,
+        group = .data$segment,
+        alpha = "PI_95"
+      ),
+    ) +
+    # 50 % prediction interval
+    geom_ribbon(
+      df_nowcast,
+      mapping = aes(
+        x = .data$date,
+        ymin = .data$quantile_25,
+        ymax = .data$quantile_75,
+        fill = .data$model_method_interact,
+        group = .data$segment,
+        alpha = "PI_50"
       )
-  }
-  # Finish the plot
-  nowcast_band_plot <- nowcast_band_plot +
+    ) +
     scale_x_date(breaks = date_breaks, date_labels = "%b %Y") +
     scale_color_manual(
       values = c(
@@ -2420,24 +2876,30 @@ plot_mcmc_diagnostics <- function(
 #' nowcast plots as calculated in "real time". Individual panels correspond
 #' to different dates, when the nowcast is calculated.
 #'
-#' @param df_nowcast a list of data frames containing columns `Distribution`
+#' @param df_nowcast a data frame containing columns `Distribution`
 #' (containing the name of the observation model), `quantile_50`
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
 #' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
 #' dates), `nowcast_date` (when the nowcast was issued) and `delay` (nowcast
 #' horizon). The individual data frames in the list correspond to different
 #' dates, when the nowcast is calculated.
-#' @param df_total a list of data frames containing columns `date`, `counts` and
-#' `data`. The last column `data` is an indicator, whether the values in the
-#' `counts` column are the final sums of the counts, or the preliminary data
-#' version. Needed to plot the observations alongside the nowcasts. The
-#' individual data frames in the list correspond to different dates, when the
-#' nowcast is calculated.
+#' @param df_total a data frame containing columns `date`, `counts`,
+#' `data_origin` (case study or simulation scenario) and `data`. The last column
+#' `data` is an indicator, whether the values in the `counts` column are the
+#' final sums of the counts, or the preliminary data version. Needed to plot the
+#' observations alongside the nowcasts. The individual data frames in the list
+#' correspond to different dates, when the nowcast is calculated.
 #' @param dates_to_show a selection of a few consecutive dates for which we want
-#' to show the estimates.
-#' @param data_origin a string indicating the data generating process of
-#' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' to show the estimates. Must be of equal length as \code{dataset}.
+#' @param dataset a string vector indicating the data generating process of
+#' simulated data, or the corresponding case study. If a vector of length larger
+#' than 1 is supplied, the plots are combined using the \code{patchwork}
+#' approach. Possible string values that can appear as elements of the vector
+#' are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and "NegBinX_switch".
+#' These values will be used to filter the \code{df_nowcast} data frame.
+#' @param sens_sc a string indicating the sensitivity analysis scenario used
+#' to generate the nowcasts. In general, we don't plot anything beyond the main
+#' analysis denoted by ""
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -2450,24 +2912,36 @@ plot_mcmc_diagnostics <- function(
 plot_nowcast_example <- function(
   df_nowcast,
   df_total,
+  dataset,
   dates_to_show,
-  data_origin = c(
-    "SARI",
-    "ILI",
-    "NegBinX",
-    "NegBin2D",
-    "NegBin1D",
-    "NegBinX_switch"
-  ),
+  sens_sc = "",
   save_plot = TRUE
 ) {
-  data_origin <- match.arg(data_origin)
+  # Check the data-generating process as either one of the case studies or
+  # simulation scenarios.
+  valid_dataset <- all(
+    dataset %in% c(
+      "SARI",
+      "ILI",
+      "NegBinX",
+      "NegBin2D",
+      "NegBin1D",
+      "NegBinX_switch"
+    )
+  )
+  if (!valid_dataset) {
+    stop("Only strings 'SARI', 'ILI', 'NegBinX', 'NegBin2D', 'NegBin1D' and 'NegBinX_switch' are possible elements of the 'dataset' vector.")  # nolint
+  }
 
-  # Bind rows of all the data frames that are in a list format
-  df_total <- bind_rows(df_total)
-  df_nowcast <- bind_rows(df_nowcast) |>
-    # Create a faceting variable, which is the interaction of the observation
-    # model and the fitting method
+  # Throw an error if nowcasts for multiple dates and/or data generating
+  # processes are to be plotted and the number of dates and the data generating
+  # processes don't match.
+  if (length(dataset) != length(dates_to_show)) {
+    stop("Arguments `dataset` and `dates_to_show` must be of the same length.")  # nolint
+  }
+  # Create a faceting variable, which is the interaction of the observation
+  # model and the fitting method
+  df_nowcast <- df_nowcast |>
     mutate(
       model_method_interact = factor(
         interaction(.data$Distribution, .data$method),
@@ -2475,40 +2949,35 @@ plot_nowcast_example <- function(
         labels = get_interaction_names(nowcast_bands_ordering = TRUE)
       )
     )
-  # Find the axis limits. X-axis limits are defined as the beginning of the
-  # first rolling window and the end of the last rolling window. Having fixed
-  # x-axis limits helps with collecting the axis via `plot_layout()`, which
-  # saves some vertical space, that would otherwise be occupied by x-axis
-  # labels. Y-axis labels are set for the patchwork plot to have consistent
-  # y-axis scale for all subplots.
-  axis_limits <- list(
-    x = range(df_total$date),
-    y = c(
-      min(df_total$counts),
-      max(c(df_nowcast$quantile_97.5, df_total$counts))
-    )
-  )
-
-  # Loop over the dates, on which the nowcasts are calculated
+  # Loop over the dates, or data-generating processes on which the nowcasts are
+  # calculated
   patches <- vector("list", length(dates_to_show))
-  names(patches) <- dates_to_show
+  names(patches) <- paste(dataset, dates_to_show, sep = "_")
   for (k in seq_along(patches)) {
     df_nowcast_filtered <- df_nowcast |>
-      filter(.data$nowcast_date == dates_to_show[k])
+      filter(
+        .data$nowcast_date == dates_to_show[k] &
+          .data$data_origin == dataset[k] &
+          .data$sensitivity_sc == sens_sc
+      )
     df_total_filtered <- df_total |>
-      filter(.data$nowcast_date == dates_to_show[k])
+      filter(
+        .data$nowcast_date == dates_to_show[k] &
+          .data$data_origin == dataset[k]
+      )
     patches[[k]] <- plot_nowcast(
       df_nowcast_filtered,
       df_total_filtered,
       get_interaction_names(),
       dates_to_show[k],
       fitting_method = "both",
-      data_origin = data_origin,
-      sensitivity_sc = "",
-      axis_limits = axis_limits,
+      data_origin = dataset[k],
+      sensitivity_sc = sens_sc,
+      axis_limits = list(x = c(NA, NA), y = c(NA, NA)),
       save_plot = FALSE
     )
   }
+
   # Arrange all the patches
   arranged <- patchwork::wrap_plots(
     patches,
@@ -2519,11 +2988,12 @@ plot_nowcast_example <- function(
   )
   # Save the plot if required, the width, height and path are hard-coded here
   if (save_plot) {
+    plot_height <- length(dataset) * 6 + 1
     save_figure(
       arranged,
-      paste0("inst/figure/nowcast_example_", data_origin),
+      paste0("inst/figure/nowcast_example_", paste(dataset, collapse = "_")),
       width = 11.5,
-      height = 7
+      height = plot_height
     )
     ret <- NULL
   } else {
