@@ -22,12 +22,12 @@ dates), \code{nowcast_date} (when the nowcast was issued) and \code{delay} (nowc
 horizon). The individual data frames in the list correspond to different
 dates, when the nowcast is calculated.}
 
-\item{df_total}{a list of data frames containing columns \code{date}, \code{counts} and
-\code{data}. The last column \code{data} is an indicator, whether the values in the
-\code{counts} column are the final sums of the counts, or the preliminary data
-version. Needed to plot the observations alongside the nowcasts. The
-individual data frames in the list correspond to different dates, when the
-nowcast is calculated.}
+\item{df_total}{a data frame containing columns \code{date}, \code{counts},
+\code{data_origin} (case study or simulation scenario) and \code{data}. The last column
+\code{data} is an indicator, whether the values in the \code{counts} column are the
+final sums of the counts, or the preliminary data version. Needed to plot the
+observations alongside the nowcasts. The individual data frames in the list
+correspond to different dates, when the nowcast is calculated.}
 
 \item{dataset}{a string vector indicating the data generating process of
 simulated data, or the corresponding case study. If a vector of length larger

@@ -2883,12 +2883,12 @@ plot_mcmc_diagnostics <- function(
 #' dates), `nowcast_date` (when the nowcast was issued) and `delay` (nowcast
 #' horizon). The individual data frames in the list correspond to different
 #' dates, when the nowcast is calculated.
-#' @param df_total a list of data frames containing columns `date`, `counts` and
-#' `data`. The last column `data` is an indicator, whether the values in the
-#' `counts` column are the final sums of the counts, or the preliminary data
-#' version. Needed to plot the observations alongside the nowcasts. The
-#' individual data frames in the list correspond to different dates, when the
-#' nowcast is calculated.
+#' @param df_total a data frame containing columns `date`, `counts`,
+#' `data_origin` (case study or simulation scenario) and `data`. The last column
+#' `data` is an indicator, whether the values in the `counts` column are the
+#' final sums of the counts, or the preliminary data version. Needed to plot the
+#' observations alongside the nowcasts. The individual data frames in the list
+#' correspond to different dates, when the nowcast is calculated.
 #' @param dates_to_show a selection of a few consecutive dates for which we want
 #' to show the estimates. Must be of equal length as \code{dataset}.
 #' @param dataset a string vector indicating the data generating process of
