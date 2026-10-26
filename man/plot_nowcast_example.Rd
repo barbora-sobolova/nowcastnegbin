@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plot_nowcast_example}
 \alias{plot_nowcast_example}
-\title{Plot the nowcasts for several dates}
+\title{Plot the nowcasts, possibly for several dates}
 \usage{
 plot_nowcast_example(
   df_nowcast,
@@ -19,15 +19,14 @@ plot_nowcast_example(
 (the point nowcasts), \code{quantile_2.5}, \code{quantile_25}, \code{quantile_75},
 \code{quantile_97.5} (bounds of the prediction intervals), \code{date} (x-axis
 dates), \code{nowcast_date} (when the nowcast was issued) and \code{delay} (nowcast
-horizon). The individual data frames in the list correspond to different
-dates, when the nowcast is calculated.}
+horizon).}
 
 \item{df_total}{a data frame containing columns \code{date}, \code{counts},
-\code{data_origin} (case study or simulation scenario) and \code{data}. The last column
-\code{data} is an indicator, whether the values in the \code{counts} column are the
-final sums of the counts, or the preliminary data version. Needed to plot the
-observations alongside the nowcasts. The individual data frames in the list
-correspond to different dates, when the nowcast is calculated.}
+\code{data_origin} (case study or simulation scenario), \code{nowcast_date} (date of
+the data snapshot) and \code{data}. The last column \code{data} is an indicator,
+whether the values in the \code{counts} column are the final sums of the counts,
+or the preliminary data version. Needed to plot the observations alongside
+the nowcasts.}
 
 \item{dataset}{a string vector indicating the data generating process of
 simulated data, or the corresponding case study. If a vector of length larger

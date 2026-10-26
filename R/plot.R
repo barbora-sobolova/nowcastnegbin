@@ -2349,9 +2349,10 @@ plot_multiple_trajectories <- function(
   # we plot
   correct_par_lengths <- length(start_date) == length(dgp) &&
     length(length_of_train_data) == length(dgp) &&
-    length(aux_study_start) == length(dgp)
+    length(aux_study_start) == length(dgp) &&
+    length(start_date) == length(end_date)
   if (!correct_par_lengths) {
-    stop("Parameters `start_date`, `length_of_train_data`, and `aux_study_start` must have the same length as the number of plotted scenarios")  # nolint
+    stop("Parameters `start_date`, `end_date`, `length_of_train_data`, and `aux_study_start` must have the same length as the number of plotted scenarios")  # nolint
   }
   # If we bind together data frames with different maximum lag, we get all zeros
   # in the columns corresponding to lags larger than the maximum. We replace
@@ -2870,7 +2871,7 @@ plot_mcmc_diagnostics <- function(
   ret
 }
 
-#' Plot the nowcasts for several dates
+#' Plot the nowcasts, possibly for several dates
 #'
 #' @description This function creates a patchwork picture composed of the
 #' nowcast plots as calculated in "real time". Individual panels correspond
@@ -2881,14 +2882,13 @@ plot_mcmc_diagnostics <- function(
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
 #' `quantile_97.5` (bounds of the prediction intervals), `date` (x-axis
 #' dates), `nowcast_date` (when the nowcast was issued) and `delay` (nowcast
-#' horizon). The individual data frames in the list correspond to different
-#' dates, when the nowcast is calculated.
+#' horizon).
 #' @param df_total a data frame containing columns `date`, `counts`,
-#' `data_origin` (case study or simulation scenario) and `data`. The last column
-#' `data` is an indicator, whether the values in the `counts` column are the
-#' final sums of the counts, or the preliminary data version. Needed to plot the
-#' observations alongside the nowcasts. The individual data frames in the list
-#' correspond to different dates, when the nowcast is calculated.
+#' `data_origin` (case study or simulation scenario), `nowcast_date` (date of
+#' the data snapshot) and `data`. The last column `data` is an indicator,
+#' whether the values in the `counts` column are the final sums of the counts,
+#' or the preliminary data version. Needed to plot the observations alongside
+#' the nowcasts.
 #' @param dates_to_show a selection of a few consecutive dates for which we want
 #' to show the estimates. Must be of equal length as \code{dataset}.
 #' @param dataset a string vector indicating the data generating process of
