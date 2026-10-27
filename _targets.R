@@ -96,7 +96,7 @@ ili_aux_analysis_start_date <- ili_analysis_start_date -
 ili_analysis_end_date <- ili_analysis_start_date +
   (length_of_train_data + ili_timesteps_to_fit - 2) * 7
 # Dates for which we want to show, what the nowcasts actually look like.
-ili_nowcast_example_dates <- as.Date("2015-12-28")
+ili_nowcast_example_dates <- as.Date("2016-10-24")
 
 # Global object related to the simulations -------------------------------------
 
@@ -147,7 +147,7 @@ sim_nowcast_example_dates <- as.Date("2018-04-01")
 # The GLM method often overestimates the mean process around season peaks.
 # We show this in a separate plot for the selected dates.
 glm_overshoot_dates <- as.Date(
-  c("2019-03-24", "2019-03-31", "2019-04-07", "2019-04-14")
+  c("2018-04-01", "2018-04-08", "2018-04-15", "2018-04-22")
 )
 
 # Define the pipeline
@@ -206,7 +206,8 @@ list(
       # "zeroth" window as the first one. The length of training data is
       # identical here and in the case study.
       num_of_weeks = aux_timesteps_to_fit +
-        2 * length_of_train_data + sim_timesteps_to_fit
+        2 * length_of_train_data + sim_timesteps_to_fit,
+      dataset = "SARI"
     )
   }),
   # Data frame storing the beginning and end points of the training data for the
@@ -387,7 +388,8 @@ list(
       sim_df_total,
       create_totals_data_frame(
         sim_train_data$train_data,
-        sim_time_horizons$train_data_begin
+        sim_time_horizons$train_data_begin,
+        sc_name
       ),
       pattern = map(sim_time_horizons, sim_train_data),
       iteration = "list"
@@ -574,7 +576,8 @@ list(
         sim_summarized_nowcast_glm,
         sim_df_total,
         dates_to_show = sim_nowcast_example_dates,
-        model_to_show = get_model_names()
+        model_to_show = get_model_names(),
+        data_origin = sc_name
       ),
       pattern = map(
         sim_summarized_nowcast_mcmc,
@@ -584,14 +587,14 @@ list(
       iteration = "list"
     ),
     # Plot an example of nowcasts from all models (GLM & MCMC) in the
-    # simualation study for selected dates
+    # simulation study for selected dates
     tar_target(
       sim_nowcast_plots,
       plot_nowcast_example(
-        map(sim_df_nowcast_example, "nowcast"),
-        map(sim_df_nowcast_example, "total"),
+        bind_rows(map(sim_df_nowcast_example, "nowcast")),
+        bind_rows(map(sim_df_nowcast_example, "total")),
         sim_nowcast_example_dates,
-        data_origin = sc_name
+        dataset = sc_name
       )
     )
   ),
@@ -608,6 +611,7 @@ list(
       sim_df_total_NegBinX,
       sim_fitted_mcmc_NegBinX$lambda,
       sim_fitted_glm_NegBinX$lambda,
+      data_origin = "NegBinX",
       dates_to_show = glm_overshoot_dates,
       model_to_show = "NegBinX"
     ),
@@ -631,13 +635,11 @@ list(
       "NegBinX"
     )
   ),
+  # Combine the results from the simulation scenarios into a list. The ordering
+  # is important here as it will be adopted by the plotting functions.
   tar_target(
     sim_summarized_nowcast_list,
     list(
-      NegBinX = bind_rows(
-        bind_rows(sim_summarized_nowcast_mcmc_NegBinX),
-        bind_rows(sim_summarized_nowcast_glm_NegBinX)
-      ),
       NegBin1D = bind_rows(
         bind_rows(sim_summarized_nowcast_mcmc_NegBin1D),
         bind_rows(sim_summarized_nowcast_glm_NegBin1D)
@@ -645,6 +647,10 @@ list(
       NegBin2D = bind_rows(
         bind_rows(sim_summarized_nowcast_mcmc_NegBin2D),
         bind_rows(sim_summarized_nowcast_glm_NegBin2D)
+      ),
+      NegBinX = bind_rows(
+        bind_rows(sim_summarized_nowcast_mcmc_NegBinX),
+        bind_rows(sim_summarized_nowcast_glm_NegBinX)
       ),
       NegBinX_switch = bind_rows(
         bind_rows(sim_summarized_nowcast_mcmc_NegBinX_switch),
@@ -654,22 +660,30 @@ list(
   ),
   tar_target(
     sim_results_plot,
-    patchwork_sim_results(sim_summarized_nowcast_list)
+    patchwork_results(
+      sim_summarized_nowcast_list,
+      full_data_list = list(
+        NegBin1D = sim_full_data_NegBin1D,
+        NegBin2D = sim_full_data_NegBin2D,
+        NegBinX = sim_full_data_NegBinX,
+        NegBinX_switch = sim_full_data_NegBinX_switch
+      ),
+      type = "simulation"
+    )
   ),
   tar_target(
     sim_all_trajectories,
-    plot_all_sim_trajectories(
+    plot_multiple_trajectories(
       bind_rows(
-        sim_full_data_NegBinX,
         sim_full_data_NegBin1D,
         sim_full_data_NegBin2D,
+        sim_full_data_NegBinX,
         sim_full_data_NegBinX_switch
       ),
-      sim_start_date,
-      sim_end_date,
-      length_of_train_data,
-      length(sim_delay_prob),
-      aux_sim_start_date,
+      rep(sim_start_date, 4),
+      rep(sim_end_date, 4),
+      rep(length_of_train_data, 4),
+      rep(aux_sim_start_date, 4),
       save_plot = TRUE
     )
   ),
@@ -696,7 +710,8 @@ list(
       # exact number of rolling windows, since we count the "zeroth" window as
       # the first one.
       num_of_weeks = aux_timesteps_to_fit +
-        2 * length_of_train_data + timesteps_to_fit - 1
+        2 * length_of_train_data + timesteps_to_fit - 1,
+      dataset = "SARI"
     )
   }),
 
@@ -801,7 +816,7 @@ list(
     )
   }),
 
-  # Main part of the case study ------------------------------------------------
+  # Main part of the SARI case study -------------------------------------------
 
   # Data frame storing the beginning and end points of the training data to
   # keep track of the rolling windows
@@ -870,7 +885,8 @@ list(
   tar_target(df_total, {
     create_totals_data_frame(
       train_data$train_data,
-      time_horizons$train_data_begin
+      time_horizons$train_data_begin,
+      "SARI"
     )
   },
   pattern = map(time_horizons, train_data),
@@ -1064,7 +1080,8 @@ list(
       summarized_nowcast_glm,
       df_total,
       dates_to_show = nowcast_example_dates,
-      model_to_show = get_model_names()
+      model_to_show = get_model_names(),
+      data_origin = "SARI"
     ),
     pattern = map(
       summarized_nowcast_mcmc,
@@ -1073,30 +1090,6 @@ list(
     ),
     iteration = "list"
   ),
-  # Plot an example of nowcasts from all models (GLM & MCMC) in the case study
-  # for selected dates
-  tar_target(
-    nowcast_plots,
-    plot_nowcast_example(
-      map(df_nowcast_example, "nowcast"),
-      map(df_nowcast_example, "total"),
-      nowcast_example_dates,
-      data_origin = "SARI"
-    )
-  ),
-  # Plot the whole incidence trajectory highlighting the first and the last
-  # estimation windows
-  tar_target(whole_trajectory_plot, {
-    plot_trajectory(
-      full_data,
-      analysis_start_date,
-      analysis_end_date,
-      length_of_train_data,
-      max_lag,
-      aux_analysis_start_date,
-      data_origin = "SARI"
-    )
-  }),
 
   # ILI incidence case study ===================================================
 
@@ -1133,7 +1126,8 @@ list(
       # exact number of rolling windows, since we count the "zeroth" window as
       # the first one.
       num_of_weeks = aux_timesteps_to_fit +
-        2 * length_of_train_data + ili_timesteps_to_fit - 1
+        2 * length_of_train_data + ili_timesteps_to_fit - 1,
+      dataset = "ILI"
     )
   }),
 
@@ -1286,7 +1280,8 @@ list(
     ili_df_total,
     create_totals_data_frame(
       ili_train_data$train_data,
-      ili_time_horizons$train_data_begin
+      ili_time_horizons$train_data_begin,
+      "ILI"
     ),
     pattern = map(ili_time_horizons, ili_train_data),
     iteration = "list"
@@ -1467,7 +1462,8 @@ list(
       ili_summarized_nowcast_glm,
       ili_df_total,
       dates_to_show = ili_nowcast_example_dates,
-      model_to_show = get_model_names()
+      model_to_show = get_model_names(),
+      data_origin = "ILI"
     ),
     pattern = map(
       ili_summarized_nowcast_mcmc,
@@ -1476,29 +1472,66 @@ list(
     ),
     iteration = "list"
   ),
+
+  # Combined plots from both case studies ======================================
+
+  # Combine the results from the SARI and ILI case study into a list, focusing
+  # only on the main analysis (i.e. ignoring the robustness check scenarios)
+  tar_target(
+    summarized_nowcast_list,
+    list(
+      SARI = filter(
+        bind_rows(
+          bind_rows(summarized_nowcast_mcmc),
+          bind_rows(summarized_nowcast_glm)
+        ),
+        sensitivity_sc == ""
+      ),
+      ILI = filter(
+        bind_rows(
+          bind_rows(ili_summarized_nowcast_mcmc),
+          bind_rows(ili_summarized_nowcast_glm)
+        ),
+        sensitivity_sc == ""
+      )
+    )
+  ),
+  tar_target(
+    case_study_results_plot,
+    patchwork_results(
+      summarized_nowcast_list,
+      full_data_list = list(SARI = full_data, ILI = ili_full_data),
+      skip_dates_list = list(SARI = skip_dates, ILI = NULL),
+      type = "case_study"
+    )
+  ),
   # Plot an example of nowcasts from all models (GLM & MCMC) in the case study
   # for selected dates
   tar_target(
-    ili_nowcast_plots,
+    nowcast_plots,
     plot_nowcast_example(
-      map(ili_df_nowcast_example, "nowcast"),
-      map(ili_df_nowcast_example, "total"),
-      ili_nowcast_example_dates,
-      data_origin = "ILI"
+      bind_rows(
+        unname(map(df_nowcast_example, "nowcast")),
+        unname(map(ili_df_nowcast_example, "nowcast"))
+      ),
+      bind_rows(
+        unname(map(df_nowcast_example, "total")),
+        unname(map(ili_df_nowcast_example, "total"))
+      ),
+      dataset = c("SARI", "ILI"),
+      dates_to_show = c(nowcast_example_dates, ili_nowcast_example_dates)
     )
   ),
   # Plot the whole incidence trajectory highlighting the first and the last
   # estimation windows
   tar_target(
-    ili_whole_trajectory_plot,
-    plot_trajectory(
-      ili_full_data,
-      ili_analysis_start_date,
-      ili_analysis_end_date,
-      length_of_train_data,
-      ili_max_lag,
-      ili_aux_analysis_start_date,
-      data_origin = "ILI"
+    case_study_trajectory_plot,
+    plot_multiple_trajectories(
+      bind_rows(full_data, ili_full_data),
+      c(analysis_start_date, ili_analysis_start_date),
+      c(analysis_end_date, ili_analysis_end_date),
+      rep(length_of_train_data, 2),
+      c(aux_analysis_start_date, ili_aux_analysis_start_date)
     )
   )
 )

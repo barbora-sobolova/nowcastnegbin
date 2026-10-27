@@ -159,12 +159,20 @@ process_ili_data <- function(
 #' case study.
 #' @param num_of_weeks number of weeks starting from the `start_date`
 #' (included), we want to load.
+#' @param dataset a string indicating, which dataset we are loading, either
+#' "SARI", or "ILI"
 #'
 #' @return a data frame containing columns `date` and columns
 #' `value_0w`, `value_1w`, etc. until `max_lag - 1`.
 #'
 #' @export
-load_preprocessed_data <- function(path, start_date, num_of_weeks) {
+load_preprocessed_data <- function(
+  path,
+  start_date,
+  num_of_weeks,
+  dataset = c("SARI", "ILI")
+) {
+  dataset <- match.arg(dataset)
   # Set the end date. It will be excluded from the dataset
   analysis_end_date <- start_date + num_of_weeks * 7
   # Load the full dataset
@@ -177,7 +185,8 @@ load_preprocessed_data <- function(path, start_date, num_of_weeks) {
       .data$age_group == "00+",
       # Filter only the desired time period
       date >= start_date & date < analysis_end_date
-    )
+    ) |>
+    mutate(data_origin = dataset)
 }
 
 #' Simulate the reporting table of a nowcasting problem based on existing data
@@ -231,6 +240,14 @@ simulate_full_data <- function(
     stop("Probability of switching the last two columns of the reporting triangle must be between 0 and 1, endpoints included.")  # nolint
   }
 
+  # Create the simulation scenario label
+  switch_string <- if (switch_last_cols_prob > 0) {
+    "_switch"
+  } else {
+    ""
+  }
+  sc_name <- paste0(model, switch_string)
+
   lgt <- nrow(df_series) - ma_degree + 1
 
   # Use tail to skip the initial `ma_degree` - 1 observations that are set to
@@ -259,7 +276,7 @@ simulate_full_data <- function(
     dplyr::mutate(
       date = tail(df_series$date, lgt),
       mean_proc = mean_proc,
-      Distribution = model
+      data_origin = sc_name
     )
   reporting_table
 }

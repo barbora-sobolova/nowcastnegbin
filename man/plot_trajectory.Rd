@@ -9,9 +9,8 @@ plot_trajectory(
   start_date,
   end_date,
   length_of_train_data,
-  max_lag,
   aux_study_start,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
   save_plot = TRUE
 )
 }
@@ -28,16 +27,13 @@ endpoint will be included.}
 \item{length_of_train_data}{a number, the length of the estimation window
 (endpoints included)}
 
-\item{max_lag}{maximum reporting delay represented by the number of columns
-of the reporting table. In this way, the 0-th lag counts as the first, 1-st
-lag as the second and so on.}
-
 \item{aux_study_start}{a date (indeed in the date format), where the
 auxiliary case study period used for determining the priors starts.}
 
 \item{data_origin}{a string indicating the data generating process of
 simulated data, or the corresponding case study. Possible
-values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
+values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+"NegBinX_switch"}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggplot2::ggsave()}}

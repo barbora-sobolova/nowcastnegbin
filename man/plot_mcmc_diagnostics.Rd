@@ -7,7 +7,7 @@
 plot_mcmc_diagnostics(
   df_diagnostics,
   model_names,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
   save_plot = TRUE
 )
 }

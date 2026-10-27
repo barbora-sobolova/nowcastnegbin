@@ -17,8 +17,17 @@
 create_totals_data_frame <- function(
   train_data,
   start_date,
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
   time_step = 7
 ) {
+  data_origin <- match.arg(data_origin)
   # Data frame to plot the observations - final counts and counts available at
   # the time of creating the nowcast
   data.frame(
@@ -27,7 +36,8 @@ create_totals_data_frame <- function(
       rowSums(mock_unobserved(train_data), na.rm = TRUE)
     ),
     date = rep(start_date + (seq_len(nrow(train_data)) - 1) * time_step, 2),
-    data = rep(c("Final", "Preliminary"), each = nrow(train_data))
+    data = rep(c("Final", "Preliminary"), each = nrow(train_data)),
+    data_origin = data_origin
   )
 }
 
@@ -154,6 +164,144 @@ summarize_nowcast <- function(
   df_nowcast_plot
 }
 
+#' Calculate the coverage values to be displayed in plots
+#'
+#' @description This function calculates the empirical coverage fractions for
+#' the 50% and 95% nominal coverage values based on the nowcasts in the form of
+#' quantiles. The resulting data frame is in the long format to allow for easier
+#' plotting. Will be called by the \code{plot_coverage} and
+#' \code{plot_coverage_alt} functions.
+#'
+#' @param df_summarized_nowcast a data frame with the summarized nowcasts,
+#' containing columns `date`, `nowcast_date`, `Distribution`, `sensitivity_sc`,
+#' `delay`, `method`, `true_val`, `quantile_2.5`, `quantile_25`, `quantile_75`
+#' and `quantile_97.5`
+#' @return a data frame with columns
+#' \describe{
+#'   \item{\code{delay}}{reporting delay as a factor,}
+#'   \item{\code{Distribution}}{factor, label of the observation model,}
+#'   \item{\code{method}}{the fitting method, either "mcmc", or "glm",}
+#'   \item{\code{sensitivity_sc}}{string indicating the sensitivity analysis
+#'   scenario, "" denotes the main analysis,}
+#'   \item{\code{nominal_coverage}}{the nominal coverage level, either
+#'   "coverage_50", or "coverage_95",}
+#'   \item{\code{empirical_coverage}}{the value of the empirical coverage,}
+#'   \item{\code{model_method_interact}}{factor, label of the model-method
+#'   combination, necessary for determining the plot colors correctly,}
+#' }
+#'
+#' @import dplyr
+#'
+#' @export
+create_coverage_plot_df <- function(df_summarized_nowcast) {
+  # Calculate the empirical coverage
+  df_summarized_nowcast |>
+    group_by(
+      .data$delay,
+      .data$Distribution,
+      .data$method,
+      .data$sensitivity_sc
+    ) |>
+    summarize(
+      coverage_50 = sum(
+        .data$true_val >= .data$quantile_25 &
+          .data$true_val <= .data$quantile_75
+      ) / n(),
+      coverage_95 = sum(
+        .data$true_val >= .data$quantile_2.5 &
+          .data$true_val <= .data$quantile_97.5
+      ) / n(),
+      .groups = "drop"
+    ) |>
+    # Pivot for easier definition of the alpha aesthetic
+    tidyr::pivot_longer(
+      cols = starts_with("coverage"),
+      names_to = "nominal_coverage",
+      values_to = "empirical_coverage"
+    ) |>
+    mutate(
+      model_method_interact = factor(
+        interaction(.data$Distribution, .data$method),
+        levels = names(get_interaction_names()),
+        labels = get_interaction_names()
+      )
+    )
+}
+
+#' Calculate the coverage values to be displayed in plots
+#'
+#' @description This function calculates the average CRPS values based on the
+#' CRPS of individual nowcasts, including the CRPS decomposition. The resulting
+#' data frame is in the long format to allow for easier plotting. Will be called
+#'  by the \code{plot_crps_decomp} and \code{plot_crps_decomp_alt} functions.
+#'
+#' @param df_summarized_nowcast a data frame with the summarized nowcasts,
+#' containing columns `date`, `nowcast_date`, `Distribution`, `sensitivity_sc`,
+#' `delay`, `method`, `crps`, `dispersion`, `underprediction` and
+#' `overprediction`
+#' @return a data frame with columns
+#' \describe{
+#'   \item{\code{delay}}{reporting delay as a factor,}
+#'   \item{\code{sensitivity_sc}}{string indicating the sensitivity analysis
+#'   scenario, "" denotes the main analysis,}
+#'   \item{\code{MAE}}{value of the mean absoltue error,}
+#'   \item{\code{Total}}{total value of the CRPS,}
+#'   \item{\code{model_method_interact}}{factor, label of the model-method
+#'   combination, necessary for determining the plot colors correctly,}
+#'   \item{\code{Dispersion}}{value of the dispersion component of the CRPS,}
+#'   \item{\code{Underprediction}}{value of the underprediction component of the
+#'   CRPS,}
+#'   \item{\code{Overprediction}}{value of the overprediction component of the
+#'   CRPS,}
+#' }
+#'
+#' @import dplyr
+#'
+#' @export
+create_crps_plot_df <- function(df_summarized_nowcast) {
+  # Calculate the decomposition of the average CRPS
+  df_crps <- df_summarized_nowcast |>
+    # Calculate the absolute error
+    mutate(AE = abs(.data$true_val - .data$quantile_50)) |>
+    group_by(
+      .data$delay,
+      .data$Distribution,
+      .data$method,
+      .data$sensitivity_sc
+    ) |>
+    summarize(
+      # Mean absolute error
+      MAE = mean(.data$AE),
+      # CRPS components
+      Dispersion = mean(.data$dispersion),
+      Underprediction = mean(.data$underprediction),
+      Overprediction = mean(.data$overprediction),
+      Total = mean(.data$crps),
+      .groups = "drop"
+    ) |>
+    mutate(
+      model_method_interact = factor(
+        interaction(.data$Distribution, .data$method),
+        levels = names(get_interaction_names()),
+        labels = get_interaction_names()
+      )
+    ) |>
+    dplyr::select(
+      c(
+        "delay",
+        "sensitivity_sc",
+        "MAE",
+        "Total",
+        "model_method_interact",
+        "Dispersion",
+        "Underprediction",
+        "Overprediction",
+        "Total"
+      )
+    )
+  df_crps
+}
+
 #' Combine data frames of results from different methods
 #'
 #' @description This function combines data frames containing results from the
@@ -176,7 +324,8 @@ filter_and_combine_methods <- function(
   df_mcmc,
   df_glm,
   dates_to_show,
-  model_to_show
+  model_to_show,
+  data_origin
 ) {
   df_combined <- bind_rows(
     mutate(
@@ -186,7 +335,8 @@ filter_and_combine_methods <- function(
         .data$nowcast_date %in% dates_to_show &
           .data$Distribution %in% model_to_show
       ),
-      method = "mcmc"
+      method = "mcmc",
+      data_origin = data_origin
     ),
     mutate(
       dplyr::filter(
@@ -195,7 +345,8 @@ filter_and_combine_methods <- function(
         .data$nowcast_date %in% dates_to_show &
           .data$Distribution %in% model_to_show
       ),
-      method = "glm"
+      method = "glm",
+      data_origin = data_origin
     )
   )
   df_combined
@@ -252,7 +403,15 @@ filter_nowcast_example_dates <- function(
   df_total,
   df_lambda_mcmc = NULL,
   df_lambda_glm = NULL,
-  dates_to_show = c("2019-03-24", "2019-03-31", "2019-04-07", "2019-04-14"),
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
+  dates_to_show = NULL,
   model_to_show = c(
     "Poisson",
     "NegBinX",
@@ -262,6 +421,9 @@ filter_nowcast_example_dates <- function(
     "NegBin1M"
   )
 ) {
+  data_origin <- match.arg(data_origin)
+  model_to_show <- match.arg(model_to_show, several.ok = TRUE)
+
   # We filter out all rolling windows we don't want to show. Since the function
   # is called for each dynamic branch, in most cases, the filtered data frame
   # will have 0 rows.
@@ -269,14 +431,16 @@ filter_nowcast_example_dates <- function(
     df_nowcast_mcmc,
     df_nowcast_glm,
     dates_to_show,
-    model_to_show
+    model_to_show,
+    data_origin
   )
   if (!is.null(df_lambda_mcmc) && !is.null(df_lambda_glm)) {
     df_lambda <- filter_and_combine_methods(
       df_lambda_mcmc,
       df_lambda_glm,
       dates_to_show,
-      model_to_show
+      model_to_show,
+      data_origin
     )
   } else {
     df_lambda <- NULL

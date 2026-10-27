@@ -10,7 +10,7 @@ plot_nowcast(
   model_names,
   date_of_the_nowcast,
   fitting_method = c("mcmc", "glm", "both"),
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
   sensitivity_sc = "",
   axis_limits = list(x = c(NA, NA), y = c(NA, NA)),
   save_plot = TRUE

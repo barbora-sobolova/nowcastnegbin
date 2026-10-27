@@ -16,7 +16,7 @@ plot_per_window(
   fitting_method = c("mcmc", "glm"),
   prob_prior_pars = NULL,
   disp_prior_pars = NULL,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
   prob_true_val = NULL,
   disp_true_val = NULL,
   lambda_true_val = NULL,

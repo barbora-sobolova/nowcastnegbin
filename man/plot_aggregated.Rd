@@ -8,7 +8,7 @@ plot_aggregated(
   df_nowcast,
   full_data,
   skip_dates = NULL,
-  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D"),
+  data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
   save_plot = TRUE
 )
 }
@@ -53,6 +53,6 @@ results: \code{plot_coverage()}, \code{plot_crps_decomp()} and
 scenarios as a robustness check. For these scenarios, the coverage and CRPS
 plots are saved as glued together by pairs. For the simulations, we don't
 create the coverage and CRPS. This is done in the
-\code{patchwork_sim_results} function, where we merge together results from
+\code{patchwork_results} function, where we merge together results from
 all simulation study scenarios.
 }
