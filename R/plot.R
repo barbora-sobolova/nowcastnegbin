@@ -788,7 +788,7 @@ plot_crps_decomp_alt <- function(
 
   if (data_origin == "SARI") {
     # Find out how many bars we draw
-    n_bars <- length(levels(df_crps$model_method_interact))
+    n_bars <- length(unique(df_crps$model_method_interact))
     # Calculate coordinates of the "Not applicable" label. We place it right
     # into the middle of the empty facet
     dummy <- dummy |>
@@ -807,7 +807,7 @@ plot_crps_decomp_alt <- function(
         ),
         border.color = alpha("white", 0),
         fill = alpha("white", 0),
-        hjust = 1
+        hjust = 0.5
       )
   }
 
