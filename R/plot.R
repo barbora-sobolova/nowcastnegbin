@@ -383,9 +383,13 @@ plot_coverage_alt <- function(
 ) {
   data_origin <- match.arg(data_origin)
 
-  # Alternative plots are drawn for the "interesting" models only
+  # Alternative plots are drawn for the "interesting" models only, which are
+  # NegBin1D, NegBin2D, NegBinX and one of the Poisson models for comparison.
   df_summarized_nowcast <- df_summarized_nowcast |>
-    filter(!(.data$Distribution %in% c("Poisson", "NegBin2M", "NegBin1M")))
+    filter(
+      !(.data$Distribution %in% c("Poisson", "NegBin2M", "NegBin1M")) |
+        (.data$Distribution == "Poisson" & .data$method == "mcmc")
+    )
 
   # Calculate the empirical coverage
   df_coverage <- create_coverage_plot_df(df_summarized_nowcast) |>
@@ -669,9 +673,13 @@ plot_crps_decomp_alt <- function(
   # Highlight the model aligned with the true data generating process if known.
   model_x_labels <- get_model_axis_labels(data_origin, bold = FALSE)
 
-  # Alternative plots are drawn for the "interesting" models only
+  # Alternative plots are drawn for the "interesting" models only, which are
+  # NegBin1D, NegBin2D, NegBinX and one of the Poisson models for comparison.
   df_summarized_nowcast <- df_summarized_nowcast |>
-    filter(!(.data$Distribution %in% c("Poisson", "NegBin2M", "NegBin1M")))
+    filter(
+      !(.data$Distribution %in% c("Poisson", "NegBin2M", "NegBin1M")) |
+        (.data$Distribution == "Poisson" & .data$method == "mcmc")
+    )
   # Calculate the decomposition of the average CRPS
   df_crps <- create_crps_plot_df(df_summarized_nowcast) |>
     # Calculate the x-coordinate of the labels denoting the total CRPS
@@ -720,8 +728,7 @@ plot_crps_decomp_alt <- function(
       sensitivity_sc = "",
       Component = factor("Overprediction"),
       delay = factor(-4),
-      # This model is displayed in the middle. We use the middle position to
-      # plot a "Not applicable" label
+      # To avoid NAs, we assign the dummy observation some arbitrary model
       model_method_interact = factor("NegBin-X-RW")
     )
     df_crps_component <- bind_rows(df_crps_component, dummy) |>
@@ -780,22 +787,27 @@ plot_crps_decomp_alt <- function(
     )
 
   if (data_origin == "SARI") {
+    # Find out how many bars we draw
+    n_bars <- length(levels(df_crps$model_method_interact))
+    # Calculate coordinates of the "Not applicable" label. We place it right
+    # into the middle of the empty facet
     dummy <- dummy |>
       mutate(
         na_label = "Not applicable",
-        na_label_position = max(df_crps$Total, na.rm = TRUE) / 2
+        na_label_y = max(df_crps$Total, na.rm = TRUE) / 2,
+        na_label_x = (n_bars + 1) / 2
       )
     crps_decomp_plot <- crps_decomp_plot +
       geom_label(
         dummy,
         mapping = aes(
-          x = .data$model_method_interact,
-          y = .data$na_label_position,
+          x = .data$na_label_x,
+          y = .data$na_label_y,
           label = .data$na_label
         ),
         border.color = alpha("white", 0),
         fill = alpha("white", 0),
-        hjust = 0.5
+        hjust = 1
       )
   }
 
@@ -1026,7 +1038,7 @@ patchwork_results <- function(
       save_figure(
         crps_alt_plot,
         "inst/figure/crps_decomposition_alt_plot_case_study",
-        width = 11,
+        width = 12,
         height = 9
       )
       # For the case studies, we save the 2x1 plot of prediction interval bands
