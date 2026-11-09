@@ -838,6 +838,96 @@ plot_crps_decomp_alt <- function(
   ret
 }
 
+plot_interal_width <- function(
+  df_summarized_nowcast,
+  data_origin = c(
+    "SARI",
+    "ILI",
+    "NegBinX",
+    "NegBin2D",
+    "NegBin1D",
+    "NegBinX_switch"
+  ),
+  sensitivity_sc = "",
+  save_plot = TRUE
+) {
+  data_origin <- match.arg(data_origin)
+
+  # Grab the number of nowcasting horizons
+  n_horizons <- length(unique(df_summarized_nowcast$delay))
+
+  df_interval_width <- df_summarized_nowcast |>
+    # Choose only models we want to compare
+    filter(
+      .data$Distribution %in% c("NegBin1D", "NegBin2D", "NegBinX") &
+        .data$method == "mcmc" &
+        .data$sensitivity_sc == ""
+    ) |>
+    mutate(
+      model_method_interact = factor(
+        interaction(.data$Distribution, .data$method),
+        levels = names(get_interaction_names()),
+        labels = get_interaction_names()
+      )
+    ) |>
+    group_by(.data$date, .data$model_method_interact, .data$delay) |>
+    summarize(
+      PI50_width = .data$quantile_75 - .data$quantile_25,
+      .groups = "drop"
+    ) |>
+    # Set the delay factor levels to show horizon 0 in the top panel
+    mutate(delay = factor(.data$delay, levels = -seq_len(n_horizons) + 1))
+
+  # Prepare the x-axis breaks
+  start_date <- min(df_interval_width$date)
+  end_date <- max(df_interval_width$date)
+  date_breaks <- seq(
+    start_date,
+    end_date,
+    length = 4
+  )
+
+  p_pi_width <- ggplot(
+    df_interval_width,
+    aes(
+      x = .data$date,
+      y = .data$PI50_width,
+      color = .data$model_method_interact
+    )
+  ) +
+    geom_line() +
+    labs(y = "50% prediction interval width", x = "Date") +
+    scale_color_manual(
+      values = get_interaction_colors(),
+      labels = get_interaction_names(),
+      name = "Model"
+    ) +
+    scale_x_date(breaks = date_breaks, date_labels = "%b %Y") +
+    facet_wrap(
+      ~delay,
+      scales = "free_y",
+      nrow = n_horizons,
+      labeller = as_labeller(label_horizon_facet(n_horizons))
+    ) +
+    get_plot_theme() +
+    theme(legend.position = "bottom")
+
+  # Save the plot if required, the width, height and path are hard-coded here.
+  # If the plot is saved on the disc, we don't return the ggplot object.
+  if (save_plot) {
+    save_figure(
+      p_pi_width,
+      paste0("inst/figure/pi_width_comparison_", data_origin),
+      width = 8,
+      height = 8
+    )
+    ret <- NULL
+  } else {
+    ret <- p_pi_width
+  }
+  ret
+}
+
 #' Compose and save figures showing results
 #'
 #' @description This functions takes the results of multiple simulation
