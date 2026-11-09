@@ -143,7 +143,21 @@ get_interaction_colors <- function() {
   )
 }
 
-
+#' Get the point shape of the interaction of an observation model and a fitting
+#' method for the coverage lineplots
+#'
+#' @return a named character vector containing the colors of the 6 models
+#' we show in the lineplot.
+get_interaction_shapes <- function() {
+  c(
+    "Poisson-RW" = 15,
+    "NegBin-X-RW" = 2,
+    "NegBin-QD-RW" = 18,
+    "NegBin-LD-RW" = 1,
+    "NegBin-X-GAM" = 8,
+    "NegBin-LD-GAM" = 4
+  )
+}
 
 #' Shared ggplot theme for standardized text sizing and legend spacing
 #'
