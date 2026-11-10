@@ -8,7 +8,7 @@ method for the coverage lineplots}
 get_interaction_shapes()
 }
 \value{
-a named character vector containing the point shapes of the 6 models
+a named numeric vector containing the point shapes of the 6 models
 we show in the lineplot.
 }
 \description{
