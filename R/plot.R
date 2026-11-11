@@ -405,7 +405,7 @@ plot_coverage_alt <- function(
       y = .data$empirical_coverage,
       color = .data$model_method_interact,
       linetype = .data$nominal_coverage,
-      shape = .data$method
+      shape = .data$model_method_interact
     )
   ) +
     geom_line() +
@@ -418,9 +418,8 @@ plot_coverage_alt <- function(
       name = ""
     ) +
     scale_shape_manual(
-      values = c("mcmc" = 19, "glm" = 8),
-      labels = c("mcmc" = "RW", "glm" = "GAM"),
-      name = "Model type"
+      values = get_interaction_shapes(),
+      name = "Model"
     ) +
     scale_color_manual(values = get_interaction_colors(), name = "Model") +
     scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.20)) +
