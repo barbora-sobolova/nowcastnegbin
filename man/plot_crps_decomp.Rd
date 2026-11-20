@@ -8,6 +8,7 @@ plot_crps_decomp(
   df_summarized_nowcast,
   data_origin = c("SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D", "NegBinX_switch"),
   sensitivity_sc = "",
+  alternative_prior = FALSE,
   save_plot = TRUE
 )
 }
@@ -23,6 +24,10 @@ values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
 
 \item{sensitivity_sc}{a string indicating the sensitivity analysis scenario
 of the MCMC method. Empty string "" indicates the main analysis.}
+
+\item{alternative_prior}{logical indicator, whether the results were obtained
+from the model with the alternative prior distribution for the dispersion
+parameter. This affects the size of the final plot.}
 
 \item{save_plot}{logical indicator, whether to save the plot using
 \code{ggsave()}}
