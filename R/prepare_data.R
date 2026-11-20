@@ -587,7 +587,7 @@ calc_delay_prob_prior <- function(
 #' `value_0w`, `value_1w`, etc. until `max_lag - 1`.
 #' @param start_date a date, where the data for estimating the overall data
 #' magnitude start. The starting point will be included.
-#' @param start_date a date, where the data for estimating the overall data
+#' @param end_date a date, where the data for estimating the overall data
 #' magnitude end. The ending point will be included.
 #'
 #' @return a numeric value indicating the estimated magnitude of the data

@@ -11,6 +11,9 @@ estimate_magnitude(full_data, start_date, end_date)
 \code{value_0w}, \code{value_1w}, etc. until \code{max_lag - 1}.}
 
 \item{start_date}{a date, where the data for estimating the overall data
+magnitude start. The starting point will be included.}
+
+\item{end_date}{a date, where the data for estimating the overall data
 magnitude end. The ending point will be included.}
 }
 \value{
