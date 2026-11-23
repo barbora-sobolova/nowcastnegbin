@@ -1059,6 +1059,8 @@ patchwork_results <- function(
         guides = "collect",
         axes = "collect"
       )
+    } else {
+      nowcast_bands0_plot <- NULL
     }
     # We do not create a composite CRPS and coverage plot for the case studies.
     # They are generated for each case study separately.
