@@ -424,6 +424,13 @@ filter_nowcast_example_dates <- function(
   data_origin <- match.arg(data_origin)
   model_to_show <- match.arg(model_to_show, several.ok = TRUE)
 
+  # If the results from the GLM method are not supplied, create a dummy empty
+  # data frame by filtering the MCMC results in a way that results in 0 rows
+  if (is.null(df_nowcast_glm)) {
+    min_date <- min(df_nowcast_mcmc$date)
+    df_nowcast_glm <- df_nowcast_mcmc |> filter(date < min_date)
+  }
+
   # We filter out all rolling windows we don't want to show. Since the function
   # is called for each dynamic branch, in most cases, the filtered data frame
   # will have 0 rows.

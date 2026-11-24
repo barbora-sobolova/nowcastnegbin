@@ -209,6 +209,9 @@ plot_nowcast <- function(
 #' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param alternative_prior logical indicator, whether the results were obtained
+#' from the model with the alternative prior distribution for the dispersion
+#' parameter. This affects the size of the final plot.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -231,6 +234,7 @@ plot_coverage <- function(
     "NegBinX_switch"
   ),
   sensitivity_sc = "",
+  alternative_prior = FALSE,
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -260,10 +264,11 @@ plot_coverage <- function(
   }
   # Grab the number of models in order to set the height of the plot
   # accordingly. We plot only the 6 MCMC-based models for the scenarios of the
-  # sensitivity analysis. Otherwise we plot 9 models (6  MCMC, and 3 GLM).
+  # sensitivity analysis and 3 MCMC-based models for the alternative prior.
+  # Otherwise we plot 9 models (6  MCMC, and 3 GLM).
   n_models <- length(unique(df_coverage$model_method_interact))
-  if (!(n_models %in% c(6, 9))) {
-    stop("Number of models must be 6 or 9.")
+  if (!(n_models %in% c(3, 6, 9))) {
+    stop("Number of models must be 3, 6 or 9.")
   }
 
   # Plot the empirical coverage as horizontal bars
@@ -317,6 +322,11 @@ plot_coverage <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
+    plot_path <- paste0(
+      "inst/figure/coverage_plot_",
+      data_origin,
+      sensitivity_sc
+    )
     if (data_origin == "ILI") {
       plot_height <- 10
     } else {
@@ -325,13 +335,12 @@ plot_coverage <- function(
         warning("Trying to save the coverage plot for a simulation scenario. The plot size might not be optimal.")  # nolint
       }
     }
+    if (alternative_prior) {
+      plot_height <- plot_height / 2
+      plot_path <- paste0(plot_path, "_alternative_prior")
+    }
 
-    save_figure(
-      coverage_plot,
-      paste0("inst/figure/coverage_plot_", data_origin, sensitivity_sc),
-      width = 10,
-      height = plot_height
-    )
+    save_figure(coverage_plot, plot_path, width = 10, height = plot_height)
     ret <- NULL
   } else {
     ret <- coverage_plot
@@ -357,6 +366,9 @@ plot_coverage <- function(
 #' "NegBinX_switch"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param alternative_prior logical indicator, whether the results were obtained
+#' from the model with the alternative prior distribution for the dispersion
+#' parameter. This affects the size of the final plot.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -379,6 +391,7 @@ plot_coverage_alt <- function(
     "NegBinX_switch"
   ),
   sensitivity_sc = "",
+  alternative_prior = FALSE,
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -431,9 +444,17 @@ plot_coverage_alt <- function(
     ) +
     get_plot_theme()
   if (save_plot) {
+    plot_path <- paste0(
+      "inst/figure/coverage_plot_alt_",
+      data_origin,
+      sensitivity_sc
+    )
+    if (alternative_prior) {
+      plot_path <- paste0(plot_path, "_alternative_prior")
+    }
     save_figure(
       coverage_plot,
-      paste0("inst/figure/coverage_plot_alt_", data_origin, sensitivity_sc),
+      plot_path,
       width = 10,
       height = 5
     )
@@ -459,6 +480,9 @@ plot_coverage_alt <- function(
 #' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param alternative_prior logical indicator, whether the results were obtained
+#' from the model with the alternative prior distribution for the dispersion
+#' parameter. This affects the size of the final plot.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -481,6 +505,7 @@ plot_crps_decomp <- function(
     "NegBinX_switch"
   ),
   sensitivity_sc = "",
+  alternative_prior = FALSE,
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -537,10 +562,11 @@ plot_crps_decomp <- function(
   }
   # Grab the number of models in order to set the height of the plot
   # accordingly. We plot only the 6 MCMC-based models for the scenarios of the
-  # sensitivity analysis. Otherwise we plot 9 models (6  MCMC, and 3 GLM).
+  # sensitivity analysis and 3 MCMC-based models for the alternative prior.
+  # Otherwise we plot 9 models (6  MCMC, and 3 GLM).
   n_models <- length(unique(df_crps$model_method_interact))
-  if (!(n_models %in% c(6, 9))) {
-    stop("Number of models must be 6 or 9.")
+  if (!(n_models %in% c(3, 6, 9))) {
+    stop("Number of models must be 3, 6 or 9.")
   }
 
   # Plot the CRPS as horizontal bars
@@ -603,6 +629,11 @@ plot_crps_decomp <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
+    plot_path <- paste0(
+      "inst/figure/crps_decomposition_plot_",
+      data_origin,
+      sensitivity_sc
+    )
     if (data_origin == "ILI") {
       plot_height <- 10
     } else {
@@ -611,16 +642,12 @@ plot_crps_decomp <- function(
         warning("Trying to save the coverage plot for a simulation scenario. The plot size might not be optimal.")  # nolint
       }
     }
-    save_figure(
-      crps_decomp_plot,
-      paste0(
-        "inst/figure/crps_decomposition_plot_",
-        data_origin,
-        sensitivity_sc
-      ),
-      width = 10,
-      height = plot_height
-    )
+    if (alternative_prior) {
+      plot_height <- plot_height / 2
+      plot_path <- paste0(plot_path, "_alternative_prior")
+    }
+
+    save_figure(crps_decomp_plot, plot_path,  width = 10, height = plot_height)
     ret <- NULL
   } else {
     ret <- crps_decomp_plot
@@ -643,6 +670,9 @@ plot_crps_decomp <- function(
 #' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param alternative_prior logical indicator, whether the results were obtained
+#' from the model with the alternative prior distribution for the dispersion
+#' parameter. This affects the size of the final plot.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggsave()}
 #'
@@ -665,6 +695,7 @@ plot_crps_decomp_alt <- function(
     "NegBinX_switch"
   ),
   sensitivity_sc = "",
+  alternative_prior = FALSE,
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -813,6 +844,11 @@ plot_crps_decomp_alt <- function(
   # Save the plot if required, the width, height and path are hard-coded here.
   # If the plot is saved on the disc, we don't return the ggplot object.
   if (save_plot) {
+    plot_path <- paste0(
+      "inst/figure/crps_decomposition_plot_alt_",
+      data_origin,
+      sensitivity_sc
+    )
     if (data_origin == "ILI") {
       plot_width <- 10
     } else if (data_origin == "SARI") {
@@ -820,16 +856,10 @@ plot_crps_decomp_alt <- function(
     } else {
       plot_width <- 4
     }
-    save_figure(
-      crps_decomp_plot,
-      paste0(
-        "inst/figure/crps_decomposition_plot_alt_",
-        data_origin,
-        sensitivity_sc
-      ),
-      width = plot_width,
-      height = 5
-    )
+    if (alternative_prior) {
+      plot_path <- paste0(plot_path, "_alternative_prior")
+    }
+    save_figure(crps_decomp_plot, plot_path, width = plot_width, height = 5)
     ret <- NULL
   } else {
     ret <- crps_decomp_plot
@@ -891,6 +921,12 @@ patchwork_results <- function(
   save_plot = TRUE
 ) {
   type <- match.arg(type)
+
+  # Are we plotting the results from the MCMC model with the alternative prior?
+  alternative_prior <- setequal(
+    unique(bind_rows(summarized_nowcast_list)$Distribution),
+    c("NegBinX", "NegBin2D", "NegBin1D")
+  )
   # How many data-generating processes there is
   data_origin <- names(summarized_nowcast_list)
   n_dgp <- length(data_origin)
@@ -914,33 +950,38 @@ patchwork_results <- function(
     simplify = FALSE
   )
   names(plot_list) <- plot_names
+
   # Loop over the data generating processes
   for (dgp in data_origin) {
     plot_list$coverage[[dgp]] <- plot_coverage(
       summarized_nowcast_list[[dgp]],
       data_origin = dgp,
       sensitivity_sc = "",
+      alternative_prior = alternative_prior,
       save_plot = FALSE
     )
     plot_list$coverage_alt[[dgp]] <- plot_coverage_alt(
       summarized_nowcast_list[[dgp]],
       data_origin = dgp,
       sensitivity_sc = "",
+      alternative_prior = alternative_prior,
       save_plot = FALSE
     )
     plot_list$crps[[dgp]] <- plot_crps_decomp(
       summarized_nowcast_list[[dgp]],
       data_origin = dgp,
       sensitivity_sc = "",
+      alternative_prior = alternative_prior,
       save_plot = FALSE
     )
     plot_list$crps_alt[[dgp]] <- plot_crps_decomp_alt(
       summarized_nowcast_list[[dgp]],
       data_origin = dgp,
       sensitivity_sc = "",
+      alternative_prior = alternative_prior,
       save_plot = FALSE
     )
-    if (type == "case_study") {
+    if (type == "case_study" && !alternative_prior) {
       plot_list$nowcast_bands0[[dgp]] <- plot_nowcast_bands(
         full_data_list[[dgp]],
         summarized_nowcast_list[[dgp]],
@@ -998,25 +1039,42 @@ patchwork_results <- function(
       nrow = 2,
       guides = "collect",
       axes = "collect"
-    ) &
-      theme(
-        legend.position = "bottom",
-        legend.direction = "horizontal",
-        legend.box = "vertical"
-      )
-    # 2x1 nowcast bands plot of all models. This goes to the main manuscript
-    nowcast_bands0_plot <-  patchwork::wrap_plots(
-      plot_list$nowcast_bands0,
-      nrow = 2,
-      guides = "collect",
-      axes = "collect"
     )
+    if (!alternative_prior) {
+      # For the main analysis, we will show the legend at the bottom. If we use
+      # alternative priors, we plot only 3 models, so the legend fits on the
+      # right margin of the plot.
+      crps_alt_plot <- crps_alt_plot &
+        theme(
+          legend.position = "bottom",
+          legend.direction = "horizontal",
+          legend.box = "vertical"
+        )
+    }
+    # 2x1 nowcast bands plot of all models. This goes to the main manuscript
+    if (!alternative_prior) {
+      nowcast_bands0_plot <-  patchwork::wrap_plots(
+        plot_list$nowcast_bands0,
+        nrow = 2,
+        guides = "collect",
+        axes = "collect"
+      )
+    } else {
+      nowcast_bands0_plot <- NULL
+    }
     # We do not create a composite CRPS and coverage plot for the case studies.
     # They are generated for each case study separately.
     crps_plot <- coverage_plot <- NULL
   }
 
   if (save_plot) {
+    # If we plot the results from the MCMC model with alternative prior, we add
+    # the corresponding suffix
+    path_alternative_suffix <- if (alternative_prior) {
+      "_alternative_prior"
+    } else {
+      ""
+    }
     if (type == "simulation") {
       # For the simulation study, we save the 4x3 barplot of coverage
       # (supplement)
@@ -1036,25 +1094,37 @@ patchwork_results <- function(
       # will go to the main manuscript.
       save_figure(
         crps_alt_plot,
-        "inst/figure/crps_decomposition_alt_plot_case_study",
+        paste0(
+          "inst/figure/crps_decomposition_alt_plot_case_study",
+          path_alternative_suffix
+        ),
         width = 12,
-        height = 9
+        height = if (alternative_prior) {
+          7
+        } else {
+          9
+        }
       )
       # For the case studies, we save the 2x1 plot of prediction interval bands
       # for delay 0. This will go to the main manuscript.
-      save_figure(
-        nowcast_bands0_plot,
-        "inst/figure/nowcast_bands_case_study_delay0",
-        width = 11.5,
-        height = 11
-      )
+      if (!alternative_prior) {
+        save_figure(
+          nowcast_bands0_plot,
+          paste0(
+            "inst/figure/nowcast_bands_case_study_delay0",
+            path_alternative_suffix
+          ),
+          width = 11.5,
+          height = 11
+        )
+      }
       coverage_alt_plot_size <- list(width = 11, height = 6)
     }
     # For the case studies and simulations, we save the coverage lineplot,
     # which will both go to the main manuscript.
     save_figure(
       coverage_alt_plot,
-      paste0("inst/figure/coverage_plot_alt_", type),
+      paste0("inst/figure/coverage_plot_alt_", type, path_alternative_suffix),
       coverage_alt_plot_size$width,
       coverage_alt_plot_size$height
     )
@@ -1956,6 +2026,15 @@ plot_aggregated <- function(
 ) {
   data_origin <- match.arg(data_origin)
 
+  # If there are results only from the NegBinX, NegBin2D and NegBin1D model, we
+  # are working within the setting using the alternative prior distribution for
+  # the dispersion parameter. Displaying only 3 models, the plot dimensions need
+  # to be adjusted
+  alternative_prior <- setequal(
+    unique(df_nowcast$Distribution),
+    c("NegBinX", "NegBin2D", "NegBin1D")
+  )
+
   # Loop over the sensitivity analysis scenarios. The data frame is always
   # filtered to contain only values from the corresponding scenario. For the GLM
   # method, we perform no sensitivity analysis and there will be only a single
@@ -1974,6 +2053,7 @@ plot_aggregated <- function(
         filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
         data_origin,
         scenario[k],
+        alternative_prior,
         # Avoid saving the individual plot for other scenarios than the main one
         save_plot && main_scenario
       )
@@ -1981,6 +2061,7 @@ plot_aggregated <- function(
         filter(df_nowcast, .data$sensitivity_sc == scenario[k]),
         data_origin,
         scenario[k],
+        alternative_prior,
         # Avoid saving the individual plot for other scenarios than the main one
         save_plot && main_scenario
       )
@@ -1994,6 +2075,7 @@ plot_aggregated <- function(
       skip_dates,
       data_origin,
       scenario[k],
+      alternative_prior,
       save_plot
     )
     ret_list[[k]] <- list(
@@ -2004,7 +2086,7 @@ plot_aggregated <- function(
   }
   # If the plots are to be saved, glue together the coverage and CRPS plots from
   # the sensitivity analysis.
-  if (save_plot && data_origin %in% c("SARI", "ILI")) {
+  if (save_plot && data_origin %in% c("SARI", "ILI") && !alternative_prior) {
     save_sensitivity_plots(ret_list, data_origin)
     # If we save a plot, we usually return NULL in place of the individual
     # plots. For consistency, we reconstruct the list of NULLs with a
@@ -2451,6 +2533,9 @@ plot_multiple_trajectories <- function(
 #' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param alternative_prior logical indicator, whether the results were obtained
+#' from the model with the alternative prior distribution for the dispersion
+#' parameter. This affects the size of the final plot.
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'
@@ -2474,6 +2559,7 @@ plot_nowcast_bands <- function(
     "NegBinX_switch"
   ),
   sensitivity_sc = "",
+  alternative_prior = FALSE,
   save_plot = TRUE
 ) {
   data_origin <- match.arg(data_origin)
@@ -2522,7 +2608,8 @@ plot_nowcast_bands <- function(
   # - the case study fitted using the GLM method
   # - the NegBinX simulation study fitted using the MCMC method
   # - the NegBinX simulation study fitted using the GLM method
-  split_figures <- data_origin %in% c("SARI", "ILI") && sensitivity_sc == ""
+  split_figures <- data_origin %in% c("SARI", "ILI") && sensitivity_sc == "" &&
+    !alternative_prior
   if (split_figures) {
     # Arrange all the patches
     arranged <- patchwork::wrap_plots(
@@ -2573,11 +2660,17 @@ plot_nowcast_bands <- function(
         height = 7
       )
     } else {
+      if (alternative_prior) {
+        plot_height <- 9
+        plot_path <- paste0(plot_path, "_alternative_prior")
+      } else {
+        plot_height <- 15
+      }
       save_figure(
         arranged,
         plot_path,
         width = 11.5,
-        height = 15
+        height = plot_height
       )
     }
     ret <- NULL
@@ -2660,10 +2753,11 @@ plot_nowcast_bands_per_horizon <- function(
     )
   # Grab the number of models in order to set the height of the plot
   # accordingly. We plot only the 6 MCMC-based models for the scenarios of the
-  # sensitivity analysis. Otherwise we plot 9 models (6  MCMC, and 3 GLM).
+  # sensitivity analysis and 3 MCMC-based models for the alternative prior.
+  # Otherwise we plot 9 models (6  MCMC, and 3 GLM).
   n_models <- length(unique(df_nowcast$model_method_interact))
-  if (!(n_models %in% c(6, 9))) {
-    stop("Number of models must be 6 or 9.")
+  if (!(n_models %in% c(3, 6, 9))) {
+    stop("Number of models must be 3, 6 or 9.")
   }
 
   # In case there are dates, where we skip nowcasting, due to the reporting
@@ -2776,7 +2870,7 @@ plot_nowcast_bands_per_horizon <- function(
     theme(
       axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
     ) +
-    # Plot 3 models per row, since `n_models` can be either 6, or 9
+    # Plot 3 models per row, since `n_models` can be only 3, 6, or 9
     facet_wrap(~model_method_interact, nrow = n_models / 3)
   nowcast_band_plot
 }
@@ -2943,13 +3037,17 @@ plot_nowcast_example <- function(
   if (!valid_dataset) {
     stop("Only strings 'SARI', 'ILI', 'NegBinX', 'NegBin2D', 'NegBin1D' and 'NegBinX_switch' are possible elements of the 'dataset' vector.")  # nolint
   }
-
   # Throw an error if nowcasts for multiple dates and/or data generating
   # processes are to be plotted and the number of dates and the data generating
   # processes don't match.
   if (length(dataset) != length(dates_to_show)) {
     stop("Arguments `dataset` and `dates_to_show` must be of the same length.")  # nolint
   }
+  # Are we plotting the results from the MCMC model with the alternative prior?
+  alternative_prior <- setequal(
+    unique(df_nowcast$Distribution),
+    c("NegBinX", "NegBin2D", "NegBin1D")
+  )
   # Create a faceting variable, which is the interaction of the observation
   # model and the fitting method
   df_nowcast <- df_nowcast |>
@@ -2987,6 +3085,9 @@ plot_nowcast_example <- function(
       axis_limits = list(x = c(NA, NA), y = c(NA, NA)),
       save_plot = FALSE
     )
+    if (alternative_prior) {
+      patches[[k]] <- patches[[k]] + facet_wrap(~Distribution, nrow = 1)
+    }
   }
 
   # Arrange all the patches
@@ -2999,10 +3100,18 @@ plot_nowcast_example <- function(
   )
   # Save the plot if required, the width, height and path are hard-coded here
   if (save_plot) {
+    plot_path <- paste0(
+      "inst/figure/nowcast_example_",
+      paste(dataset, collapse = "_")
+    )
     plot_height <- length(dataset) * 6 + 1
+    if (alternative_prior) {
+      plot_path <- paste0(plot_path, "_alternative_prior")
+      plot_height <- plot_height / 2 - 1 / 2
+    }
     save_figure(
       arranged,
-      paste0("inst/figure/nowcast_example_", paste(dataset, collapse = "_")),
+      plot_path,
       width = 11.5,
       height = plot_height
     )
