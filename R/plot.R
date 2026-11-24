@@ -923,7 +923,7 @@ plot_interval_width <- function(
     filter(
       .data$Distribution %in% model_names &
         .data$method == "mcmc" &
-        .data$sensitivity_sc == .env$sensitivity_sc
+        .data$sensitivity_sc == .env$sensitivity_sc  # nolint
     ) |>
     mutate(
       model_method_interact = factor(
