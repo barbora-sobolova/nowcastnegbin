@@ -879,9 +879,9 @@ plot_crps_decomp_alt <- function(
 #' models for the SARI data.
 #'
 #' @param df_summarized_nowcast a data frame containing columns `Distribution`
-#' (containing the name of the observation model), `quantile_50`
-#' (the point nowcasts), `quantile_25`, `quantile_75` (bounds of the 50%
-#' prediction intervals) and `date` (x-axis dates).
+#' (containing the name of the observation model), `quantile_25`, `quantile_75`
+#' (bounds of the 50% prediction intervals),`date` (x-axis dates), `delay`,
+#' `method` ("mcmc", or "glm") and `sensitivity_sc`.
 #' @param model_names a vector of names of the observation models, we wish to
 #' plot.
 #' @param data_origin a string indicating the data generating process of
@@ -923,7 +923,7 @@ plot_interval_width <- function(
     filter(
       .data$Distribution %in% model_names &
         .data$method == "mcmc" &
-        .data$sensitivity_sc == ""
+        .data$sensitivity_sc == .env$sensitivity_sc
     ) |>
     mutate(
       model_method_interact = factor(

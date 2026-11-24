@@ -1053,7 +1053,8 @@ list(
     plot_interval_width(
       bind_rows(summarized_nowcast_mcmc),
       model_names = c("NegBinX", "NegBin2D", "NegBin1D"),
-      data_origin = "SARI"
+      data_origin = "SARI",
+      sensitivity_sc = ""
     )
   }),
   # Extract the nowcasts from both fitting methods in the case study in order to

@@ -14,9 +14,9 @@ plot_interval_width(
 }
 \arguments{
 \item{df_summarized_nowcast}{a data frame containing columns \code{Distribution}
-(containing the name of the observation model), \code{quantile_50}
-(the point nowcasts), \code{quantile_25}, \code{quantile_75} (bounds of the 50\%
-prediction intervals) and \code{date} (x-axis dates).}
+(containing the name of the observation model), \code{quantile_25}, \code{quantile_75}
+(bounds of the 50\% prediction intervals),\code{date} (x-axis dates), \code{delay},
+\code{method} ("mcmc", or "glm") and \code{sensitivity_sc}.}
 
 \item{model_names}{a vector of names of the observation models, we wish to
 plot.}
