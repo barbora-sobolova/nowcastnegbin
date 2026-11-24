@@ -168,6 +168,13 @@ list(
   tar_target(compiled_model, {
     cmdstanr::cmdstan_model(here::here("inst", "stan", "nowcast.stan"))
   }),
+  # Compile the alternative STAN model. It is used to fit the NegBinX, Negbin1D
+  # and NegBin2D models with a different prior for the dispersion parameter.
+  tar_target(compiled_alternative_model, {
+    cmdstanr::cmdstan_model(
+      here::here("inst", "stan", "nowcast_nb_size_scaling.stan")
+    )
+  }),
   # STAN settings
   tar_target(stan_settings, {
     list(
@@ -1066,6 +1073,119 @@ list(
     iteration = "list"
   ),
 
+  # Fit the alternative model with a different prior ---------------------------
+
+  # Estimate the magnitude of the time series as a median over the historical
+  # data
+  tar_target(
+    data_magnitude,
+    estimate_magnitude(
+      full_data,
+      aux_analysis_start_date,
+      analysis_start_date - 7
+    )
+  ),
+  # Set the prior of the dispersion parameter using an ad-hoc scaling
+  tar_target(
+    disp_par_prior_alternative,
+    data.frame(
+      model_name = c(
+        "NegBin1D",
+        "NegBin2D",
+        "NegBinX"
+      ),
+      # These are parameters of the truncated normal now, even though we still
+      # use the parameter names of the log-normal
+      mean_log = rep(0, 3),
+      sd_log = c(
+        0.5 * sqrt(data_magnitude / max_lag),  # NegBin1D
+        0.5 / sqrt(max_lag),  # NegBin2D
+        0.5  # NegBinX
+      ),
+      disp_par_factor = 1
+    )
+  ),
+  # Create grouped data frames to group targets by date. The models will be
+  # stored and subsequently loaded in bundles of 3
+  tar_group_by(
+    branches_mcmc_alternative,
+    # Filter only the NegBinX, NegBin2D and NegBin1D models from the setup of
+    # the dynamic branches
+      group_branches(
+        time_horizons,
+        disp_par_prior_alternative,
+        prior_delay_param,
+        fitting_method = "mcmc",
+        sensitivity_scenarios = data.frame(
+          scenario_name = "",
+          delay_prob_factor = 4,
+          # Dummy variable that has no effect for the alternative model
+          disp_par_factor = 1
+        )
+    ),
+    train_data_begin,
+    nowcast_date
+  ),
+  # Fit the alternative model
+  tar_target(fitted_mcmc_alternative, {
+    fit_all_stan_models(
+      compiled_alternative_model$sample,
+      stan_data = stan_data,
+      model_obs = branches_mcmc_alternative$model_code,
+      date_of_the_nowcast = branches_mcmc_alternative$nowcast_date,
+      prior_delay_param = select(
+        branches_mcmc_alternative,
+        starts_with("delay_")
+      ),
+      mean_log = branches_mcmc_alternative$mean_log,
+      sd_log = branches_mcmc_alternative$sd_log,
+      stan_settings = stan_settings,
+      sensitivity_scenario_name = branches_mcmc_alternative$scenario_name
+    )
+  },
+  pattern = map(branches_mcmc_alternative, stan_data),
+  iteration = "list"
+  ),
+  # Calculate the quantiles and CRPS of the nowcasts obtained by the alternative
+  # MCMC model
+  tar_target(summarized_nowcast_mcmc_alternative, {
+    summarize_nowcast(fitted_mcmc_alternative$nowcast, df_total, "mcmc")
+  },
+  pattern = map(fitted_mcmc_alternative, df_total),
+  iteration = "list"
+  ),
+  # Extract the nowcasts for a selected date in order to show an example of
+  # nowcasts. We do it per branch here to avoid loading all fits at once when we
+  # want to plot only nowcasts for a selected date.
+  tar_target(df_nowcast_example_alternative, {
+    filter_nowcast_example_dates(
+      summarized_nowcast_mcmc_alternative,
+      NULL,
+      df_total,
+      dates_to_show = nowcast_example_dates,
+      model_to_show = c("NegBinX", "NegBin2D", "NegBin1D"),
+      data_origin = "SARI"
+    )},
+    pattern = map(
+      summarized_nowcast_mcmc_alternative,
+      df_total
+    ),
+    iteration = "list"
+  ),
+  # Plot the prediction intervals as bands around the data for each horizon.
+  # This plot is not splitted to horizon 0 and the rest.
+  tar_target(nowcast_band_plots_alternative, {
+    plot_nowcast_bands(
+    full_data,
+    bind_rows(summarized_nowcast_mcmc_alternative),
+    skip_dates = skip_dates,
+    data_origin = "SARI",
+    sensitivity_sc = "",
+    alternative_prior = TRUE,
+    save_plot = TRUE
+    )
+  }),
+
   # ILI incidence case study ===================================================
 
   # Download and process the data available from the Delphi API to the format
@@ -1448,7 +1568,128 @@ list(
     iteration = "list"
   ),
 
+  # Fit the alternative model with a different prior ---------------------------
+
+  # Estimate the magnitude of the time series as a median over the historical
+  # data
+  tar_target(
+    ili_data_magnitude,
+    estimate_magnitude(
+      ili_full_data,
+      ili_aux_analysis_start_date,
+      ili_analysis_start_date - 7
+    )
+  ),
+
+  # Set the prior of the dispersion parameter using an ad-hoc scaling
+  tar_target(
+    ili_disp_par_prior_alternative,
+    data.frame(
+      model_name = c(
+        "NegBin1D",
+        "NegBin2D",
+        "NegBinX"
+      ),
+      # These are parameters of the truncated normal now, even though we still
+      # use the parameter names of the log-normal
+      mean_log = rep(0, 3),
+      sd_log = c(
+        0.5 * sqrt(ili_data_magnitude / ili_max_lag),  # NegBin1D
+        0.5 / sqrt(ili_max_lag),  # NegBin2D
+        0.5  # NegBinX
+      ),
+      disp_par_factor = 1
+    )
+  ),
+  # Create grouped data frames to group targets by date. The models will be
+  # stored and subsequently loaded in bundles of 3
+  tar_group_by(
+    ili_branches_mcmc_alternative,
+    # Filter only the NegBinX, NegBin2D and NegBin1D models from the setup of
+    # the dynamic branches
+    group_branches(
+      ili_time_horizons,
+      ili_disp_par_prior_alternative,
+      ili_prior_delay_param,
+      fitting_method = "mcmc",
+      sensitivity_scenarios = data.frame(
+        scenario_name = "",
+        delay_prob_factor = 4,
+        # Dummy variable that has no effect for the alternative model
+        disp_par_factor = 1
+      )
+    ),
+    train_data_begin,
+    nowcast_date
+  ),
+  tar_target(ili_fitted_mcmc_alternative, {
+    fit_all_stan_models(
+      compiled_alternative_model$sample,
+      stan_data = ili_stan_data,
+      model_obs = ili_branches_mcmc_alternative$model_code,
+      date_of_the_nowcast = ili_branches_mcmc_alternative$nowcast_date,
+      prior_delay_param = select(
+        ili_branches_mcmc_alternative,
+        starts_with("delay_")
+      ),
+      mean_log = ili_branches_mcmc_alternative$mean_log,
+      sd_log = ili_branches_mcmc_alternative$sd_log,
+      stan_settings = stan_settings,
+      sensitivity_scenario_name = ili_branches_mcmc_alternative$scenario_name
+    )
+  },
+  pattern = map(ili_branches_mcmc_alternative, ili_stan_data),
+  iteration = "list"
+  ),
+  # Calculate the quantiles and CRPS of the nowcasts obtained by the alternative
+  # MCMC model
+  tar_target(
+    ili_summarized_nowcast_mcmc_alternative,
+    summarize_nowcast(
+      ili_fitted_mcmc_alternative$nowcast,
+      ili_df_total,
+      "mcmc"
+    ),
+    pattern = map(ili_fitted_mcmc_alternative, ili_df_total),
+    iteration = "list"
+  ),
+  # Extract the nowcasts for a selected date in order to show an example of
+  # nowcasts. We do it per branch here to avoid loading all fits at once when we
+  # want to plot only nowcasts for a selected date.
+  tar_target(
+    ili_df_nowcast_example_alternative,
+    filter_nowcast_example_dates(
+      ili_summarized_nowcast_mcmc_alternative,
+      NULL,
+      ili_df_total,
+      dates_to_show = ili_nowcast_example_dates,
+      model_to_show = c("NegBinX", "NegBin2D", "NegBin1D"),
+      data_origin = "ILI"
+    ),
+    pattern = map(
+      ili_summarized_nowcast_mcmc_alternative,
+      ili_df_total
+    ),
+    iteration = "list"
+  ),
+  # Plot the prediction intervals as bands around the data for each horizon.
+  # This plot is not splitted to horizon 0 and the rest.
+  tar_target(
+    ili_nowcast_band_plots_alternative,
+    plot_nowcast_bands(
+      ili_full_data,
+      bind_rows(ili_summarized_nowcast_mcmc_alternative),
+      skip_dates = NULL,
+      data_origin = "ILI",
+      sensitivity_sc = "",
+      alternative_prior = TRUE,
+      save_plot = TRUE
+    )
+  ),
+
   # Combined plots from both case studies ======================================
+
+  # Standard analysis ----------------------------------------------------------
 
   # Combine the results from the SARI and ILI case study into a list, focusing
   # only on the main analysis (i.e. ignoring the robustness check scenarios)
@@ -1507,6 +1748,38 @@ list(
       c(analysis_end_date, ili_analysis_end_date),
       rep(length_of_train_data, 2),
       c(aux_analysis_start_date, ili_aux_analysis_start_date)
+    )
+  ),
+
+  # Model with the alternative prior -------------------------------------------
+
+  tar_target(
+    case_study_results_plot_alternative,
+    patchwork_results(
+      list(
+        SARI = bind_rows(summarized_nowcast_mcmc_alternative),
+        ILI = bind_rows(ili_summarized_nowcast_mcmc_alternative)
+      ),
+      full_data_list = list(SARI = full_data, ILI = ili_full_data),
+      skip_dates_list = list(SARI = skip_dates, ILI = NULL),
+      type = "case_study"
+    )
+  ),
+  # Plot an example of nowcasts from the 3 models and both case studies for
+  # selected dates
+  tar_target(
+    nowcast_plots_alternative,
+    plot_nowcast_example(
+      bind_rows(
+        unname(map(df_nowcast_example_alternative, "nowcast")),
+        unname(map(ili_df_nowcast_example_alternative, "nowcast"))
+      ),
+      bind_rows(
+        unname(map(df_nowcast_example_alternative, "total")),
+        unname(map(ili_df_nowcast_example_alternative, "total"))
+      ),
+      dataset = c("SARI", "ILI"),
+      dates_to_show = c(nowcast_example_dates, ili_nowcast_example_dates)
     )
   )
 )

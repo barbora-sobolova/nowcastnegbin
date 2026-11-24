@@ -578,6 +578,34 @@ calc_delay_prob_prior <- function(
   ret
 }
 
+#' Estimate the data magnitude from past observations
+#'
+#' @description This function calculates an estimate the magnitude of the data
+#' as the median of past observations.
+#'
+#' @param full_data a data frame containing columns `date` and columns
+#' `value_0w`, `value_1w`, etc. until `max_lag - 1`.
+#' @param start_date a date, where the data for estimating the overall data
+#' magnitude start. The starting point will be included.
+#' @param end_date a date, where the data for estimating the overall data
+#' magnitude end. The ending point will be included.
+#'
+#' @return a numeric value indicating the estimated magnitude of the data
+#'
+#' @import dplyr
+#' @importFrom stats median
+#'
+#' @export
+estimate_magnitude <- function(full_data, start_date, end_date) {
+  full_data |> filter(
+    date >= start_date &
+      date <= end_date
+  ) |>
+    select(starts_with("value_")) |>
+    rowSums() |>
+    median()
+}
+
 #' Create a data frame with info about the dynamic branching structure
 #'
 #' @description This function creates a grouped data frame of dates and models
