@@ -8,9 +8,9 @@
 #' (containing the name of the observation model), `quantile_50`
 #' (the point nowcasts), `quantile_2.5`, `quantile_25`, `quantile_75`,
 #' `quantile_97.5` (bounds of the prediction intervals) and `date` (x-axis
-#' dates). If we want to plot models fitted by both, the MCMC andthe  GLM method
-#' \code{fitting_method = "both"}, the data frame must contain an additional
-#' column `model_method_interact`.
+#' dates). If we want to plot models fitted by both, the MCMC and the  GLM
+#' method \code{fitting_method = "both"}, the data frame must contain an
+#' additional column `model_method_interact`.
 #' @param df_total a data frame with columns `date`, `counts` and `data`
 #' returned by the function \code{create_totals_data_frame()}
 #' @param model_names a vector of names of the observation models, we wish to
@@ -21,7 +21,8 @@
 #' "glm", or "both", when we want to plot both methods next to each other
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param axis_limits a list with 2 elements named `x` and `y`. Each element
@@ -206,7 +207,8 @@ plot_nowcast <- function(
 #' prediction target `true_val`
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param alternative_prior logical indicator, whether the results were obtained
@@ -477,7 +479,8 @@ plot_coverage_alt <- function(
 #' `quantile_50` and `true_val` (to calculate the mean absolute error).
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param alternative_prior logical indicator, whether the results were obtained
@@ -667,7 +670,8 @@ plot_crps_decomp <- function(
 #' `quantile_50` and `true_val` (to calculate the mean absolute error).
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param alternative_prior logical indicator, whether the results were obtained
@@ -867,8 +871,37 @@ plot_crps_decomp_alt <- function(
   ret
 }
 
-plot_interal_width <- function(
+#' Plot the prediction interval widths in time
+#'
+#' @description This function plots the width of the prediction intervals in
+#' time by horizon in order to compare different models. This is used primarily
+#' to visualize the differences between the "NegBinX", "NegBin2D" and "NegBin1D"
+#' models for the SARI data.
+#'
+#' @param df_summarized_nowcast a data frame containing columns `Distribution`
+#' (containing the name of the observation model), `quantile_50`
+#' (the point nowcasts), `quantile_25`, `quantile_75` (bounds of the 50%
+#' prediction intervals) and `date` (x-axis dates).
+#' @param model_names a vector of names of the observation models, we wish to
+#' plot.
+#' @param data_origin a string indicating the data generating process of
+#' simulated data, or the corresponding case study. Possible
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
+#' @param sensitivity_sc a string indicating the sensitivity analysis scenario
+#' of the MCMC method. Empty string "" indicates the main analysis.
+#' @param save_plot logical indicator, whether to save the plot using
+#' \code{ggplot2::ggsave()}
+#'
+#' @return a ggplot object with one facet per nowcasting horizon, or NULL if
+#' \code{save_plot = TRUE}
+#'
+#' @import dplyr ggplot2
+#'
+#' @export
+plot_interval_width <- function(
   df_summarized_nowcast,
+  model_names,
   data_origin = c(
     "SARI",
     "ILI",
@@ -888,7 +921,7 @@ plot_interal_width <- function(
   df_interval_width <- df_summarized_nowcast |>
     # Choose only models we want to compare
     filter(
-      .data$Distribution %in% c("NegBin1D", "NegBin2D", "NegBinX") &
+      .data$Distribution %in% model_names &
         .data$method == "mcmc" &
         .data$sensitivity_sc == ""
     ) |>
@@ -1254,7 +1287,8 @@ patchwork_results <- function(
 #' NegBin1D.
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param true_value NULL for \code{data_origin} equal "SARI", or "ILI",
@@ -1419,7 +1453,8 @@ plot_disp_par <- function(
 #' delay probability distribution
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param true_value NULL for \code{data_origin} equal "SARI", or "ILI",
@@ -1647,7 +1682,8 @@ plot_delay_prob <- function(
 #' "mcmc", or "glm"
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param true_value NULL for \code{data_origin} equal "SARI", or "ILI",
@@ -1774,7 +1810,8 @@ plot_mean_proc <- function(
 #' saved file correctly
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param save_plot logical indicator, whether to save the plot using
@@ -1906,7 +1943,8 @@ plot_rw_sd <- function(
 #' model
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param prob_true_val  NULL for \code{data_origin} equal "SARI", or "ILI",
 #' otherwise the true value of the delay probability vector used to generate the
 #' data
@@ -2084,7 +2122,8 @@ plot_per_window <- function(
 #' \code{skip_dates = NULL} if no gaps are to be plotted.
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param save_plot logical indicator, whether to save the plots using
 #' \code{ggsave()}
 #'
@@ -2620,7 +2659,8 @@ plot_multiple_trajectories <- function(
 #' \code{skip_dates = NULL} if no gaps are to be plotted.
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param sensitivity_sc a string indicating the sensitivity analysis scenario
 #' of the MCMC method. Empty string "" indicates the main analysis.
 #' @param alternative_prior logical indicator, whether the results were obtained
@@ -2977,7 +3017,8 @@ plot_nowcast_bands_per_horizon <- function(
 #' plot.
 #' @param data_origin a string indicating the data generating process of
 #' simulated data, or the corresponding case study. Possible
-#' values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"
+#' values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+#' "NegBinX_switch"
 #' @param save_plot logical indicator, whether to save the plot using
 #' \code{ggplot2::ggsave()}
 #'

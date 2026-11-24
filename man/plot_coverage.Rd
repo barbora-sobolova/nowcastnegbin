@@ -21,7 +21,8 @@ prediction target \code{true_val}}
 
 \item{data_origin}{a string indicating the data generating process of
 simulated data, or the corresponding case study. Possible
-values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
+values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+"NegBinX_switch"}
 
 \item{sensitivity_sc}{a string indicating the sensitivity analysis scenario
 of the MCMC method. Empty string "" indicates the main analysis.}

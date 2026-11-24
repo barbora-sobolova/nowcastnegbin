@@ -1050,7 +1050,11 @@ list(
     )
   }),
   tar_target(interval_width_plot, {
-    plot_interal_width(bind_rows(summarized_nowcast_mcmc), data_origin = "SARI")
+    plot_interval_width(
+      bind_rows(summarized_nowcast_mcmc),
+      model_names = c("NegBinX", "NegBin2D", "NegBin1D"),
+      data_origin = "SARI"
+    )
   }),
   # Extract the nowcasts from both fitting methods in the case study in order to
   # show an example of nowcasts. We do it per branch here to avoid loading all
