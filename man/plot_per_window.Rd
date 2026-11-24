@@ -76,7 +76,8 @@ model}
 
 \item{data_origin}{a string indicating the data generating process of
 simulated data, or the corresponding case study. Possible
-values are "SARI", "ILI", "NegBinX", "NegBin2D" and "NegBin1D"}
+values are "SARI", "ILI", "NegBinX", "NegBin2D", "NegBin1D" and
+"NegBinX_switch"}
 
 \item{prob_true_val}{NULL for \code{data_origin} equal "SARI", or "ILI",
 otherwise the true value of the delay probability vector used to generate the

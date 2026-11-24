@@ -985,34 +985,6 @@ list(
       data_origin = "SARI"
     )
   }),
-  tar_target(delay_prob_example, {
-    filter(
-      fitted_mcmc$delay_prob,
-      .data$nowcast_date == delay_prob_example_date & .data$sensitivity_sc == ""
-    )
-    },
-    pattern = map(fitted_mcmc),
-  ),
-  tar_target(plot_delay_prob_example, {
-    plot_delay_prob(
-      delay_prob_example,
-      model_names = c("NegBinX", "NegBin2D", "NegBin1D"),
-      date_of_the_nowcast = delay_prob_example_date,
-      fitting_method = "mcmc",
-      prob_prior_pars = as.vector(
-        select(
-          filter(prior_delay_param, delay_prob_factor == 4),
-          -"delay_prob_factor"
-        ),
-        mode = "numeric"
-      ),
-      data_origin = "SARI",
-      sensitivity_sc = "",
-      true_value = NULL,
-      example = TRUE,
-      save_plot = TRUE
-    )
-  }),
   # Fit the gamlss models
   tar_target(fitted_glm, {
     fit_all_glm_models(
@@ -1075,6 +1047,14 @@ list(
       full_data,
       skip_dates,
       data_origin = "SARI"
+    )
+  }),
+  tar_target(interval_width_plot, {
+    plot_interval_width(
+      bind_rows(summarized_nowcast_mcmc),
+      model_names = c("NegBinX", "NegBin2D", "NegBin1D"),
+      data_origin = "SARI",
+      sensitivity_sc = ""
     )
   }),
   # Extract the nowcasts from both fitting methods in the case study in order to
